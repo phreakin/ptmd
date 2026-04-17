@@ -11,14 +11,16 @@ $pageSubheading = 'Run a full smoke test plus authentication and authorization c
 include __DIR__ . '/_admin_head.php';
 require_once __DIR__ . '/../inc/e2e_tests.php';
 
-$results = null;
+$results       = null;
+$schemaResults = null;
 
 if (is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         redirect('/admin/site-tests.php', 'Invalid CSRF token.', 'danger');
     }
 
-    $results = run_ptmd_e2e_tests();
+    $schemaResults = run_ptmd_schema_tests();
+    $results       = run_ptmd_e2e_tests();
 }
 ?>
 
@@ -42,9 +44,70 @@ if (is_post()) {
     Run this suite during low-traffic periods. It makes real HTTP/API requests and briefly adds then removes one chat message for positive-path verification.
 </div>
 
+<?php if ($schemaResults): ?>
+    <div class="ptmd-panel p-xl mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <h2 class="h6 mb-0 me-2">Schema &amp; Seed Validation</h2>
+            <span class="ptmd-status <?php echo $schemaResults['ok'] ? 'ptmd-status-published' : 'ptmd-status-draft'; ?>">
+                <?php echo $schemaResults['ok'] ? 'PASS' : 'FAIL'; ?>
+            </span>
+            <span class="ptmd-muted small">
+                <?php ee((string) $schemaResults['summary']['passed']); ?> passed /
+                <?php ee((string) $schemaResults['summary']['failed']); ?> failed /
+                <?php ee((string) $schemaResults['summary']['total']); ?> total
+            </span>
+            <span class="ptmd-muted small">
+                Runtime: <?php ee((string) $schemaResults['duration_ms']); ?>ms
+            </span>
+        </div>
+        <?php if (!empty($schemaResults['error'])): ?>
+            <div class="alert ptmd-alert alert-danger mt-3 mb-0"><?php ee($schemaResults['error']); ?></div>
+        <?php endif; ?>
+    </div>
+
+    <?php foreach ($schemaResults['groups'] as $group): ?>
+        <div class="ptmd-panel p-lg mb-4">
+            <h3 class="h6 mb-3"><?php ee($group['name']); ?></h3>
+            <div class="table-responsive">
+                <table class="ptmd-table w-100">
+                    <thead>
+                    <tr>
+                        <th style="width:36%">Check</th>
+                        <th style="width:10%">Result</th>
+                        <th style="width:24%">Message</th>
+                        <th style="width:30%">Details</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($group['tests'] as $test): ?>
+                        <tr>
+                            <td><?php ee($test['name']); ?></td>
+                            <td>
+                                <span class="ptmd-status <?php echo $test['ok'] ? 'ptmd-status-published' : 'ptmd-status-draft'; ?>">
+                                    <?php echo $test['ok'] ? 'PASS' : 'FAIL'; ?>
+                                </span>
+                            </td>
+                            <td><?php ee($test['message']); ?></td>
+                            <td class="ptmd-muted" style="font-size:var(--text-xs)">
+                                <?php if (!empty($test['meta']) && is_array($test['meta'])): ?>
+                                    <pre class="mb-0" style="white-space:pre-wrap;font-size:var(--text-xs);line-height:1.4"><?php ee(json_encode($test['meta'], JSON_PRETTY_PRINT)); ?></pre>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
 <?php if ($results): ?>
     <div class="ptmd-panel p-xl mb-4">
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <h2 class="h6 mb-0 me-2">E2E &amp; API Tests</h2>
             <span class="ptmd-status <?php echo $results['ok'] ? 'ptmd-status-published' : 'ptmd-status-draft'; ?>">
                 <?php echo $results['ok'] ? 'PASS' : 'FAIL'; ?>
             </span>

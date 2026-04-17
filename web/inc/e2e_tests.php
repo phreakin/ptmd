@@ -361,3 +361,222 @@ function run_ptmd_e2e_tests(): array
         'groups' => $groups,
     ];
 }
+
+/**
+ * Schema and seed-data validation suite.
+ *
+ * Checks all 21 schema tables exist (with their required columns) and verifies
+ * that the minimum seed data required for the site to function is present.
+ */
+function run_ptmd_schema_tests(): array
+{
+    $started = microtime(true);
+    $groups  = [];
+
+    $pdo = get_db();
+
+    if (!$pdo) {
+        return [
+            'ok'         => false,
+            'error'      => 'Database connection unavailable — schema tests cannot run.',
+            'started_at' => date('c'),
+            'duration_ms' => 0,
+            'summary'    => ['passed' => 0, 'failed' => 1, 'total' => 1],
+            'groups'     => [],
+        ];
+    }
+
+    // ------------------------------------------------------------------
+    // 1. Table existence — every table defined in schema.sql must exist.
+    // ------------------------------------------------------------------
+    $tableTests = [];
+
+    /** @var array<string,list<string>> $requiredTables  table => critical columns */
+    $requiredTables = [
+        'users'                     => ['id', 'username', 'email', 'password_hash', 'role', 'created_at', 'updated_at'],
+        'episodes'                  => ['id', 'title', 'slug', 'status', 'published_at', 'created_at', 'updated_at'],
+        'episode_categories'        => ['id', 'name', 'slug', 'created_at', 'updated_at'],
+        'episode_tags'              => ['id', 'name', 'slug', 'created_at', 'updated_at'],
+        'episode_tag_map'           => ['episode_id', 'tag_id'],
+        'site_settings'             => ['id', 'setting_key', 'setting_value', 'setting_type', 'updated_at'],
+        'media_library'             => ['id', 'filename', 'file_path', 'file_type', 'file_size', 'category', 'created_at', 'updated_at'],
+        'social_accounts'           => ['id', 'platform', 'handle', 'is_active', 'created_at', 'updated_at'],
+        'social_post_schedules'     => ['id', 'platform', 'content_type', 'day_of_week', 'post_time', 'timezone', 'is_active', 'created_at', 'updated_at'],
+        'social_platform_preferences' => ['id', 'platform', 'default_status', 'is_enabled', 'created_at', 'updated_at'],
+        'social_post_queue'         => ['id', 'platform', 'content_type', 'scheduled_for', 'status', 'created_at', 'updated_at'],
+        'social_post_logs'          => ['id', 'queue_id', 'platform', 'status', 'created_at'],
+        'chat_messages'             => ['id', 'username', 'message', 'status', 'created_at', 'updated_at'],
+        'chat_moderation_logs'      => ['id', 'chat_message_id', 'action', 'created_at'],
+        'ai_generations'            => ['id', 'feature', 'input_prompt', 'output_text', 'model', 'created_at'],
+        'ai_video_ideas'            => ['id', 'idea_title', 'premise', 'suggested_angle', 'scope', 'rank_order', 'created_at', 'updated_at'],
+        'overlay_batch_jobs'        => ['id', 'label', 'overlay_path', 'status', 'total_items', 'done_items', 'created_at', 'updated_at'],
+        'overlay_batch_items'       => ['id', 'batch_job_id', 'source_path', 'status', 'created_at', 'updated_at'],
+        'video_clips'               => ['id', 'label', 'source_path', 'status', 'created_at', 'updated_at'],
+        'ai_assistant_sessions'     => ['id', 'title', 'created_at', 'updated_at'],
+        'ai_assistant_messages'     => ['id', 'session_id', 'role', 'content', 'created_at'],
+    ];
+
+    // Fetch all column names once, keyed by table.
+    $dbName = null;
+    try {
+        $dbRow = $pdo->query("SELECT DATABASE() AS db")->fetch(\PDO::FETCH_ASSOC);
+        $dbName = is_array($dbRow) ? ($dbRow['db'] ?? null) : null;
+    } catch (\Throwable $e) {
+        // ignore — we will still attempt per-table column checks
+    }
+
+    /** @var array<string,list<string>> $existingColumns  table => [col, ...] */
+    $existingColumns = [];
+    if ($dbName !== null) {
+        try {
+            $colStmt = $pdo->prepare(
+                "SELECT TABLE_NAME, COLUMN_NAME
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = :db
+                 ORDER BY TABLE_NAME, ORDINAL_POSITION"
+            );
+            $colStmt->execute(['db' => $dbName]);
+            foreach ($colStmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $t = (string) $row['TABLE_NAME'];
+                $existingColumns[$t][] = (string) $row['COLUMN_NAME'];
+            }
+        } catch (\Throwable $e) {
+            // column map will be empty; per-table checks will fail with a helpful message
+        }
+    }
+
+    foreach ($requiredTables as $table => $columns) {
+        $tableExists = array_key_exists($table, $existingColumns);
+
+        if (!$tableExists) {
+            ptmd_e2e_record(
+                $tableTests,
+                "Table: {$table}",
+                false,
+                "Table does not exist",
+                ['table' => $table]
+            );
+            continue;
+        }
+
+        $missingCols = array_values(array_diff($columns, $existingColumns[$table]));
+        $ok = $missingCols === [];
+        ptmd_e2e_record(
+            $tableTests,
+            "Table: {$table}",
+            $ok,
+            $ok ? 'Table exists with required columns' : 'Missing columns: ' . implode(', ', $missingCols),
+            ['table' => $table, 'missing_columns' => $missingCols]
+        );
+    }
+
+    $groups[] = ['name' => 'Schema — Tables & Columns', 'tests' => $tableTests];
+
+    // ------------------------------------------------------------------
+    // 2. Seed data — minimum rows required for the site to function.
+    // ------------------------------------------------------------------
+    $seedTests = [];
+
+    $checks = [
+        [
+            'name'  => 'Admin user exists',
+            'sql'   => "SELECT COUNT(*) FROM users WHERE role = 'admin'",
+            'min'   => 1,
+            'label' => 'users (admin)',
+        ],
+        [
+            'name'  => 'site_settings populated',
+            'sql'   => "SELECT COUNT(*) FROM site_settings",
+            'min'   => 5,
+            'label' => 'site_settings',
+        ],
+        [
+            'name'  => 'site_name setting exists',
+            'sql'   => "SELECT COUNT(*) FROM site_settings WHERE setting_key = 'site_name'",
+            'min'   => 1,
+            'label' => "site_settings['site_name']",
+        ],
+        [
+            'name'  => 'openai_model setting exists',
+            'sql'   => "SELECT COUNT(*) FROM site_settings WHERE setting_key = 'openai_model'",
+            'min'   => 1,
+            'label' => "site_settings['openai_model']",
+        ],
+        [
+            'name'  => 'At least one published episode',
+            'sql'   => "SELECT COUNT(*) FROM episodes WHERE status = 'published'",
+            'min'   => 1,
+            'label' => 'episodes (published)',
+        ],
+        [
+            'name'  => 'Episode tags seeded',
+            'sql'   => "SELECT COUNT(*) FROM episode_tags",
+            'min'   => 1,
+            'label' => 'episode_tags',
+        ],
+        [
+            'name'  => 'Social post schedules seeded',
+            'sql'   => "SELECT COUNT(*) FROM social_post_schedules",
+            'min'   => 1,
+            'label' => 'social_post_schedules',
+        ],
+        [
+            'name'  => 'Social platform preferences seeded',
+            'sql'   => "SELECT COUNT(*) FROM social_platform_preferences",
+            'min'   => 1,
+            'label' => 'social_platform_preferences',
+        ],
+    ];
+
+    foreach ($checks as $check) {
+        try {
+            $count = (int) $pdo->query($check['sql'])->fetchColumn();
+            $ok    = $count >= $check['min'];
+            ptmd_e2e_record(
+                $seedTests,
+                $check['name'],
+                $ok,
+                $ok
+                    ? "{$check['label']}: {$count} row(s) found"
+                    : "{$check['label']}: expected ≥{$check['min']} row(s), found {$count}",
+                ['count' => $count, 'min_required' => $check['min']]
+            );
+        } catch (\Throwable $e) {
+            ptmd_e2e_record(
+                $seedTests,
+                $check['name'],
+                false,
+                'Query failed: ' . $e->getMessage()
+            );
+        }
+    }
+
+    $groups[] = ['name' => 'Seed Data', 'tests' => $seedTests];
+
+    // ------------------------------------------------------------------
+    // Summary
+    // ------------------------------------------------------------------
+    $passed = 0;
+    $failed = 0;
+    foreach ($groups as $group) {
+        foreach ($group['tests'] as $test) {
+            if (!empty($test['ok'])) {
+                $passed++;
+            } else {
+                $failed++;
+            }
+        }
+    }
+
+    return [
+        'ok'          => $failed === 0,
+        'started_at'  => date('c'),
+        'duration_ms' => (int) ((microtime(true) - $started) * 1000),
+        'summary'     => [
+            'passed' => $passed,
+            'failed' => $failed,
+            'total'  => $passed + $failed,
+        ],
+        'groups' => $groups,
+    ];
+}
