@@ -97,6 +97,9 @@ if ($pdo) {
                 <a href="/admin/ai-tools.php" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
                     <i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Content Studio
                 </a>
+                <a href="/admin/ai-assistant.php" class="btn btn-ptmd-outline" style="border-color:rgba(46,196,182,0.4);color:var(--ptmd-teal)">
+                    <i class="fa-solid fa-robot me-2"></i>AI Copilot
+                </a>
                 <a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-calendar me-2"></i>Schedule Post
                 </a>

@@ -265,4 +265,29 @@ CREATE TABLE IF NOT EXISTS video_clips (
     CONSTRAINT fk_vc_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Admin Copilot — Conversation sessions
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_assistant_sessions (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED  NULL,
+    title       VARCHAR(255)  NOT NULL DEFAULT 'New Conversation',
+    created_at  DATETIME      NOT NULL,
+    updated_at  DATETIME      NOT NULL,
+    CONSTRAINT fk_aas_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Admin Copilot — Per-turn messages
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_assistant_messages (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT UNSIGNED  NOT NULL,
+    role        ENUM('user','assistant') NOT NULL,
+    content     MEDIUMTEXT    NOT NULL,
+    created_at  DATETIME      NOT NULL,
+    CONSTRAINT fk_aam_session FOREIGN KEY (session_id) REFERENCES ai_assistant_sessions(id) ON DELETE CASCADE,
+    INDEX idx_aam_session_created (session_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
