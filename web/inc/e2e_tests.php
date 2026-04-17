@@ -215,7 +215,12 @@ function run_ptmd_e2e_tests(): array
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (invalid csrf)', $chatPostOk, $chatPostOk ? 'CSRF protection enforced' : 'CSRF protection check failed', ['actual_status' => $chatPost['status'] ?? null]);
 
     $chatValidCsrf = csrf_token();
-    $chatValidMessage = 'E2E validation message ' . date('YmdHis');
+    try {
+        $uniqueSuffix = bin2hex(random_bytes(3));
+    } catch (Throwable $e) {
+        $uniqueSuffix = (string) mt_rand(100000, 999999);
+    }
+    $chatValidMessage = 'E2E validation message ' . date('Y-m-d H:i:s') . ' #' . $uniqueSuffix;
     $chatPostValid = ptmd_e2e_request(
         $baseUrl,
         '/api/chat_messages.php',
@@ -230,15 +235,19 @@ function run_ptmd_e2e_tests(): array
         && !empty($chatPostValid['json']['id']);
     $chatValidMessageText = $chatValidOk ? 'Chat API accepts valid submissions' : 'Valid chat submission failed';
     $chatCleanupOk = true;
+    $chatCleanupError = null;
     if ($chatValidOk && $pdo) {
         $cleanupStmt = $pdo->prepare('DELETE FROM chat_messages WHERE id = :id');
         $chatCleanupOk = $cleanupStmt->execute(['id' => (int) $chatPostValid['json']['id']]);
+        if (!$chatCleanupOk) {
+            $chatCleanupError = $cleanupStmt->errorInfo();
+        }
     }
     if ($chatValidOk && !$chatCleanupOk) {
         $chatValidOk = false;
         $chatValidMessageText = 'Chat submission succeeded but cleanup failed';
     }
-    ptmd_e2e_record($api, 'POST /api/chat_messages.php (valid csrf)', $chatValidOk, $chatValidMessageText, ['actual_status' => $chatPostValid['status'] ?? null]);
+    ptmd_e2e_record($api, 'POST /api/chat_messages.php (valid csrf)', $chatValidOk, $chatValidMessageText, ['actual_status' => $chatPostValid['status'] ?? null, 'cleanup_error' => $chatCleanupError]);
 
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
