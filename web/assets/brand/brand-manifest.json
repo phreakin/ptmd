@@ -1,0 +1,26 @@
+﻿{
+  "brand": {
+    "name": "Paper Trail MD",
+    "tagline": "We Follow the Story Until It Breaks. ...Or Until It Stops Making Sense.",
+    "email": "papertrailmd@gmail.com",
+    "domain": "papertrailmd.com",
+    "focus": "15-30 minute mini-documentaries on social, cultural, and political stories",
+    "tone": [
+      "investigative",
+      "skeptical",
+      "hard-hitting",
+      "funny",
+      "smart"
+    ]
+  },
+  "palette": {
+    "midnightBlack": "#0B0C10",
+    "paperWhite": "#F5F5F3",
+    "deepNavy": "#1C2A39",
+    "slateGray": "#2F3A40",
+    "evidenceRed": "#C1121F",
+    "highlighterYellow": "#FFD60A",
+    "forensicTeal": "#2EC4B6",
+    "mutedGold": "#BFA181"
+  }
+}

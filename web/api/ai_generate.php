@@ -109,14 +109,14 @@ if (!verify_csrf($_POST['csrf_token'] ?? null)) {
 
 $feature = trim((string) ($_POST['feature'] ?? ''));
 
-$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept', 'episode_field_suggestion', 'episode_field_optimize'];
+$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept', 'case_field_suggestion', 'case_field_optimize'];
 if (!in_array($feature, $allowed, true)) {
     echo json_encode(['ok' => false, 'error' => 'Unknown feature: ' . e($feature)]);
     exit;
 }
 
 $systemPrompt = ptmd_ai_system_prompt();
-$episodeId    = null;
+$caseId    = null;
 
 // ── Build prompts per feature ──────────────────────────────────────────────────
 
@@ -138,7 +138,7 @@ switch ($feature) {
             ? "Use this additional current-context guidance: {$currentContext}\n\n"
             : '';
 
-        $userPrompt = "Today is " . date('Y-m-d') . ". Generate {$count} compelling documentary episode ideas for Paper Trail MD based on current social situations and issues in {$scopeLabel}.{$themeClause}\n\n"
+        $userPrompt = "Today is " . date('Y-m-d') . ". Generate {$count} compelling documentary case ideas for Paper Trail MD based on current social situations and issues in {$scopeLabel}.{$themeClause}\n\n"
             . $contextClause
             . "Return ONLY valid JSON (no markdown, no commentary) as an array where each item has exactly these keys:\n"
             . "- title\n"
@@ -148,14 +148,14 @@ switch ($feature) {
 
     case 'title':
         $topic     = trim((string) ($_POST['title_topic'] ?? ''));
-        $epId      = (int) ($_POST['title_episode'] ?? 0);
-        $episodeId = $epId ?: null;
+        $epId      = (int) ($_POST['title_case'] ?? 0);
+        $caseId = $epId ?: null;
 
         $context = $topic;
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt FROM episodes WHERE id = :id');
+                $ep = $pdo->prepare('SELECT title, excerpt FROM cases WHERE id = :id');
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -165,11 +165,11 @@ switch ($feature) {
         }
 
         if (!$context) {
-            echo json_encode(['ok' => false, 'error' => 'Provide a topic or select an episode.']);
+            echo json_encode(['ok' => false, 'error' => 'Provide a topic or select an case.']);
             exit;
         }
 
-        $userPrompt = "Generate 8 compelling episode titles for a PTMD documentary.\n"
+        $userPrompt = "Generate 8 compelling case titles for a PTMD documentary.\n"
             . "Topic/premise: {$context}\n\n"
             . "Requirements:\n"
             . "- Punchy, investigative, brand-appropriate\n"
@@ -197,15 +197,15 @@ switch ($feature) {
         break;
 
     case 'description':
-        $epId  = (int) ($_POST['desc_episode'] ?? 0);
+        $epId  = (int) ($_POST['desc_case'] ?? 0);
         $notes = trim((string) ($_POST['desc_notes'] ?? ''));
-        $episodeId = $epId ?: null;
+        $caseId = $epId ?: null;
 
         $context = $notes;
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body FROM episodes WHERE id = :id');
+                $ep = $pdo->prepare('SELECT title, excerpt, body FROM cases WHERE id = :id');
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -216,12 +216,12 @@ switch ($feature) {
         }
 
         if (!$context) {
-            echo json_encode(['ok' => false, 'error' => 'Select an episode or add notes.']);
+            echo json_encode(['ok' => false, 'error' => 'Select an case or add notes.']);
             exit;
         }
 
         $userPrompt = "Write a full YouTube video description for a PTMD documentary.\n\n"
-            . "Episode context:\n{$context}\n\n"
+            . "case context:\n{$context}\n\n"
             . "Additional notes: {$notes}\n\n"
             . "Requirements:\n"
             . "- Strong first 2 lines (visible in search without expanding)\n"
@@ -232,15 +232,15 @@ switch ($feature) {
         break;
 
     case 'caption':
-        $epId     = (int) ($_POST['cap_episode'] ?? 0);
+        $epId     = (int) ($_POST['cap_case'] ?? 0);
         $platform = trim((string) ($_POST['cap_platform'] ?? 'all'));
-        $episodeId = $epId ?: null;
+        $caseId = $epId ?: null;
 
         $context = '';
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt FROM episodes WHERE id = :id');
+                $ep = $pdo->prepare('SELECT title, excerpt FROM cases WHERE id = :id');
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -250,7 +250,7 @@ switch ($feature) {
         }
 
         if (!$context) {
-            echo json_encode(['ok' => false, 'error' => 'Select an episode.']);
+            echo json_encode(['ok' => false, 'error' => 'Select an case.']);
             exit;
         }
 
@@ -258,8 +258,8 @@ switch ($feature) {
             ? 'YouTube Shorts, TikTok, Instagram Reels, X (Twitter), and Facebook Reels'
             : $platform;
 
-        $userPrompt = "Write social media captions for a PTMD episode.\n\n"
-            . "Episode:\n{$context}\n\n"
+        $userPrompt = "Write social media captions for a PTMD case.\n\n"
+            . "case:\n{$context}\n\n"
             . "Platforms: {$platformList}\n\n"
             . "For each platform write a separate caption that:\n"
             . "- Fits the character limit and style of that platform\n"
@@ -271,15 +271,15 @@ switch ($feature) {
         break;
 
     case 'thumbnail_concept':
-        $epId  = (int) ($_POST['thumb_episode'] ?? 0);
+        $epId  = (int) ($_POST['thumb_case'] ?? 0);
         $style = trim((string) ($_POST['thumb_style'] ?? 'PTMD cinematic dark'));
-        $episodeId = $epId ?: null;
+        $caseId = $epId ?: null;
 
         $context = '';
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt FROM episodes WHERE id = :id');
+                $ep = $pdo->prepare('SELECT title, excerpt FROM cases WHERE id = :id');
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -289,12 +289,12 @@ switch ($feature) {
         }
 
         if (!$context) {
-            echo json_encode(['ok' => false, 'error' => 'Select an episode.']);
+            echo json_encode(['ok' => false, 'error' => 'Select an case.']);
             exit;
         }
 
         $userPrompt = "Describe a compelling YouTube thumbnail concept for this PTMD documentary.\n\n"
-            . "Episode:\n{$context}\n\n"
+            . "case:\n{$context}\n\n"
             . "Visual style: {$style}\n\n"
             . "Output:\n"
             . "1. Main image / subject: what should be prominently shown?\n"
@@ -306,7 +306,7 @@ switch ($feature) {
             . "Be specific and visual-director precise.";
         break;
 
-    case 'episode_field_suggestion':
+    case 'case_field_suggestion':
         $field = trim((string) ($_POST['suggest_field'] ?? ''));
         $allowedFields = [
             'title' => 'Title',
@@ -323,8 +323,8 @@ switch ($feature) {
             exit;
         }
 
-        $epId = (int) ($_POST['suggest_episode'] ?? 0);
-        $episodeId = $epId ?: null;
+        $epId = (int) ($_POST['suggest_case'] ?? 0);
+        $caseId = $epId ?: null;
         $guidance = trim((string) ($_POST['suggest_guidance'] ?? ''));
 
         $contextTitle = trim((string) ($_POST['context_title'] ?? ''));
@@ -338,7 +338,13 @@ switch ($feature) {
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body, keywords, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep = $pdo->prepare(
+                    'SELECT e.title, e.excerpt, e.body, e.video_url, e.duration, e.thumbnail_image,
+                     (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ", ")
+                      FROM case_tag_map m INNER JOIN case_tags t ON t.id = m.tag_id
+                      WHERE m.case_id = e.id) AS keywords
+                     FROM cases e WHERE e.id = :id LIMIT 1'
+                );
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -374,16 +380,16 @@ switch ($feature) {
         ];
         $fieldRule = $fieldRuleMap[$field];
 
-        $userPrompt = "Suggest content for the '{$allowedFields[$field]}' field for a PTMD episode edit form.\n\n"
+        $userPrompt = "Suggest content for the '{$allowedFields[$field]}' field for a PTMD case edit form.\n\n"
             . $guidanceClause
-            . "Current episode context:\n{$context}\n"
+            . "Current case context:\n{$context}\n"
             . "Output rules:\n"
             . "- Return only the suggestion text, no labels\n"
             . "- Keep tone investigative, sharp, credible\n"
             . "- {$fieldRule}\n";
         break;
 
-    case 'episode_field_optimize':
+    case 'case_field_optimize':
         $field = trim((string) ($_POST['suggest_field'] ?? ''));
         $allowedFields = [
             'title' => 'Title',
@@ -400,8 +406,8 @@ switch ($feature) {
             exit;
         }
 
-        $epId = (int) ($_POST['suggest_episode'] ?? 0);
-        $episodeId = $epId ?: null;
+        $epId = (int) ($_POST['suggest_case'] ?? 0);
+        $caseId = $epId ?: null;
         $guidance = trim((string) ($_POST['suggest_guidance'] ?? ''));
 
         $contextTitle = trim((string) ($_POST['context_title'] ?? ''));
@@ -416,7 +422,13 @@ switch ($feature) {
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body, keywords, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep = $pdo->prepare(
+                    'SELECT e.title, e.excerpt, e.body, e.video_url, e.duration, e.thumbnail_image,
+                     (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ", ")
+                      FROM case_tag_map m INNER JOIN case_tags t ON t.id = m.tag_id
+                      WHERE m.case_id = e.id) AS keywords
+                     FROM cases e WHERE e.id = :id LIMIT 1'
+                );
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -457,10 +469,10 @@ switch ($feature) {
         ];
         $fieldRule = $optimizationRules[$field];
 
-        $userPrompt = "Optimize the existing '{$allowedFields[$field]}' text for a PTMD episode edit form.\n\n"
+        $userPrompt = "Optimize the existing '{$allowedFields[$field]}' text for a PTMD case edit form.\n\n"
             . $guidanceClause
             . "Current field text to optimize:\n{$sourceText}\n\n"
-            . "Current episode context:\n{$context}\n"
+            . "Current case context:\n{$context}\n"
             . "Output rules:\n"
             . "- Return only the optimized text, no labels\n"
             . "- Preserve factual meaning and avoid adding unsupported claims\n"
@@ -489,7 +501,7 @@ $generationId = save_ai_generation(
     $result['model'],
     $result['prompt_tokens'],
     $result['response_tokens'],
-    $episodeId
+    $caseId
 );
 
 $ideas = [];

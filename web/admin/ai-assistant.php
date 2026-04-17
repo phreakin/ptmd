@@ -3,7 +3,7 @@
  * PTMD Admin — AI Copilot
  *
  * A conversational admin assistant powered by OpenAI.
- * Helps with episodes, social publishing, media, moderation,
+ * Helps with cases, social publishing, media, moderation,
  * content drafting, and any other site admin task.
  */
 
@@ -75,11 +75,11 @@ if ($pdo) {
             <div class="copilot-starters-label">Quick starts</div>
             <?php
             $starters = [
-                ['icon' => 'fa-film',           'text' => 'Draft titles for a new episode about housing policy'],
-                ['icon' => 'fa-tags',           'text' => 'Generate YouTube keywords for my latest episode'],
+                ['icon' => 'fa-film',           'text' => 'Draft titles for a new case about housing policy'],
+                ['icon' => 'fa-tags',           'text' => 'Generate YouTube keywords for my latest case'],
                 ['icon' => 'fa-calendar-check', 'text' => 'How do I schedule a social post?'],
                 ['icon' => 'fa-lightbulb',      'text' => 'Suggest 5 documentary ideas for the PTMD brand'],
-                ['icon' => 'fa-align-left',     'text' => 'Write a description for my most recent episode'],
+                ['icon' => 'fa-align-left',     'text' => 'Write a description for my most recent case'],
                 ['icon' => 'fa-gear',           'text' => 'How do I change the OpenAI model I\'m using?'],
             ];
             ?>
@@ -104,7 +104,7 @@ if ($pdo) {
                 </div>
                 <h2 class="h5 mb-2">How can I help you today?</h2>
                 <p class="ptmd-muted small mb-0">
-                    Ask me anything — episode ideas, social captions, how to use admin features, or site stats.
+                    Ask me anything — case ideas, social captions, how to use admin features, or site stats.
                 </p>
             </div>
         </div>

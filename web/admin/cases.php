@@ -1,13 +1,17 @@
 <?php
 /**
- * PTMD Admin — Episodes CRUD
+ * PTMD Admin — cases CRUD
  */
 
 require_once __DIR__ . '/../inc/bootstrap.php';
 
-$pageTitle   = 'Episodes | PTMD Admin';
-$activePage  = 'episodes';
-$pageHeading = 'Episodes';
+$pageTitle   = 'cases | PTMD Admin';
+$activePage  = 'cases';
+$pageHeading = 'cases';
+
+// Load config, session, DB layer, and helpers BEFORE any call to get_db()/is_post()/etc.
+require_once __DIR__ . '/../inc/bootstrap.php';
+require_login();
 
 $pdo    = get_db();
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
@@ -16,7 +20,7 @@ $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 // ── Handle POST ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/episodes.php', 'Invalid CSRF token.', 'danger');
+        redirect('/admin/cases.php', 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'save';
@@ -24,8 +28,8 @@ if ($pdo && is_post()) {
     if ($postAction === 'delete') {
         $delId = (int) ($_POST['id'] ?? 0);
         if ($delId > 0) {
-            $pdo->prepare('DELETE FROM episodes WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/episodes.php', 'Episode deleted.', 'success');
+            $pdo->prepare('DELETE FROM cases WHERE id = :id')->execute(['id' => $delId]);
+            redirect('/admin/cases.php', 'case deleted.', 'success');
         }
     }
 
@@ -80,7 +84,7 @@ if ($pdo && is_post()) {
     if (!empty($_FILES['video_file']['name'])) {
         $savedVid = save_upload(
             $_FILES['video_file'],
-            'episodes',
+            'cases',
             $GLOBALS['config']['allowed_video_ext']
         );
         if ($savedVid) {
@@ -90,7 +94,7 @@ if ($pdo && is_post()) {
 
     if ($id > 0) {
         $stmt = $pdo->prepare(
-            'UPDATE episodes SET title=:title, slug=:slug, excerpt=:excerpt, body=:body,
+            'UPDATE cases SET title=:title, slug=:slug, excerpt=:excerpt, body=:body,
              thumbnail_image=:thumb, video_url=:video_url, video_file_path=:vfp,
              duration=:duration, status=:status, published_at=:pub,
              updated_at=NOW() WHERE id=:id'
@@ -100,10 +104,10 @@ if ($pdo && is_post()) {
             'thumb'=>$thumbPath, 'video_url'=>$videoUrl, 'vfp'=>$videoFilePath,
             'duration'=>$duration, 'status'=>$status, 'pub'=>$publishedAt, 'id'=>$id,
         ]);
-        $episodeId = $id;
+        $caseId = $id;
     } else {
         $stmt = $pdo->prepare(
-            'INSERT INTO episodes (title, slug, excerpt, body, thumbnail_image, video_url,
+            'INSERT INTO cases (title, slug, excerpt, body, thumbnail_image, video_url,
              video_file_path, duration, status, published_at, created_at, updated_at)
              VALUES (:title,:slug,:excerpt,:body,:thumb,:video_url,:vfp,:duration,:status,:pub,NOW(),NOW())'
         );
@@ -112,12 +116,12 @@ if ($pdo && is_post()) {
             'thumb'=>$thumbPath, 'video_url'=>$videoUrl, 'vfp'=>$videoFilePath,
             'duration'=>$duration, 'status'=>$status, 'pub'=>$publishedAt,
         ]);
-        $episodeId = (int) $pdo->lastInsertId();
+        $caseId = (int) $pdo->lastInsertId();
     }
 
-    if ($episodeId > 0) {
-        $pdo->prepare('DELETE FROM episode_tag_map WHERE episode_id = :episode_id')->execute([
-            'episode_id' => $episodeId,
+    if ($caseId > 0) {
+        $pdo->prepare('DELETE FROM case_tag_map WHERE case_id = :case_id')->execute([
+            'case_id' => $caseId,
         ]);
 
         foreach ($keywords as $keyword) {
@@ -127,22 +131,22 @@ if ($pdo && is_post()) {
             }
 
             $pdo->prepare(
-                'INSERT IGNORE INTO episode_tags (name, slug, created_at, updated_at)
+                'INSERT IGNORE INTO case_tags (name, slug, created_at, updated_at)
                  VALUES (:name, :slug, NOW(), NOW())'
             )->execute([
                 'name' => $keyword,
                 'slug' => $tagSlug,
             ]);
 
-            $tagStmt = $pdo->prepare('SELECT id FROM episode_tags WHERE slug = :slug LIMIT 1');
+            $tagStmt = $pdo->prepare('SELECT id FROM case_tags WHERE slug = :slug LIMIT 1');
             $tagStmt->execute(['slug' => $tagSlug]);
             $tagId = (int) ($tagStmt->fetchColumn() ?: 0);
             if ($tagId > 0) {
                 $pdo->prepare(
-                    'INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
-                     VALUES (:episode_id, :tag_id)'
+                    'INSERT IGNORE INTO case_tag_map (case_id, tag_id)
+                     VALUES (:case_id, :tag_id)'
                 )->execute([
-                    'episode_id' => $episodeId,
+                    'case_id' => $caseId,
                     'tag_id'     => $tagId,
                 ]);
             }
@@ -150,41 +154,41 @@ if ($pdo && is_post()) {
     }
 
     if ($id > 0) {
-        redirect('/admin/episodes.php', 'Episode updated.', 'success');
+        redirect('/admin/cases.php', 'case updated.', 'success');
     }
 
-    redirect('/admin/episodes.php', 'Episode created.', 'success');
+    redirect('/admin/cases.php', 'case created.', 'success');
 }
 
-$pageSubheading = $action === 'edit' ? 'Edit Episode' : ($action === 'new' ? 'New Episode' : 'All Episodes');
+$pageSubheading = $action === 'edit' ? 'Edit case' : ($action === 'new' ? 'New case' : 'All cases');
 $pageActions    = '';
 $apiKeySet = site_setting('openai_api_key', '') !== '';
 if ($action === 'list') {
-    $pageActions = '<a href="/admin/episodes.php?action=new" class="btn btn-ptmd-primary"><i class="fa-solid fa-plus me-2"></i>New Episode</a>';
+    $pageActions = '<a href="/admin/cases.php?action=new" class="btn btn-ptmd-primary"><i class="fa-solid fa-plus me-2"></i>New case</a>';
 } elseif ($action === 'edit' || $action === 'new') {
-    $pageActions = '<a href="/admin/episodes.php" class="btn btn-ptmd-outline"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>';
+    $pageActions = '<a href="/admin/cases.php" class="btn btn-ptmd-outline"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>';
 }
 
 include __DIR__ . '/_admin_head.php';
 
-// ── Fetch episode for edit ────────────────────────────────────────────────────
+// ── Fetch case for edit ────────────────────────────────────────────────────
 $ep = null;
 $epKeywords = '';
 if ($editId > 0 && $pdo) {
-    $stmt = $pdo->prepare('SELECT * FROM episodes WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT * FROM cases WHERE id = :id');
     $stmt->execute(['id' => $editId]);
     $ep = $stmt->fetch();
     if ($ep) {
-        $epKeywords = implode(', ', get_episode_tags((int) $ep['id']));
+        $epKeywords = implode(', ', get_case_tags((int) $ep['id']));
     }
 }
 
 // ── List view ─────────────────────────────────────────────────────────────────
 if ($action === 'list'):
-    $episodes = $pdo ? $pdo->query('SELECT * FROM episodes ORDER BY updated_at DESC')->fetchAll() : [];
+    $cases = $pdo ? $pdo->query('SELECT * FROM cases ORDER BY updated_at DESC')->fetchAll() : [];
 ?>
     <div class="ptmd-panel p-lg">
-        <?php if ($episodes): ?>
+        <?php if ($cases): ?>
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
@@ -197,7 +201,7 @@ if ($action === 'list'):
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-3">
@@ -209,7 +213,7 @@ if ($action === 'list'):
                                             loading="lazy"
                                         >
                                     <?php endif; ?>
-                                    <a href="/admin/episodes.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>"
                                        class="fw-500 ptmd-text-muted">
                                         <?php ee($ep['title']); ?>
                                     </a>
@@ -226,16 +230,16 @@ if ($action === 'list'):
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <a href="/admin/episodes.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>"
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Edit">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
-                                    <a href="/index.php?page=episode&slug=<?php ee($ep['slug']); ?>"
+                                    <a href="/index.php?page=case&slug=<?php ee($ep['slug']); ?>"
                                        target="_blank" rel="noopener"
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View public">
                                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                     </a>
-                                    <form method="post" action="/admin/episodes.php" class="d-inline">
+                                    <form method="post" action="/admin/cases.php" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="id" value="<?php ee((string) $ep['id']); ?>">
@@ -257,7 +261,7 @@ if ($action === 'list'):
             </table>
         </div>
         <?php else: ?>
-            <p class="ptmd-muted">No episodes yet. <a href="/admin/episodes.php?action=new">Create your first episode</a>.</p>
+            <p class="ptmd-muted">No cases yet. <a href="/admin/cases.php?action=new">Create your first case</a>.</p>
         <?php endif; ?>
     </div>
 
@@ -265,7 +269,7 @@ if ($action === 'list'):
 // ── Create / Edit form ────────────────────────────────────────────────────────
 else:
 ?>
-    <form method="post" action="/admin/episodes.php" enctype="multipart/form-data">
+    <form method="post" action="/admin/cases.php" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" id="ep_id" name="id" value="<?php ee((string) ($ep['id'] ?? 0)); ?>">
         <input type="hidden" name="_action" value="save">
@@ -276,7 +280,7 @@ else:
             <div class="col-lg-8">
 
                 <div class="ptmd-panel p-xl mb-4">
-                    <h2 class="h6 mb-4">Episode Details</h2>
+                    <h2 class="h6 mb-4">case Details</h2>
                     <div class="mb-3">
                         <label class="form-label" for="ep_title">Title <span style="color:var(--ptmd-error)">*</span></label>
                         <input class="form-control" id="ep_title" name="title"
@@ -428,7 +432,7 @@ else:
                 <div class="d-grid gap-2">
                     <button class="btn btn-ptmd-primary" type="submit">
                         <i class="fa-solid fa-floppy-disk me-2"></i>
-                        <?php echo $editId > 0 ? 'Save Changes' : 'Create Episode'; ?>
+                        <?php echo $editId > 0 ? 'Save Changes' : 'Create case'; ?>
                     </button>
                     <?php if ($editId > 0): ?>
                         <a href="/admin/ai-tools.php" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
@@ -467,7 +471,7 @@ const resultInput = document.getElementById('ai_suggest_result');
 const applyBtn = document.getElementById('ai_apply_suggestion_btn');
 const optimizeBtn = document.getElementById('ai_optimize_btn');
 const csrfInput = document.querySelector('input[name="csrf_token"]');
-const episodeIdInput = document.getElementById('ep_id');
+const caseIdInput = document.getElementById('ep_id');
 
 async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPayload = {}) {
     if (!button || !fieldSelect || !resultWrap || !resultInput || !csrfInput) {
@@ -485,7 +489,7 @@ async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPa
         fd.set('feature', feature);
         fd.set('suggest_field', selectedField);
         fd.set('suggest_guidance', guidanceInput?.value ?? '');
-        fd.set('suggest_episode', episodeIdInput?.value ?? '');
+        fd.set('suggest_case', caseIdInput?.value ?? '');
         fd.set('context_title', document.getElementById('ep_title')?.value ?? '');
         fd.set('context_excerpt', document.getElementById('ep_excerpt')?.value ?? '');
         fd.set('context_body', document.getElementById('ep_body')?.value ?? '');
@@ -520,7 +524,7 @@ async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPa
 
     if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfInput) {
     suggestBtn.addEventListener('click', async () => {
-        await runFieldAiAction(suggestBtn, 'Suggesting Field', 'Suggest Field', 'episode_field_suggestion');
+        await runFieldAiAction(suggestBtn, 'Suggesting Field', 'Suggest Field', 'case_field_suggestion');
     });
 
     if (optimizeBtn) {
@@ -541,7 +545,7 @@ async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPa
                 optimizeBtn,
                 'Optimizing Field',
                 'Optimize Field',
-                'episode_field_optimize',
+                'case_field_optimize',
                 { optimize_source: sourceText }
             );
         });

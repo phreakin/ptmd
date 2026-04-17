@@ -4,8 +4,8 @@
  * Layout is loaded from site_settings.home_module_layout.
  */
 
-$featuredEpisode = get_featured_episode();
-$latestEpisodes  = get_latest_episodes(6);
+$featuredcase = get_featured_case();
+$latestcases  = get_latest_cases(6);
 
 $moduleFiles = [
     'hero'     => __DIR__ . '/home-modules/hero.php',
