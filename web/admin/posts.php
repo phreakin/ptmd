@@ -14,6 +14,21 @@ require_once __DIR__ . '/../inc/social_services.php';
 
 $pdo = get_db();
 
+function safe_upload_rel_path(?string $path): string
+{
+    $clean = trim((string) $path);
+    if ($clean === '' || str_contains($clean, "\0")) {
+        return '';
+    }
+
+    $clean = ltrim($clean, '/');
+    if (str_contains($clean, '..')) {
+        return '';
+    }
+
+    return preg_match('/^[A-Za-z0-9_\-\/\.]+$/', $clean) ? $clean : '';
+}
+
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         redirect('/admin/posts.php', 'Invalid CSRF token.', 'danger');
@@ -209,7 +224,11 @@ if ($pdo && is_post()) {
 }
 
 $queue = $pdo ? $pdo->query(
-    'SELECT q.*, e.title AS episode_title, vc.label AS clip_label, vc.output_path AS clip_output_path, vc.source_path AS clip_source_path
+    'SELECT
+         q.id, q.episode_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
+         q.scheduled_for, q.status, q.external_post_id, q.last_error, q.created_at, q.updated_at,
+         e.title AS episode_title,
+         vc.label AS clip_label, vc.output_path AS clip_output_path, vc.source_path AS clip_source_path
      FROM social_post_queue q
      LEFT JOIN episodes e ON e.id = q.episode_id
      LEFT JOIN video_clips vc ON vc.id = q.clip_id
@@ -225,17 +244,14 @@ $prefMap   = [];
 foreach ($prefRows as $row) {
     $prefMap[$row['platform']] = $row;
 }
+$clipsById = [];
+foreach ($clips as $clip) {
+    $clipsById[(int) $clip['id']] = $clip;
+}
 
 $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
-$selectedClip = null;
-if ($selectedClipId > 0) {
-    foreach ($clips as $clip) {
-        if ((int) $clip['id'] === $selectedClipId) {
-            $selectedClip = $clip;
-            break;
-        }
-    }
-}
+$selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
+$selectedClipAsset = safe_upload_rel_path($selectedClip['output_path'] ?? $selectedClip['source_path'] ?? '');
 
 $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
@@ -372,7 +388,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                 <input
                     class="form-control"
                     name="asset_path"
-                    value="<?php ee($selectedClip['output_path'] ?? $selectedClip['source_path'] ?? ''); ?>"
+                    value="<?php ee($selectedClipAsset); ?>"
                     placeholder="clips/..., episodes/..., or /uploads/..."
                 >
             </div>
@@ -405,9 +421,10 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                             <td class="fw-500"><?php ee($item['platform']); ?></td>
                             <td class="ptmd-muted small">
                                 <?php if (!empty($item['clip_id'])): ?>
+                                    <?php $safeClipPath = safe_upload_rel_path($item['clip_output_path'] ?: $item['clip_source_path']); ?>
                                     <div class="fw-500"><?php ee($item['clip_label'] ?: ('Clip #' . $item['clip_id'])); ?></div>
-                                    <?php if (!empty($item['clip_output_path']) || !empty($item['clip_source_path'])): ?>
-                                        <a href="/uploads/<?php ee($item['clip_output_path'] ?: $item['clip_source_path']); ?>" target="_blank" rel="noopener" style="font-size:var(--text-xs)">
+                                    <?php if ($safeClipPath !== ''): ?>
+                                        <a href="/uploads/<?php ee($safeClipPath); ?>" target="_blank" rel="noopener" style="font-size:var(--text-xs)">
                                             Open video
                                         </a>
                                     <?php endif; ?>
