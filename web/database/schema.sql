@@ -259,10 +259,69 @@ CREATE TABLE IF NOT EXISTS video_clips (
     end_time        VARCHAR(20)   NULL,
     duration_sec    DECIMAL(8,2)  NULL,
     platform_target VARCHAR(80)   NULL,       -- youtube_shorts | tiktok | instagram_reels | etc.
-    status          ENUM('raw','processing','ready','queued','posted') NOT NULL DEFAULT 'raw',
+    status          ENUM('raw','processing','ready','complete','queued','posted') NOT NULL DEFAULT 'raw',
     created_at      DATETIME      NOT NULL,
     updated_at      DATETIME      NOT NULL,
     CONSTRAINT fk_vc_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Pipeline Jobs  (one per video entering the automated pipeline)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pipeline_jobs (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    source_clip_id      INT UNSIGNED  NULL,   -- FK to video_clips (the "complete" source)
+    branded_clip_id     INT UNSIGNED  NULL,   -- FK to video_clips (after brand overlay)
+    episode_id          INT UNSIGNED  NULL,
+    label               VARCHAR(255)  NOT NULL DEFAULT '',
+    brand_preset_json   JSON          NULL,   -- overlay_path, position, opacity, scale
+    platforms_json      JSON          NULL,   -- array of platform slugs
+    auto_queue          TINYINT(1)    NOT NULL DEFAULT 1,
+    schedule_offset_hrs SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    caption_template    TEXT          NULL,
+    current_stage       ENUM('pending','brand_imaging','clip_generation','queueing','done','failed') NOT NULL DEFAULT 'pending',
+    status              ENUM('pending','processing','completed','failed','canceled') NOT NULL DEFAULT 'pending',
+    error_message       TEXT          NULL,
+    created_by          INT UNSIGNED  NULL,
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    CONSTRAINT fk_pj_source  FOREIGN KEY (source_clip_id)  REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_pj_branded FOREIGN KEY (branded_clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_pj_episode FOREIGN KEY (episode_id)      REFERENCES episodes(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_pj_user    FOREIGN KEY (created_by)      REFERENCES users(id)       ON DELETE SET NULL,
+    INDEX idx_pj_status (status),
+    INDEX idx_pj_source (source_clip_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Pipeline Items  (one row per stage + platform within a job)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pipeline_items (
+    id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    pipeline_job_id INT UNSIGNED  NOT NULL,
+    stage           ENUM('brand_imaging','clip_generation','queueing') NOT NULL,
+    platform        VARCHAR(80)   NULL,       -- NULL for brand_imaging; platform slug otherwise
+    input_path      VARCHAR(255)  NULL,       -- relative to /uploads
+    output_path     VARCHAR(255)  NULL,       -- relative to /uploads
+    video_clip_id   INT UNSIGNED  NULL,       -- created video_clips row (if any)
+    queue_id        INT UNSIGNED  NULL,       -- created social_post_queue row (if any)
+    status          ENUM('pending','processing','done','failed','skipped') NOT NULL DEFAULT 'pending',
+    error_message   TEXT          NULL,
+    ffmpeg_command  TEXT          NULL,
+    created_at      DATETIME      NOT NULL,
+    updated_at      DATETIME      NOT NULL,
+    CONSTRAINT fk_pi_job   FOREIGN KEY (pipeline_job_id) REFERENCES pipeline_jobs(id)     ON DELETE CASCADE,
+    CONSTRAINT fk_pi_clip  FOREIGN KEY (video_clip_id)   REFERENCES video_clips(id)       ON DELETE SET NULL,
+    CONSTRAINT fk_pi_queue FOREIGN KEY (queue_id)        REFERENCES social_post_queue(id) ON DELETE SET NULL,
+    INDEX idx_pi_job_stage (pipeline_job_id, stage, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- Migrations  (run these ALTER statements on existing databases
+-- that were created before the pipeline feature was added)
+-- ============================================================
+-- ALTER TABLE video_clips
+--     MODIFY COLUMN status
+--     ENUM('raw','processing','ready','complete','queued','posted') NOT NULL DEFAULT 'raw';

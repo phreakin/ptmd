@@ -307,6 +307,15 @@ if ($rawClips):
                                     >
                                         <i class="fa-solid fa-calendar-plus"></i>
                                     </a>
+                                    <?php if (in_array($clip['status'], ['raw', 'ready'], true)): ?>
+                                        <a
+                                            href="/admin/pipeline.php?clip_id=<?php ee((string) $clip['id']); ?>"
+                                            class="btn btn-ptmd-ghost btn-sm ptmd-text-teal"
+                                            data-tippy-content="Send to Pipeline (brand imaging + platform clips + social queue)"
+                                        >
+                                            <i class="fa-solid fa-rocket"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

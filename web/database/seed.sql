@@ -34,7 +34,15 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('intro_asset_path',     '/assets/brand/intros/ptmd_intro.mp4',                    'string', 'Intro Asset Path',     'brand',    NOW()),
 ('default_overlay_path', '/assets/brand/overlays/ptmd_overlay_lower_third.png',   'string', 'Default Overlay',      'brand',    NOW()),
 ('ffmpeg_path',          'ffmpeg',                                                  'string', 'FFmpeg Binary',        'system',   NOW()),
-('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW())
+('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW()),
+('pipeline_brand_overlay',       '/assets/brand/overlays/ptmd_overlay_lower_third.png', 'string', 'Pipeline Default Brand Overlay Path', 'pipeline', NOW()),
+('pipeline_overlay_position',    'bottom-right',                                         'string', 'Pipeline Default Overlay Position',   'pipeline', NOW()),
+('pipeline_overlay_opacity',     '1.00',                                                 'string', 'Pipeline Default Overlay Opacity',    'pipeline', NOW()),
+('pipeline_overlay_scale',       '30',                                                   'string', 'Pipeline Default Overlay Scale (%)',  'pipeline', NOW()),
+('pipeline_default_platforms',   '["youtube_shorts","tiktok","instagram_reels","facebook_reels","x"]', 'json', 'Pipeline Default Platforms', 'pipeline', NOW()),
+('pipeline_schedule_offset_hrs', '24',                                                   'int',    'Pipeline Schedule Offset (hours)',    'pipeline', NOW()),
+('pipeline_auto_queue',          '1',                                                    'bool',   'Pipeline Auto-Queue Posts',           'pipeline', NOW()),
+('cron_token',                   '',                                                     'secret', 'Cron Security Token',                 'system',   NOW())
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW();
 
 -- Sample episodes

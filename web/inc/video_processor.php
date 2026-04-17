@@ -28,6 +28,89 @@ function ffprobe_bin(): string
 }
 
 // ---------------------------------------------------------------------------
+// Platform profiles — target resolution for each social platform
+// ---------------------------------------------------------------------------
+
+/**
+ * Return supported platform output profiles.
+ * width/height define the target resolution; aspect determines crop strategy.
+ */
+function get_platform_profiles(): array
+{
+    return [
+        'youtube'         => ['label' => 'YouTube (Full)',    'width' => 1920, 'height' => 1080],
+        'youtube_shorts'  => ['label' => 'YouTube Shorts',    'width' => 1080, 'height' => 1920],
+        'tiktok'          => ['label' => 'TikTok',            'width' => 1080, 'height' => 1920],
+        'instagram_reels' => ['label' => 'Instagram Reels',   'width' => 1080, 'height' => 1920],
+        'facebook_reels'  => ['label' => 'Facebook Reels',    'width' => 1080, 'height' => 1920],
+        'x'               => ['label' => 'X / Twitter',       'width' => 1280, 'height' =>  720],
+    ];
+}
+
+// ---------------------------------------------------------------------------
+// Generate a platform-optimized clip from a source video.
+//
+// For vertical platforms (9:16): center-crops a landscape source, then scales.
+// For horizontal platforms (16:9): scales + pads with black bars if needed.
+// Returns output path on success, null on failure.
+// ---------------------------------------------------------------------------
+
+function generate_platform_clip(
+    string $inputPath,
+    string $outputDir,
+    string $platform,
+    string $label = ''
+): ?string {
+    $profiles = get_platform_profiles();
+
+    if (!isset($profiles[$platform])) {
+        error_log('[PTMD VideoProcessor] Unknown platform profile: ' . $platform);
+        return null;
+    }
+
+    if (!is_file($inputPath)) {
+        return null;
+    }
+
+    if (!is_dir($outputDir)) {
+        mkdir($outputDir, 0755, true);
+    }
+
+    $w = $profiles[$platform]['width'];
+    $h = $profiles[$platform]['height'];
+
+    $suffix  = $label ? '_' . preg_replace('/[^a-z0-9]/i', '_', $label) : '';
+    $outFile = 'platform_' . $platform . '_' . time() . $suffix . '.mp4';
+    $outPath = rtrim($outputDir, '/') . '/' . $outFile;
+
+    // Build FFmpeg video filter based on target aspect ratio
+    if ($h > $w) {
+        // Vertical (9:16): center-crop the landscape input to 9:16, then scale
+        $vf = "crop=ih*{$w}/{$h}:ih:(iw-ih*{$w}/{$h})/2:0,scale={$w}:{$h}";
+    } else {
+        // Horizontal (16:9 or 1:1): scale to fit, pad remainder with black
+        $vf = "scale={$w}:{$h}:force_original_aspect_ratio=decrease,pad={$w}:{$h}:(ow-iw)/2:(oh-ih)/2:black";
+    }
+
+    $cmd = sprintf(
+        '%s -y -i %s -vf %s -c:v libx264 -crf 22 -preset fast -c:a aac -movflags +faststart %s 2>&1',
+        ffmpeg_bin(),
+        escapeshellarg($inputPath),
+        escapeshellarg($vf),
+        escapeshellarg($outPath)
+    );
+
+    exec($cmd, $output, $returnCode);
+
+    if ($returnCode !== 0) {
+        error_log('[PTMD VideoProcessor] platform clip failed for ' . $platform . ': ' . implode("\n", $output));
+        return null;
+    }
+
+    return $outPath;
+}
+
+// ---------------------------------------------------------------------------
 // Probe a video file for duration and basic metadata
 // Returns array or null on failure.
 // ---------------------------------------------------------------------------
