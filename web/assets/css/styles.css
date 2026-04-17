@@ -316,7 +316,7 @@
 
         & .nav-link {
             color: var(--ptmd-muted-strong);
-            font-size: var(--text-sm);
+            font-size: var(--text-xs);
             font-weight: 500;
             padding: 0.4rem 0.75rem;
             border-radius: var(--radius-md);
@@ -328,6 +328,20 @@
             }
 
             & i { opacity: 0.7; }
+        }
+
+        & .ptmd-nav-live {
+            color: #ff4d5a;
+            font-weight: 700;
+
+            &:hover {
+                color: #ff6b76;
+                background: rgba(193,18,31,0.18);
+            }
+
+            & i {
+                opacity: 1;
+            }
         }
 
         & .navbar-toggler {
@@ -574,6 +588,11 @@
         box-shadow: 0 0 6px rgba(193,18,31,0.8);
         animation: live-pulse 1.4s ease-in-out infinite;
         vertical-align: middle;
+    }
+
+    .ptmd-footer-live {
+        color: #ff4d5a !important;
+        font-weight: 700;
     }
 
     @keyframes live-pulse {
