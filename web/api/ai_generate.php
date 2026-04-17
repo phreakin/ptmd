@@ -338,7 +338,13 @@ switch ($feature) {
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body, keywords, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep = $pdo->prepare(
+                    'SELECT e.title, e.excerpt, e.body, e.video_url, e.duration, e.thumbnail_image,
+                     (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ", ")
+                      FROM episode_tag_map m INNER JOIN episode_tags t ON t.id = m.tag_id
+                      WHERE m.episode_id = e.id) AS keywords
+                     FROM episodes e WHERE e.id = :id LIMIT 1'
+                );
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
@@ -416,7 +422,13 @@ switch ($feature) {
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body, keywords, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep = $pdo->prepare(
+                    'SELECT e.title, e.excerpt, e.body, e.video_url, e.duration, e.thumbnail_image,
+                     (SELECT GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ", ")
+                      FROM episode_tag_map m INNER JOIN episode_tags t ON t.id = m.tag_id
+                      WHERE m.episode_id = e.id) AS keywords
+                     FROM episodes e WHERE e.id = :id LIMIT 1'
+                );
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
