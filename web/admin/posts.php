@@ -22,11 +22,21 @@ function safe_upload_rel_path(?string $path): string
     }
 
     $clean = ltrim($clean, '/');
-    if (str_contains($clean, '..')) {
+    if (str_contains($clean, '\\')) {
         return '';
     }
 
-    return preg_match('/^[A-Za-z0-9_\-\/\.]+$/', $clean) ? $clean : '';
+    $segments = explode('/', $clean);
+    foreach ($segments as $segment) {
+        if ($segment === '' || $segment === '.' || $segment === '..') {
+            return '';
+        }
+        if (!preg_match('/^[A-Za-z0-9_.-]+$/', $segment)) {
+            return '';
+        }
+    }
+
+    return implode('/', $segments);
 }
 
 if ($pdo && is_post()) {
@@ -478,7 +488,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
                                         <button class="btn btn-ptmd-ghost btn-sm" type="submit"
                                             style="color:var(--ptmd-warning)"
-                                            data-confirm="Remove this video from only this social platform?"
+                                            data-confirm="Mark this post as removed from this platform?"
                                             data-tippy-content="Remove from this site">
                                             <i class="fa-solid fa-link-slash"></i>
                                         </button>
