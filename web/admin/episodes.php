@@ -8,8 +8,8 @@ $activePage  = 'episodes';
 $pageHeading = 'Episodes';
 
 $pdo    = get_db();
-$action = $_GET['action'] ?? ($_GET['edit'] ? 'edit' : 'list');
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+$action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 
 if ($editId > 0 && !isset($_GET['action'])) {
     $action = 'edit';
@@ -41,10 +41,30 @@ if ($pdo && is_post()) {
     $body      = trim((string) ($_POST['body']      ?? ''));
     $videoUrl  = trim((string) ($_POST['video_url'] ?? ''));
     $duration  = trim((string) ($_POST['duration']  ?? ''));
+    $keywordsRaw = trim((string) ($_POST['keywords'] ?? ''));
     $status    = in_array($_POST['status'] ?? '', ['draft','published','archived']) ? $_POST['status'] : 'draft';
     $publishedAt = ($status === 'published')
         ? (trim((string) ($_POST['published_at'] ?? '')) ?: date('Y-m-d H:i:s'))
         : null;
+
+    $keywords = [];
+    if ($keywordsRaw !== '') {
+        $parts = preg_split('/[\r\n,]+/', $keywordsRaw) ?: [];
+        $seen = [];
+        foreach ($parts as $part) {
+            $keyword = trim($part);
+            if ($keyword === '') {
+                continue;
+            }
+            $keyword = mb_substr($keyword, 0, 120);
+            $key = mb_strtolower($keyword);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $keywords[] = $keyword;
+        }
+    }
 
     // Handle thumbnail upload
     $thumbPath = trim((string) ($_POST['thumbnail_image'] ?? ''));
@@ -84,7 +104,7 @@ if ($pdo && is_post()) {
             'thumb'=>$thumbPath, 'video_url'=>$videoUrl, 'vfp'=>$videoFilePath,
             'duration'=>$duration, 'status'=>$status, 'pub'=>$publishedAt, 'id'=>$id,
         ]);
-        redirect('/admin/episodes.php', 'Episode updated.', 'success');
+        $episodeId = $id;
     } else {
         $stmt = $pdo->prepare(
             'INSERT INTO episodes (title, slug, excerpt, body, thumbnail_image, video_url,
@@ -96,8 +116,47 @@ if ($pdo && is_post()) {
             'thumb'=>$thumbPath, 'video_url'=>$videoUrl, 'vfp'=>$videoFilePath,
             'duration'=>$duration, 'status'=>$status, 'pub'=>$publishedAt,
         ]);
-        redirect('/admin/episodes.php', 'Episode created.', 'success');
+        $episodeId = (int) $pdo->lastInsertId();
     }
+
+    if ($episodeId > 0) {
+        $pdo->prepare('DELETE FROM episode_tag_map WHERE episode_id = :episode_id')->execute([
+            'episode_id' => $episodeId,
+        ]);
+
+        foreach ($keywords as $keyword) {
+            $tagSlug = slugify($keyword);
+            if ($tagSlug === '') {
+                continue;
+            }
+
+            $pdo->prepare(
+                'INSERT INTO episode_tags (name, slug, created_at, updated_at)
+                 VALUES (:name, :slug, NOW(), NOW())
+                 ON DUPLICATE KEY UPDATE updated_at = NOW(), id = LAST_INSERT_ID(id)'
+            )->execute([
+                'name' => $keyword,
+                'slug' => $tagSlug,
+            ]);
+
+            $tagId = (int) $pdo->lastInsertId();
+            if ($tagId > 0) {
+                $pdo->prepare(
+                    'INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
+                     VALUES (:episode_id, :tag_id)'
+                )->execute([
+                    'episode_id' => $episodeId,
+                    'tag_id'     => $tagId,
+                ]);
+            }
+        }
+    }
+
+    if ($id > 0) {
+        redirect('/admin/episodes.php', 'Episode updated.', 'success');
+    }
+
+    redirect('/admin/episodes.php', 'Episode created.', 'success');
 }
 
 $pageSubheading = $action === 'edit' ? 'Edit Episode' : ($action === 'new' ? 'New Episode' : 'All Episodes');
@@ -112,10 +171,14 @@ include __DIR__ . '/_admin_head.php';
 
 // ── Fetch episode for edit ────────────────────────────────────────────────────
 $ep = null;
+$epKeywords = '';
 if ($editId > 0 && $pdo) {
     $stmt = $pdo->prepare('SELECT * FROM episodes WHERE id = :id');
     $stmt->execute(['id' => $editId]);
     $ep = $stmt->fetch();
+    if ($ep) {
+        $epKeywords = implode(', ', get_episode_tags((int) $ep['id']));
+    }
 }
 
 // ── List view ─────────────────────────────────────────────────────────────────
@@ -236,6 +299,13 @@ else:
                         <label class="form-label" for="ep_body">Body / Article Copy</label>
                         <textarea class="form-control" id="ep_body" name="body"
                             rows="12"><?php ee($ep['body'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="ep_keywords">Keywords</label>
+                        <input class="form-control" id="ep_keywords" name="keywords"
+                            value="<?php ee($epKeywords); ?>"
+                            placeholder="comma-separated keywords (e.g. politics, corruption, city hall)">
+                        <div class="form-text ptmd-muted">Use commas to separate keywords.</div>
                     </div>
                 </div>
 
