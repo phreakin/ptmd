@@ -16,6 +16,7 @@ $activePage = $activePage ?? '';
 
 $navItems = [
     ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
+    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-sliders',       'id' => 'site-editor'],
     ['href' => '/admin/episodes.php',        'label' => 'Episodes',        'icon' => 'fa-film',           'id' => 'episodes'],
     ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
     ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
@@ -132,7 +133,7 @@ $navItems = [
         <!-- Site & Content -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Content</div>
-            <?php foreach (array_slice($navItems, 0, 5) as $item): ?>
+            <?php foreach (array_slice($navItems, 0, 6) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -148,7 +149,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 5, 5) as $item): ?>
+            <?php foreach (array_slice($navItems, 6, 4) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
