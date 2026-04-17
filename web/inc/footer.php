@@ -44,7 +44,8 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 
             <!-- Social column -->
             <div class="col-6 col-lg-3">
-                <h6 class="ptmd-footer-heading"><i class="fa-solid fa-share-nodes me-1"></i>Follow Us</h6>
+                <h6 class="ptmd-footer-heading">
+                    <i class="fa-solid fa-share-nodes me-1"></i>Follow Us</h6>
                 <div class="d-flex flex-column gap-2 ptmd-footer-links">
                     <?php if (site_setting('social_youtube')): ?>
                         <a href="<?php ee(site_setting('social_youtube')); ?>" target="_blank" rel="noopener">
@@ -81,8 +82,8 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     Have a lead? A tip? A document that proves something?
                     We want to know.
                 </p>
-                <a href="/index.php?page=contact" class="btn btn-ptmd-secondary btn-sm">
-                    <i class="fa-solid fa-paper-plane me-1"></i>Submit a Tip
+                <a href="/index.php?page=contact" class="btn btn-ptmd-success btn-sm">
+                   Submit a Tip
                 </a>
             </div>
 

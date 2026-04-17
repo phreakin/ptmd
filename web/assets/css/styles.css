@@ -26,6 +26,7 @@
         --ptmd-yellow: #FFD60A;
         --ptmd-teal:   #2EC4B6;
         --ptmd-gold:   #BFA181;
+        --ptmd-cyan:   #17A2B8;
 
         --ptmd-purple: #6A0DAD;
         --ptmd-blue:   #2563EB;
@@ -135,6 +136,9 @@
         -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
     }
+
+    a { text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
     img, video { max-width: 100%; height: auto; display: block; }
 
