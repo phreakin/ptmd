@@ -7,7 +7,7 @@ INSERT INTO users (username, email, password_hash, role, created_at, updated_at)
 VALUES (
     'admin',
     'admin@papertrailmd.local',
-    '$2y$12$aFWY5J6qm0UWN6bXuGvJIOYAqPO6cjWIekYDkQoNHk4w3RnGHYkha',
+    '$2y$12$S8Y9BBdMNqNiGHN/r6Y8H.04icmFFUDqIZKYu.mEwIDoD7nAXHMU2',
     'admin',
     NOW(), NOW()
 ) ON DUPLICATE KEY UPDATE updated_at = NOW();
