@@ -12,7 +12,7 @@
 $pageTitle    = 'Overlay Tool | PTMD Admin';
 $activePage   = 'overlay-tool';
 $pageHeading  = 'Overlay Tool';
-$pageSubheading = 'Select an overlay, pick clips, then apply in batch. Preview updates live in the canvas.';
+$pageSubheading = 'Select an overlay, pick clips or images, then apply in batch. Preview updates live in the canvas.';
 $extraScripts = '<script src="/assets/js/overlay-tool.js"></script>';
 
 include __DIR__ . '/_admin_head.php';
@@ -66,6 +66,18 @@ if ($pdo) {
          LEFT JOIN episodes e ON e.id = vc.episode_id
          WHERE vc.status IN ("raw","ready")
          ORDER BY vc.created_at DESC LIMIT 50'
+    )->fetchAll();
+}
+
+// Also pull image assets from media library
+$dbImages = [];
+if ($pdo) {
+    $dbImages = $pdo->query(
+        'SELECT id, filename, file_path, category
+         FROM media_library
+         WHERE file_type LIKE "image/%"
+         ORDER BY created_at DESC
+         LIMIT 100'
     )->fetchAll();
 }
 
@@ -223,25 +235,25 @@ if ($pdo) {
         </div>
     </div>
 
-    <!-- Right: Clip browser -->
+    <!-- Right: Asset browser -->
     <div class="col-lg-4">
         <div class="ptmd-panel p-lg h-100 d-flex flex-column">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h6 mb-0">
-                    <i class="fa-solid fa-film me-2 ptmd-text-teal"></i>Clips
+                    <i class="fa-solid fa-photo-film me-2 ptmd-text-teal"></i>Assets
                 </h2>
                 <span id="selectedClipsCount" class="ptmd-muted" style="font-size:var(--text-xs)">
-                    No clips selected
+                    No assets selected
                 </span>
             </div>
             <p class="ptmd-muted small mb-3">
                 <kbd>Ctrl</kbd> + click for multi-select.
-                First selected clip previews on the canvas.
+                First selected asset previews on the canvas.
             </p>
 
-            <?php if (!$dbClips && !$localClips): ?>
+            <?php if (!$dbClips && !$localClips && !$dbImages): ?>
                 <div class="ptmd-muted small">
-                    No clips found. Upload clips via
+                    No clips or images found. Upload assets via
                     <a href="/admin/video-processor.php">Video Processor</a>
                     or the <a href="/admin/media.php">Media Library</a>.
                 </div>
@@ -252,6 +264,7 @@ if ($pdo) {
                     <div
                         class="clip-thumbnail-item"
                         data-clip-path="/uploads/<?php ee($clip['output_path'] ?? $clip['source_path']); ?>"
+                        data-asset-kind="clip"
                         data-clip-id="<?php ee((string) $clip['id']); ?>"
                         data-tippy-content="<?php ee($clip['label']); ?>"
                     >
@@ -270,6 +283,7 @@ if ($pdo) {
                     <div
                         class="clip-thumbnail-item"
                         data-clip-path="<?php ee($clip['path']); ?>"
+                        data-asset-kind="clip"
                         data-tippy-content="<?php ee($clip['label']); ?>"
                     >
                         <video
@@ -279,6 +293,24 @@ if ($pdo) {
                             style="pointer-events:none"
                         ></video>
                         <div class="clip-name"><?php ee($clip['label']); ?></div>
+                        <div class="clip-select-check"><i class="fa-solid fa-check" style="font-size:10px"></i></div>
+                    </div>
+                <?php endforeach; ?>
+
+                <?php foreach ($dbImages as $image): ?>
+                    <div
+                        class="clip-thumbnail-item"
+                        data-clip-path="/uploads/<?php ee($image['file_path']); ?>"
+                        data-asset-kind="image"
+                        data-tippy-content="<?php ee($image['filename']); ?>"
+                    >
+                        <img
+                            src="/uploads/<?php ee($image['file_path']); ?>"
+                            alt="<?php ee($image['filename']); ?>"
+                            loading="lazy"
+                            style="width:100%;height:100%;object-fit:cover;pointer-events:none"
+                        >
+                        <div class="clip-name"><?php ee($image['filename']); ?></div>
                         <div class="clip-select-check"><i class="fa-solid fa-check" style="font-size:10px"></i></div>
                     </div>
                 <?php endforeach; ?>
@@ -305,13 +337,21 @@ if ($pdo) {
                     placeholder="e.g. Episode 1 — Teaser Clips"
                 >
             </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button class="btn btn-ptmd-outline w-100" type="button" id="aiOverlaySuggestBtn">
+                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Suggest Placement
+                </button>
+            </div>
+            <div class="col-12">
+                <div id="aiSuggestionText" class="ptmd-muted small"></div>
+            </div>
         </div>
         <div class="d-flex gap-3 align-items-center flex-wrap">
             <button class="btn btn-ptmd-primary btn-lg" type="submit" id="submitBatchBtn">
-                <i class="fa-solid fa-layer-group me-2"></i>Apply Overlays to Selected Clips
+                <i class="fa-solid fa-layer-group me-2"></i>Apply Overlays to Selected Assets
             </button>
             <span class="ptmd-muted small">
-                Selected clips + overlay + settings above will be sent to FFmpeg for processing.
+                Selected assets + overlay + settings above will be processed in batch.
             </span>
         </div>
     </form>

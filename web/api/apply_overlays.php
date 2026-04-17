@@ -70,20 +70,25 @@ $position    = trim((string) ($_POST['position']     ?? 'bottom-right'));
 $opacity     = max(0.0, min(1.0, (float) ($_POST['opacity'] ?? 1.0)));
 $scale       = max(5, min(100, (int)   ($_POST['scale']   ?? 30)));
 $label       = trim((string) ($_POST['label']        ?? 'Untitled Batch'));
-$clipPaths   = $_POST['clip_paths'] ?? [];
+$assetPaths  = $_POST['asset_paths'] ?? ($_POST['clip_paths'] ?? []);
+
+$allowedPositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center', 'full'];
+if (!in_array($position, $allowedPositions, true)) {
+    $position = 'bottom-right';
+}
 
 if ($overlayPath === '') {
     echo json_encode(['ok' => false, 'error' => 'No overlay selected']);
     exit;
 }
 
-if (!is_array($clipPaths) || count($clipPaths) === 0) {
-    echo json_encode(['ok' => false, 'error' => 'No clips selected']);
+if (!is_array($assetPaths) || count($assetPaths) === 0) {
+    echo json_encode(['ok' => false, 'error' => 'No assets selected']);
     exit;
 }
 
-// Sanitize: only allow paths under /uploads/ or /assets/brand/overlays/
-$allowedPrefixes = ['/uploads/', '/assets/brand/'];
+// Sanitize overlay source
+$allowedOverlayPrefixes = ['/uploads/', '/assets/brand/'];
 
 function is_safe_path(string $path, array $prefixes): bool
 {
@@ -95,21 +100,21 @@ function is_safe_path(string $path, array $prefixes): bool
     return false;
 }
 
-if (!is_safe_path($overlayPath, $allowedPrefixes)) {
+if (!is_safe_path($overlayPath, $allowedOverlayPrefixes)) {
     echo json_encode(['ok' => false, 'error' => 'Invalid overlay path']);
     exit;
 }
 
-$safeClips = array_filter($clipPaths, fn($p) => is_safe_path(trim((string) $p), $allowedPrefixes));
-$safeClips = array_values($safeClips);
+$safeAssets = array_filter($assetPaths, fn($p) => is_safe_path(trim((string) $p), ['/uploads/']));
+$safeAssets = array_values($safeAssets);
 
-if (count($safeClips) === 0) {
-    echo json_encode(['ok' => false, 'error' => 'No valid clip paths provided']);
+if (count($safeAssets) === 0) {
+    echo json_encode(['ok' => false, 'error' => 'No valid asset paths provided']);
     exit;
 }
 
-// Limit to 20 clips per batch
-$safeClips = array_slice($safeClips, 0, 20);
+// Limit to 20 assets per batch
+$safeAssets = array_slice($safeAssets, 0, 20);
 
 // ── Create batch job row ──────────────────────────────────────────────────────
 $jobStmt = $pdo->prepare(
@@ -124,7 +129,7 @@ $jobStmt->execute([
     'position' => $position,
     'opacity'  => number_format($opacity, 2, '.', ''),
     'scale'    => $scale,
-    'total'    => count($safeClips),
+    'total'    => count($safeAssets),
     'user'     => (int) ($_SESSION['admin_user_id'] ?? 0),
 ]);
 
@@ -136,16 +141,16 @@ $itemStmt = $pdo->prepare(
      VALUES (:job_id, :source, "pending", NOW(), NOW())'
 );
 
-foreach ($safeClips as $clipPath) {
+foreach ($safeAssets as $assetPath) {
     // source_path is relative to /uploads — strip the /uploads/ prefix
-    $rel = ltrim(str_replace('/uploads/', '', trim((string) $clipPath)), '/');
+    $rel = ltrim(str_replace('/uploads/', '', trim((string) $assetPath)), '/');
     $itemStmt->execute(['job_id' => $jobId, 'source' => $rel]);
 }
 
 // ── Process synchronously if small batch ─────────────────────────────────────
 $SYNC_LIMIT = 5;
 
-if (count($safeClips) <= $SYNC_LIMIT) {
+if (count($safeAssets) <= $SYNC_LIMIT) {
     $pdo->prepare(
         'UPDATE overlay_batch_jobs SET status = "processing", updated_at = NOW() WHERE id = :id'
     )->execute(['id' => $jobId]);
@@ -164,13 +169,11 @@ if (count($safeClips) <= $SYNC_LIMIT) {
     }
 
     // Check final status
-    $failCount = (int) $pdo->prepare(
+    $failCountStmt = $pdo->prepare(
         'SELECT COUNT(*) FROM overlay_batch_items WHERE batch_job_id = :jid AND status = "failed"'
-    )->execute(['jid' => $jobId]);
-    // Simpler count
-    $failCount = (int) $pdo->query(
-        "SELECT COUNT(*) FROM overlay_batch_items WHERE batch_job_id = {$jobId} AND status = 'failed'"
-    )->fetchColumn();
+    );
+    $failCountStmt->execute(['jid' => $jobId]);
+    $failCount = (int) $failCountStmt->fetchColumn();
 
     $finalStatus = $failCount === 0 ? 'completed' : 'failed';
     $pdo->prepare(
@@ -196,6 +199,6 @@ if (count($safeClips) <= $SYNC_LIMIT) {
 echo json_encode([
     'ok'         => true,
     'job_id'     => $jobId,
-    'item_count' => count($safeClips),
+    'item_count' => count($safeAssets),
     'message'    => 'Batch job created and processing.',
 ]);

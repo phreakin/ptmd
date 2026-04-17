@@ -116,7 +116,93 @@ function extract_clip(
         return null;
     }
 
+    $watermarkPath = resolve_configured_watermark_path();
+    if ($watermarkPath && watermark_auto_apply_enabled()) {
+        $watermarkedPath = rtrim($outputDir, '/') . '/wm_' . basename($outFile);
+        $watermarkResult = apply_watermark_to_video($outPath, $watermarkPath, $watermarkedPath);
+
+        if (!$watermarkResult['ok']) {
+            error_log('[PTMD VideoProcessor] auto watermark failed: ' . ($watermarkResult['error'] ?? 'unknown error'));
+            @unlink($watermarkedPath);
+            @unlink($outPath);
+            return null;
+        }
+
+        @unlink($outPath);
+        rename($watermarkedPath, $outPath);
+    }
+
     return $outPath;
+}
+
+function watermark_auto_apply_enabled(): bool
+{
+    $value = strtolower(trim(site_setting('watermark_auto_apply', '1')));
+    return in_array($value, ['1', 'true', 'yes', 'on'], true);
+}
+
+function resolve_configured_watermark_path(): ?string
+{
+    $path = trim(site_setting('watermark_asset_path', ''));
+    if ($path === '') {
+        return null;
+    }
+
+    if (!str_starts_with($path, '/uploads/') && !str_starts_with($path, '/assets/')) {
+        return null;
+    }
+
+    $absolute = $_SERVER['DOCUMENT_ROOT'] . $path;
+    return is_file($absolute) ? $absolute : null;
+}
+
+function apply_watermark_to_video(
+    string $inputVideoPath,
+    string $watermarkImagePath,
+    string $outputPath,
+    float $opacity = 0.85,
+    int $scalePercent = 14
+): array {
+    if (!is_file($inputVideoPath)) {
+        return ['ok' => false, 'error' => 'Input video not found: ' . $inputVideoPath];
+    }
+    if (!is_file($watermarkImagePath)) {
+        return ['ok' => false, 'error' => 'Watermark image not found: ' . $watermarkImagePath];
+    }
+
+    $outDir = dirname($outputPath);
+    if (!is_dir($outDir)) {
+        mkdir($outDir, 0755, true);
+    }
+
+    $alpha = number_format(max(0.0, min(1.0, $opacity)), 2);
+    $wmScale = max(5, min(50, $scalePercent));
+    $filter = sprintf(
+        '[1:v]scale=iw*%d/100:-1,colorchannelmixer=aa=%s[wm];[0:v][wm]overlay=W-w-16:H-h-16',
+        $wmScale,
+        $alpha
+    );
+
+    $cmd = sprintf(
+        '%s -y -i %s -i %s -filter_complex %s -c:v libx264 -crf 20 -preset fast -c:a copy -movflags +faststart %s 2>&1',
+        ffmpeg_bin(),
+        escapeshellarg($inputVideoPath),
+        escapeshellarg($watermarkImagePath),
+        escapeshellarg($filter),
+        escapeshellarg($outputPath)
+    );
+
+    exec($cmd, $rawOutput, $returnCode);
+    if ($returnCode !== 0) {
+        return [
+            'ok' => false,
+            'error' => 'FFmpeg watermark pass failed (exit ' . $returnCode . ')',
+            'command' => $cmd,
+            'output' => implode("\n", $rawOutput),
+        ];
+    }
+
+    return ['ok' => true, 'output' => $outputPath, 'command' => $cmd];
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +219,8 @@ function apply_overlay_to_video(
     string $outputPath,
     string $position    = 'bottom-right',
     float  $opacity     = 1.0,
-    int    $scalePercent = 30
+    int    $scalePercent = 30,
+    bool   $includeWatermark = true
 ): array {
     if (!is_file($inputVideoPath)) {
         return ['ok' => false, 'error' => 'Input video not found: ' . $inputVideoPath];
@@ -175,19 +262,25 @@ function apply_overlay_to_video(
         $scaleFilter = 'scale=iw:ih';
     }
 
-    $filterComplex = sprintf(
-        '[1:v]%s%s[ovr];[0:v][ovr]overlay=%s',
-        $scaleFilter,
-        $opacityFilter,
-        $overlayExpr
-    );
+    $filterComplex = sprintf('[1:v]%s%s[ovr];[0:v][ovr]overlay=%s[tmp]', $scaleFilter, $opacityFilter, $overlayExpr);
+    $inputArgs = sprintf('-i %s -i %s', escapeshellarg($inputVideoPath), escapeshellarg($overlayImagePath));
+    $finalLabel = '[tmp]';
+
+    if ($includeWatermark && watermark_auto_apply_enabled()) {
+        $watermarkPath = resolve_configured_watermark_path();
+        if ($watermarkPath && realpath($watermarkPath) !== realpath($overlayImagePath)) {
+            $filterComplex .= ';[2:v]scale=iw*14/100:-1,colorchannelmixer=aa=0.85[wm];[tmp][wm]overlay=W-w-16:H-h-16[outv]';
+            $inputArgs .= ' -i ' . escapeshellarg($watermarkPath);
+            $finalLabel = '[outv]';
+        }
+    }
 
     $cmd = sprintf(
-        '%s -y -i %s -i %s -filter_complex %s -c:v libx264 -crf 20 -preset fast -c:a copy -movflags +faststart %s 2>&1',
+        '%s -y %s -filter_complex %s -map %s -map 0:a? -c:v libx264 -crf 20 -preset fast -c:a copy -movflags +faststart %s 2>&1',
         ffmpeg_bin(),
-        escapeshellarg($inputVideoPath),
-        escapeshellarg($overlayImagePath),
+        $inputArgs,
         escapeshellarg($filterComplex),
+        escapeshellarg($finalLabel),
         escapeshellarg($outputPath)
     );
 
@@ -209,6 +302,142 @@ function apply_overlay_to_video(
     ];
 }
 
+function gd_load_image(string $path): ?array
+{
+    $info = @getimagesize($path);
+    if (!$info) {
+        return null;
+    }
+
+    $mime = strtolower((string) ($info['mime'] ?? ''));
+    $img = match ($mime) {
+        'image/png'  => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : false,
+        'image/jpeg' => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($path) : false,
+        'image/gif'  => function_exists('imagecreatefromgif') ? @imagecreatefromgif($path) : false,
+        'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+        default      => false,
+    };
+
+    if (!$img) {
+        return null;
+    }
+
+    return ['img' => $img, 'mime' => $mime];
+}
+
+function gd_apply_global_opacity(GdImage $img, float $opacity): void
+{
+    $opacity = max(0.0, min(1.0, $opacity));
+    if ($opacity >= 0.999) {
+        return;
+    }
+
+    $w = imagesx($img);
+    $h = imagesy($img);
+    for ($x = 0; $x < $w; $x++) {
+        for ($y = 0; $y < $h; $y++) {
+            $rgba = imagecolorsforindex($img, imagecolorat($img, $x, $y));
+            $alpha0 = (int) ($rgba['alpha'] ?? 0);
+            $alpha1 = (int) round(127 - ((127 - $alpha0) * $opacity));
+            $alpha1 = max(0, min(127, $alpha1));
+            $color = imagecolorallocatealpha($img, $rgba['red'], $rgba['green'], $rgba['blue'], $alpha1);
+            imagesetpixel($img, $x, $y, $color);
+        }
+    }
+}
+
+function apply_overlay_to_image(
+    string $inputImagePath,
+    string $overlayImagePath,
+    string $outputPath,
+    string $position    = 'bottom-right',
+    float  $opacity     = 1.0,
+    int    $scalePercent = 30
+): array {
+    if (!is_file($inputImagePath)) {
+        return ['ok' => false, 'error' => 'Input image not found: ' . $inputImagePath];
+    }
+    if (!is_file($overlayImagePath)) {
+        return ['ok' => false, 'error' => 'Overlay image not found: ' . $overlayImagePath];
+    }
+    if (!function_exists('imagecreatetruecolor')) {
+        return ['ok' => false, 'error' => 'GD extension is not available'];
+    }
+
+    $baseData = gd_load_image($inputImagePath);
+    $ovrData  = gd_load_image($overlayImagePath);
+    if (!$baseData || !$ovrData) {
+        return ['ok' => false, 'error' => 'Unsupported image format'];
+    }
+
+    $base = $baseData['img'];
+    $ovr = $ovrData['img'];
+    imagealphablending($base, true);
+    imagesavealpha($base, true);
+    imagealphablending($ovr, true);
+    imagesavealpha($ovr, true);
+
+    $baseW = imagesx($base);
+    $baseH = imagesy($base);
+    $ovrW  = imagesx($ovr);
+    $ovrH  = imagesy($ovr);
+    if ($ovrW <= 0 || $ovrH <= 0) {
+        imagedestroy($base);
+        imagedestroy($ovr);
+        return ['ok' => false, 'error' => 'Overlay image dimensions are invalid'];
+    }
+
+    if ($position === 'full') {
+        $drawW = $baseW;
+        $drawH = $baseH;
+    } else {
+        $drawW = (int) max(1, round($baseW * max(5, min(100, $scalePercent)) / 100));
+        $drawH = (int) max(1, round($drawW * ($ovrH / $ovrW)));
+    }
+
+    $resized = imagecreatetruecolor($drawW, $drawH);
+    imagealphablending($resized, false);
+    imagesavealpha($resized, true);
+    $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+    imagefilledrectangle($resized, 0, 0, $drawW, $drawH, $transparent);
+    imagecopyresampled($resized, $ovr, 0, 0, 0, 0, $drawW, $drawH, $ovrW, $ovrH);
+    gd_apply_global_opacity($resized, $opacity);
+
+    $positions = [
+        'top-left'     => [10, 10],
+        'top-right'    => [$baseW - $drawW - 10, 10],
+        'bottom-left'  => [10, $baseH - $drawH - 10],
+        'bottom-right' => [$baseW - $drawW - 10, $baseH - $drawH - 10],
+        'center'       => [($baseW - $drawW) / 2, ($baseH - $drawH) / 2],
+        'full'         => [0, 0],
+    ];
+    [$x, $y] = $positions[$position] ?? $positions['bottom-right'];
+    imagecopy($base, $resized, (int) round($x), (int) round($y), 0, 0, $drawW, $drawH);
+
+    $outDir = dirname($outputPath);
+    if (!is_dir($outDir)) {
+        mkdir($outDir, 0755, true);
+    }
+
+    $ext = strtolower(pathinfo($outputPath, PATHINFO_EXTENSION));
+    $saved = match ($ext) {
+        'jpg', 'jpeg' => imagejpeg($base, $outputPath, 90),
+        'gif' => imagegif($base, $outputPath),
+        'webp' => function_exists('imagewebp') ? imagewebp($base, $outputPath, 90) : false,
+        default => imagepng($base, $outputPath),
+    };
+
+    imagedestroy($base);
+    imagedestroy($ovr);
+    imagedestroy($resized);
+
+    if (!$saved) {
+        return ['ok' => false, 'error' => 'Failed to write overlay image output'];
+    }
+
+    return ['ok' => true, 'output' => $outputPath, 'command' => 'gd:image-composite'];
+}
+
 // ---------------------------------------------------------------------------
 // Process a single overlay_batch_items row
 // Updates DB status during processing.
@@ -226,21 +455,39 @@ function process_batch_item(PDO $pdo, array $item, array $job): void
     $inputAbs   = $uploadBase . '/' . ltrim($item['source_path'], '/');
     $overlayAbs = $_SERVER['DOCUMENT_ROOT'] . $job['overlay_path'];   // absolute on disk
 
-    // Build output filename
-    $outSubdir  = 'clips/processed';
-    $outDir     = $uploadBase . '/' . $outSubdir;
-    $outFile    = 'ptmd_overlay_' . $item['id'] . '_' . time() . '.mp4';
-    $outAbs     = $outDir . '/' . $outFile;
-    $outRel     = $outSubdir . '/' . $outFile;
+    $ext = strtolower(pathinfo($inputAbs, PATHINFO_EXTENSION));
+    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true);
 
-    $result = apply_overlay_to_video(
-        $inputAbs,
-        $overlayAbs,
-        $outAbs,
-        $job['position'],
-        (float) $job['opacity'],
-        (int) $job['scale']
-    );
+    if ($isImage) {
+        $outSubdir  = 'images/processed';
+        $outDir     = $uploadBase . '/' . $outSubdir;
+        $safeExt    = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $ext : 'png';
+        $outFile    = 'ptmd_overlay_' . $item['id'] . '_' . time() . '.' . $safeExt;
+        $outAbs     = $outDir . '/' . $outFile;
+        $outRel     = $outSubdir . '/' . $outFile;
+        $result = apply_overlay_to_image(
+            $inputAbs,
+            $overlayAbs,
+            $outAbs,
+            $job['position'],
+            (float) $job['opacity'],
+            (int) $job['scale']
+        );
+    } else {
+        $outSubdir  = 'clips/processed';
+        $outDir     = $uploadBase . '/' . $outSubdir;
+        $outFile    = 'ptmd_overlay_' . $item['id'] . '_' . time() . '.mp4';
+        $outAbs     = $outDir . '/' . $outFile;
+        $outRel     = $outSubdir . '/' . $outFile;
+        $result = apply_overlay_to_video(
+            $inputAbs,
+            $overlayAbs,
+            $outAbs,
+            $job['position'],
+            (float) $job['opacity'],
+            (int) $job['scale']
+        );
+    }
 
     if ($result['ok']) {
         $pdo->prepare(
@@ -267,7 +514,7 @@ function process_batch_item(PDO $pdo, array $item, array $job): void
     // Update job counters
     $pdo->prepare(
         'UPDATE overlay_batch_jobs
-         SET done_items = (SELECT COUNT(*) FROM overlay_batch_items WHERE batch_job_id = :jid AND status = "done"),
+         SET done_items = (SELECT COUNT(*) FROM overlay_batch_items WHERE batch_job_id = :jid AND status IN ("done","failed")),
              updated_at = NOW()
          WHERE id = :jid'
     )->execute(['jid' => $job['id']]);

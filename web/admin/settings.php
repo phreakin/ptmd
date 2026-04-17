@@ -42,6 +42,13 @@ if ($pdo) {
     }
 }
 
+$watermarkAssets = [];
+if ($pdo) {
+    $watermarkAssets = $pdo->query(
+        'SELECT file_path, filename FROM media_library WHERE category = "watermark" ORDER BY created_at DESC'
+    )->fetchAll();
+}
+
 $groupLabels = [
     'general'  => ['label' => 'General',          'icon' => 'fa-globe'],
     'homepage' => ['label' => 'Homepage',          'icon' => 'fa-house'],
@@ -69,7 +76,41 @@ $groupLabels = [
                         <label class="form-label" for="s_<?php ee($setting['setting_key']); ?>">
                             <?php ee($setting['label'] ?? $setting['setting_key']); ?>
                         </label>
-                        <?php if ($setting['setting_type'] === 'secret'): ?>
+                        <?php if ($setting['setting_key'] === 'watermark_asset_path'): ?>
+                            <select
+                                class="form-select"
+                                id="s_<?php ee($setting['setting_key']); ?>"
+                                name="settings[<?php ee($setting['setting_key']); ?>]"
+                            >
+                                <option value="<?php ee($setting['setting_value'] ?? ''); ?>">
+                                    <?php ee(($setting['setting_value'] ?? '') !== '' ? 'Current: ' . $setting['setting_value'] : 'Select watermark'); ?>
+                                </option>
+                                <?php foreach ($watermarkAssets as $wm): ?>
+                                    <?php $value = '/uploads/' . ltrim((string) $wm['file_path'], '/'); ?>
+                                    <option value="<?php ee($value); ?>" <?php echo (($setting['setting_value'] ?? '') === $value) ? 'selected' : ''; ?>>
+                                        <?php ee($wm['filename']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text ptmd-muted" style="font-size:var(--text-xs)">
+                                Upload watermark files in <a href="/admin/media.php?category=watermark">Media Library → Watermark</a>.
+                            </div>
+                        <?php elseif ($setting['setting_key'] === 'watermark_auto_apply'): ?>
+                            <input type="hidden" name="settings[watermark_auto_apply]" value="0">
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    id="s_<?php ee($setting['setting_key']); ?>"
+                                    type="checkbox"
+                                    name="settings[<?php ee($setting['setting_key']); ?>]"
+                                    value="1"
+                                    <?php echo in_array(strtolower((string) ($setting['setting_value'] ?? '')), ['1', 'true', 'yes', 'on'], true) ? 'checked' : ''; ?>
+                                >
+                                <label class="form-check-label" for="s_<?php ee($setting['setting_key']); ?>">
+                                    Automatically apply watermark to generated clips/videos
+                                </label>
+                            </div>
+                        <?php elseif ($setting['setting_type'] === 'secret'): ?>
                             <!-- Secret fields: show placeholder, not value -->
                             <input
                                 class="form-control"
