@@ -1,0 +1,110 @@
+{
+  "youtube": {
+    "thumbnails": {
+      "standard": "1280x720",
+      "maxres": "1920x1080",
+      "medium": "640x480",
+      "small": "320x180"
+    },
+    "channel_art": {
+      "desktop": "2560x423",
+      "safe_area": "1546x423",
+      "tv": "2560x1440"
+    },
+    "shorts": {
+      "vertical_video": "1080x1920"
+    }
+  },
+
+  "tiktok": {
+    "videos": {
+      "vertical": "1080x1920",
+      "square": "1080x1080"
+    },
+    "profile": {
+      "avatar": "200x200"
+    }
+  },
+
+  "instagram": {
+    "posts": {
+      "square": "1080x1080",
+      "portrait": "1080x1350",
+      "landscape": "1080x608"
+    },
+    "stories": {
+      "story": "1080x1920",
+      "reel": "1080x1920"
+    },
+    "profile": {
+      "avatar": "320x320"
+    }
+  },
+
+  "facebook": {
+    "posts": {
+      "shared_image": "1200x630",
+      "shared_link": "1200x628"
+    },
+    "reels": {
+      "vertical_video": "1080x1920"
+    },
+    "covers": {
+      "page_cover": "820x312",
+      "group_cover": "1640x856"
+    },
+    "profile": {
+      "avatar": "170x170"
+    }
+  },
+
+  "twitter_x": {
+    "posts": {
+      "single_image": "1200x675",
+      "multi_image": "1200x675"
+    },
+    "profile": {
+      "avatar": "400x400",
+      "header": "1500x500"
+    }
+  },
+
+  "linkedin": {
+    "posts": {
+      "image": "1200x627",
+      "video": "1080x1920"
+    },
+    "profile": {
+      "avatar": "400x400",
+      "background": "1584x396"
+    },
+    "company": {
+      "logo": "300x300",
+      "cover": "1128x191"
+    }
+  },
+
+  "pinterest": {
+    "pins": {
+      "standard": "1000x1500",
+      "square": "1000x1000",
+      "long": "1000x2100"
+    },
+    "profile": {
+      "avatar": "165x165"
+    }
+  },
+
+  "snapchat": {
+    "spotlight": {
+      "vertical_video": "1080x1920"
+    },
+    "ads": {
+      "single_image": "1080x1920",
+      "video": "1080x1920"
+    }
+  },
+
+  "twitch": {
+    "thumbnails": {
+      "video_thumbnail": "128,

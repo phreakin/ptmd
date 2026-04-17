@@ -1,0 +1,113 @@
+{
+  "social_video_upload_config": {
+    "youtube_shorts": {
+      "upload_page": "https://www.youtube.com/upload",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 60,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Vertical only; auto-detected as Shorts"
+    },
+
+    "tiktok": {
+      "upload_page": "https://www.tiktok.com/upload",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 600,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Supports 15s, 60s, 3m, 10m"
+    },
+
+    "instagram_reels": {
+      "upload_page": "https://www.instagram.com/create/reel/",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 90,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Vertical only"
+    },
+
+    "facebook_reels": {
+      "upload_page": "https://www.facebook.com/reels/create",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 90,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Vertical recommended"
+    },
+
+    "twitter_x": {
+      "upload_page": "https://x.com/compose/tweet",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 140,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Verified accounts can upload longer"
+    },
+
+    "linkedin": {
+      "upload_page": "https://www.linkedin.com/feed/",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 180,
+      "min_length_seconds": 3,
+      "file_types": ["mp4"],
+      "notes": "Max 3 minutes"
+    },
+
+    "pinterest": {
+      "upload_page": "https://www.pinterest.com/pin-builder/",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 60,
+      "min_length_seconds": 4,
+      "file_types": ["mp4"],
+      "notes": "Idea Pin videos"
+    },
+
+    "snapchat_spotlight": {
+      "upload_page": "https://web.snapchat.com/spotlight/submit",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 60,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Vertical only"
+    },
+
+    "twitch_clips": {
+      "upload_page": "https://dashboard.twitch.tv/u/me/content/clips",
+      "video_format": "1280x720",
+      "aspect_ratio": "16:9",
+      "max_length_seconds": 60,
+      "min_length_seconds": 5,
+      "file_types": ["mp4"],
+      "notes": "Clips auto-generated from streams"
+    },
+
+    "reddit": {
+      "upload_page": "https://www.reddit.com/submit",
+      "video_format": "1200x675",
+      "aspect_ratio": "16:9",
+      "max_length_seconds": 180,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "Subreddit rules may vary"
+    },
+
+    "discord": {
+      "upload_page": "https://discord.com/channels/@me",
+      "video_format": "1080x1920",
+      "aspect_ratio": "9:16",
+      "max_length_seconds": 600,
+      "min_length_seconds": 1,
+      "file_types": ["mp4", "mov"],
+      "notes": "File size limits apply"
+    }
+  }
+}

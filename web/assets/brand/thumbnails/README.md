@@ -7,4 +7,4 @@ Use these template directions:
 - red/yellow accents
 - high contrast text
 
-Exports folder contains episode-specific thumbnail outputs.
+Exports folder contains case-specific thumbnail outputs.

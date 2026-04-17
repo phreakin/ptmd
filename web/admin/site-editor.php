@@ -15,8 +15,8 @@ $pdo = get_db();
 
 $moduleCatalog = [
     'hero'     => ['label' => 'Hero',             'icon' => 'fa-star',        'description' => 'Top section with headline and CTA'],
-    'featured' => ['label' => 'Featured Episode', 'icon' => 'fa-film',        'description' => 'Highlighted latest episode'],
-    'latest'   => ['label' => 'Latest Episodes',  'icon' => 'fa-table-cells', 'description' => 'Episode cards grid'],
+    'featured' => ['label' => 'Featured case', 'icon' => 'fa-film',        'description' => 'Highlighted latest case'],
+    'latest'   => ['label' => 'Latest cases',  'icon' => 'fa-table-cells', 'description' => 'case cards grid'],
     'social'   => ['label' => 'Social CTA',       'icon' => 'fa-share-nodes', 'description' => 'Follow links and call-to-action'],
 ];
 
@@ -172,102 +172,7 @@ $enabledMap = array_fill_keys($currentOrder, true);
 </form>
 
 <?php
-$extraScripts = <<<HTML
-<style>
-    .ptmd-module-item {
-        background: var(--ptmd-surface-2);
-        border: 1px solid var(--ptmd-border);
-        border-radius: var(--radius-lg);
-        padding: .9rem 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        cursor: move;
-    }
-    .ptmd-module-item.dragging { opacity: .55; border-color: var(--ptmd-teal); }
-    .ptmd-module-item.is-disabled { opacity: .55; }
-    .module-drag-handle { cursor: grab; }
-</style>
-<script>
-(() => {
-    const list = document.getElementById('siteModuleList');
-    const orderInput = document.getElementById('moduleOrderInput');
-    if (!list || !orderInput) return;
-
-    function updateOrderInput() {
-        const order = [...list.querySelectorAll('[data-module-id]')]
-            .map(el => el.dataset.moduleId)
-            .filter(Boolean);
-        orderInput.value = order.join(',');
-    }
-
-    function syncDisabledState() {
-        list.querySelectorAll('.ptmd-module-item').forEach((item) => {
-            const checked = item.querySelector('.module-toggle')?.checked;
-            item.classList.toggle('is-disabled', !checked);
-        });
-    }
-
-    let draggingItem = null;
-
-    list.addEventListener('dragstart', (e) => {
-        const item = e.target.closest('.ptmd-module-item');
-        if (!item) return;
-        draggingItem = item;
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    });
-
-    list.addEventListener('dragend', () => {
-        if (draggingItem) draggingItem.classList.remove('dragging');
-        draggingItem = null;
-        updateOrderInput();
-    });
-
-    list.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const overItem = e.target.closest('.ptmd-module-item');
-        if (!draggingItem || !overItem || overItem === draggingItem) return;
-
-        const rect = overItem.getBoundingClientRect();
-        const after = e.clientY > rect.top + (rect.height / 2);
-        if (after) {
-            overItem.after(draggingItem);
-        } else {
-            overItem.before(draggingItem);
-        }
-    });
-
-    list.addEventListener('click', (e) => {
-        const upBtn = e.target.closest('.module-up');
-        const downBtn = e.target.closest('.module-down');
-        if (!upBtn && !downBtn) return;
-
-        const item = e.target.closest('.ptmd-module-item');
-        if (!item) return;
-
-        if (upBtn && item.previousElementSibling) {
-            item.previousElementSibling.before(item);
-            updateOrderInput();
-        }
-
-        if (downBtn && item.nextElementSibling) {
-            item.nextElementSibling.after(item);
-            updateOrderInput();
-        }
-    });
-
-    list.addEventListener('change', (e) => {
-        if (!e.target.closest('.module-toggle')) return;
-        syncDisabledState();
-    });
-
-    updateOrderInput();
-    syncDisabledState();
-})();
-</script>
-HTML;
+$extraScripts = '<script src="/assets/js/admin/site-editor.js"></script>';
 
 include __DIR__ . '/_admin_footer.php';
 ?>

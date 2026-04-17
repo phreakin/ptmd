@@ -21,7 +21,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     >
                 </div>
                 <p class="ptmd-muted small">
-                    <?php ee(site_setting('site_tagline', 'Investigative. Sharp. Cinematic.')); ?>
+                    <?php ee(site_setting('site_tagline', 'Follow the trail. Receipts matter.')); ?>
                 </p>
                 <p class="ptmd-muted small mb-0">
                     <a href="mailto:<?php ee(site_setting('site_email', 'papertrailmd@gmail.com')); ?>">
@@ -35,16 +35,22 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 <h6 class="ptmd-footer-heading">Site</h6>
                 <ul class="list-unstyled ptmd-footer-links">
                     <li><a href="/index.php">Home</a></li>
-                    <li><a href="/index.php?page=episodes">Episodes</a></li>
-                    <li><a href="/index.php?page=case-chat">Case Chat</a></li>
+                    <li><a href="/index.php?page=cases">Open Cases</a></li>
                     <li><a href="/index.php?page=about">About</a></li>
-                    <li><a href="/index.php?page=contact">Contact</a></li>
+                    <li><a href="/index.php?page=series">Series</a></li>
+                    <li><a href="/index.php?page=cases">Closed Cases</a></li>
+                    <li><a href="/index.php?page=cases">Cold Cases</a></li>
+                    <li><a href="/index.php?page=cases">Most Wanted</a></li>
+                    <li><a href="/index.php?page=case-chat">Case Chat</a></li>
+                    <li><a href="/index.php?page=cases">Schedule</a></li>
+                    <li><a href="/index.php?page=case-chat">Live</a></li>
                 </ul>
             </div>
 
             <!-- Social column -->
             <div class="col-6 col-lg-3">
-                <h6 class="ptmd-footer-heading">Follow</h6>
+                <h6 class="ptmd-footer-heading">
+                    <i class="fa-solid fa-share-nodes me-1"></i>Follow Us</h6>
                 <div class="d-flex flex-column gap-2 ptmd-footer-links">
                     <?php if (site_setting('social_youtube')): ?>
                         <a href="<?php ee(site_setting('social_youtube')); ?>" target="_blank" rel="noopener">
@@ -53,7 +59,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     <?php endif; ?>
                     <?php if (site_setting('social_x')): ?>
                         <a href="<?php ee(site_setting('social_x')); ?>" target="_blank" rel="noopener">
-                            <i class="fa-brands fa-x-twitter me-2"></i>X / Twitter
+                            <i class="fa-brands fa-x-twitter me-2" style="color:var(--ptmd-x-blue)"></i>X (Twitter)
                         </a>
                     <?php endif; ?>
                     <?php if (site_setting('social_instagram')): ?>
@@ -76,13 +82,13 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 
             <!-- CTA column -->
             <div class="col-lg-3">
-                <h6 class="ptmd-footer-heading">Pitch a Story</h6>
+                <h6 class="ptmd-footer-heading">Drop a Tip</h6>
                 <p class="ptmd-muted small">
-                    Have a lead? A tip? A document that proves something?
-                    We want to know.
+                    Have a lead? A receipt? A document that proves something?
+                    The timeline never lies — show us yours.
                 </p>
                 <a href="/index.php?page=contact" class="btn btn-ptmd-secondary btn-sm">
-                    <i class="fa-solid fa-paper-plane me-1"></i>Submit a Tip
+                    <i class="fa-solid fa-paper-plane me-1"></i>Drop a Tip
                 </a>
             </div>
 
@@ -94,7 +100,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 &copy; <?php echo date('Y'); ?> <?php ee($siteName); ?>. All rights reserved.
             </p>
             <p class="ptmd-muted small mb-0">
-                Built with intent.
+                🧾 Receipts matter.
             </p>
         </div>
     </div>

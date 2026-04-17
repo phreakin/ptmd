@@ -121,11 +121,14 @@ function run_ptmd_e2e_tests(): array
     $public = [];
     $publicRoutes = [
         '/index.php' => 200,
-        '/index.php?page=episodes' => 200,
-        '/index.php?page=about' => 200,
-        '/index.php?page=contact' => 200,
+        '/index.php?page=home' => 200,
+        '/index.php?page=cases' => 200,
+        '/index.php?page=cold-cases' => 200,
+        '/index.php?page=closed-cases' => 200,
         '/index.php?page=case-chat' => 200,
-        '/index.php?page=missing-page' => 404,
+        '/index.php?page=open-cases' => 200,
+        '/index.php?page=case-detail' => 200,
+        '/index.php?page=case-detail&slug=test-case' => 200,
     ];
 
     foreach ($publicRoutes as $route => $expectedStatus) {
@@ -140,20 +143,20 @@ function run_ptmd_e2e_tests(): array
         );
     }
 
-    $episodeSlug = '';
+    $caseslug = '';
     $pdo = get_db();
     if ($pdo) {
-        $slugStmt = $pdo->prepare('SELECT slug FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1');
+        $slugStmt = $pdo->prepare('SELECT slug FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT 1');
         $slugStmt->execute(['status' => 'published']);
-        $episodeSlug = (string) $slugStmt->fetchColumn();
+        $caseslug = (string) $slugStmt->fetchColumn();
     }
-    if ($episodeSlug !== '') {
-        $epPath = '/index.php?page=episode&slug=' . rawurlencode($episodeSlug);
+    if ($caseslug !== '') {
+        $epPath = '/index.php?page=case&slug=' . rawurlencode($caseslug);
         $res = ptmd_e2e_request($baseUrl, $epPath);
         $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
-        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'Episode page loaded' : 'Episode page failed', ['actual_status' => $res['status'] ?? null]);
+        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'case page loaded' : 'case page failed', ['actual_status' => $res['status'] ?? null]);
     } else {
-        ptmd_e2e_record($public, 'Episode detail route', true, 'Skipped: no published episode found');
+        ptmd_e2e_record($public, 'case detail route', true, 'Skipped: no published case found');
     }
     $groups[] = ['name' => 'Public Site', 'tests' => $public];
 

@@ -1,0 +1,133 @@
+{
+  "brand": {
+    "name": "Paper Trails MD",
+    "style": "cinematic-collage",
+    "description": "Gritty, documentary, stamped-file aesthetic with harsh contrast, raw tone, and distressed visual language."
+  },
+
+  "colors": {
+    "primary": {
+      "case_file_yellow": "#FFD400",
+      "hazard_yellow": "#FFEA00",
+      "blood_red": "#C1121F",
+      "siren_red": "#FF3B30",
+      "charcoal_black": "#0A0A0A",
+      "deep_void_black": "#111111",
+      "rust_orange": "#F97316",
+      "burnt_orange": "#D35400"
+    },
+    "secondary": {
+      "ash_gray": "#2A2A2A",
+      "gunmetal": "#1F1F1F",
+      "muted_steel": "#3C3C3C",
+      "dust_white": "#F2F2F2",
+      "faded_paper": "#E8E3D9",
+      "file_folder_tan": "#C2A878",
+      "warning_amber": "#FFB300",
+      "emergency_orange": "#FF6A00"
+    },
+    "accent": {
+      "confidential_red": "#D7263D",
+      "caution_tape_yellow": "#F9E400",
+      "evidence_blue": "#1E3A8A",
+      "toxic_green": "#00FF66",
+      "glitch_purple": "#6A0DAD"
+    },
+    "overlays": {
+      "smoke": "rgba(0,0,0,0.35)",
+      "heavy_grain": "rgba(0,0,0,0.55)",
+      "yellow_glow": "rgba(255,212,0,0.25)",
+      "red_glow": "rgba(193,18,31,0.25)",
+      "rust_glow": "rgba(249,115,22,0.25)"
+    }
+  },
+
+  "fonts": {
+    "headers": [
+      "Anton",
+      "Impact",
+      "Bebas Neue",
+      "Oswald",
+      "League Gothic",
+      "Archivo Black"
+    ],
+    "body": [
+      "Inter",
+      "Roboto Condensed",
+      "Source Sans Pro",
+      "IBM Plex Sans",
+      "PT Sans"
+    ],
+    "special": [
+      "Special Elite",
+      "Courier Prime",
+      "Redaction",
+      "VT323"
+    ]
+  },
+
+  "typography": {
+    "header_transform": "uppercase",
+    "header_weight": "800",
+    "body_weight": "400",
+    "line_height": {
+      "tight": 1.1,
+      "normal": 1.4,
+      "loose": 1.7
+    }
+  },
+
+  "spacing": {
+    "scale": {
+      "xs": "4px",
+      "sm": "8px",
+      "md": "16px",
+      "lg": "24px",
+      "xl": "32px",
+      "xxl": "48px"
+    }
+  },
+
+  "borders": {
+    "radius": {
+      "none": "0px",
+      "sm": "2px",
+      "md": "4px",
+      "lg": "8px"
+    },
+    "width": {
+      "thin": "1px",
+      "thick": "3px"
+    }
+  },
+
+  "shadows": {
+    "soft": "0px 2px 4px rgba(0,0,0,0.25)",
+    "hard": "0px 0px 0px 2px rgba(0,0,0,1)"
+  },
+
+  "components": {
+    "header": {
+      "background": "charcoal_black",
+      "text_color": "case_file_yellow",
+      "font_family": "Anton"
+    },
+    "stamp": {
+      "font_family": "Special Elite",
+      "text_transform": "uppercase",
+      "color": "confidential_red",
+      "background": "none",
+      "border": "3px solid #D7263D"
+    },
+    "callout": {
+      "background": "file_folder_tan",
+      "text_color": "charcoal_black",
+      "border_left": "4px solid #FFD400"
+    },
+    "warning": {
+      "background": "warning_amber",
+      "text_color": "charcoal_black",
+      "border": "3px solid #FF3B30"
+    }
+  }
+}
