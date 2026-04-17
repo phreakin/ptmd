@@ -87,7 +87,7 @@ if (is_post()) {
     }
 
     $json = json_encode($finalOrder, JSON_UNESCAPED_SLASHES);
-    if (!is_string($json)) {
+    if ($json === false) {
         redirect('/admin/site-editor.php', 'Could not encode layout.', 'danger');
     }
 
