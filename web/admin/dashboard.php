@@ -22,7 +22,7 @@ if ($pdo) {
     $stats['ai']       = (int) $pdo->query('SELECT COUNT(*) FROM ai_generations')->fetchColumn();
 }
 
-// Recent cases
+// Recent Cases
 $recentEps = [];
 if ($pdo) {
     $recentEps = $pdo->query('SELECT id, title, slug, status, published_at FROM cases ORDER BY updated_at DESC LIMIT 6')->fetchAll();
@@ -117,7 +117,7 @@ if ($pdo) {
     <div class="col-lg-7">
         <div class="ptmd-panel p-lg">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="h6 mb-0">Recent cases</h2>
+                <h2 class="h6 mb-0">Recent Cases</h2>
                 <a href="/admin/cases.php" class="btn btn-ptmd-ghost btn-sm">
                     View All <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
