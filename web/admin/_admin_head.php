@@ -7,7 +7,7 @@
  */
 
 require_once __DIR__ . '/../inc/bootstrap.php';
-require_login();
+/* require_login(); */
 
 $adminUser  = current_admin();
 $flash      = pull_flash();
