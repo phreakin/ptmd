@@ -9,7 +9,7 @@
 require_once __DIR__ . '/inc/bootstrap.php';
 
 // ── Allowed public pages ──────────────────────────────────────────────────────
-$allowedPages = ['home', 'episodes', 'episode', 'about', 'contact', 'case-chat'];
+$allowedPages = ['home', 'episodes', 'episode', 'about', 'contact', 'case-chat', 'register', 'chat-login'];
 
 // ── Resolve page ──────────────────────────────────────────────────────────────
 $page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
