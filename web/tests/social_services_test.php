@@ -51,7 +51,8 @@ foreach ($dispatchCases as $case) {
     $item['platform'] = $case['platform'];
     $result = dispatch_social_post($item);
     ptmd_assert_same($result['ok'] ?? null, false, "dispatch_social_post returns failure for {$case['platform']}");
-    ptmd_assert_same($result['external_post_id'] ?? 'missing', null, "dispatch_social_post keeps external_post_id null for {$case['platform']}");
+    ptmd_assert_true(array_key_exists('external_post_id', $result), "dispatch_social_post includes external_post_id for {$case['platform']}");
+    ptmd_assert_same($result['external_post_id'], null, "dispatch_social_post keeps external_post_id null for {$case['platform']}");
     ptmd_assert_same($result['error'] ?? null, $case['expected_error'], "dispatch_social_post returns expected error for {$case['platform']}");
 }
 
@@ -70,6 +71,7 @@ $stubCalls = [
 
 foreach ($stubCalls as $stub) {
     ptmd_assert_same($stub['result']['ok'] ?? null, false, "{$stub['name']} returns failure");
-    ptmd_assert_same($stub['result']['external_post_id'] ?? 'missing', null, "{$stub['name']} keeps external_post_id null");
+    ptmd_assert_true(array_key_exists('external_post_id', $stub['result']), "{$stub['name']} includes external_post_id");
+    ptmd_assert_same($stub['result']['external_post_id'], null, "{$stub['name']} keeps external_post_id null");
     ptmd_assert_same($stub['result']['error'] ?? null, $stub['expected'], "{$stub['name']} returns expected TODO error");
 }
