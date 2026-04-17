@@ -43,14 +43,9 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=episodes">
-                            <i class="fa-solid fa-film fa-sm me-1"></i>Episodes
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-folder-open fa-sm me-1"></i>Open Cases
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=case-chat">
-                            <i class="fa-solid fa-comments fa-sm me-1"></i>Case Chat
-                            <span class="ptmd-live-dot ms-1" title="Live"></span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -59,8 +54,40 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=contact">
-                            <i class="fa-solid fa-envelope fa-sm me-1"></i>Contact
+                        <a class="nav-link" href="/index.php?page=series">
+                            <i class="fa-solid fa-layer-group fa-sm me-1"></i>Series
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-folder fa-sm me-1"></i>Closed Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-snowflake fa-sm me-1"></i>Cold Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-bullseye fa-sm me-1"></i>Most Wanted
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2" href="/index.php?page=case-chat">
+                            <i class="fa-solid fa-comments fa-sm"></i>Case Chat
+                            <span class="ptmd-live-dot ms-1" aria-hidden="true"></span>
+                            <span class="visually-hidden">Live</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-calendar-days fa-sm me-1"></i>Schedule
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=case-chat">
+                            <i class="fa-solid fa-tower-broadcast fa-sm me-1"></i>Live
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">

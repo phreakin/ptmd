@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episodes
+-- cases
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episodes (
+CREATE TABLE IF NOT EXISTS cases (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     title           VARCHAR(255)  NOT NULL,
     slug            VARCHAR(255)  NOT NULL UNIQUE,
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS episodes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episode Categories
+-- case Categories
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episode_categories (
+CREATE TABLE IF NOT EXISTS case_categories (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(120) NOT NULL UNIQUE,
     slug       VARCHAR(140) NOT NULL UNIQUE,
@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS episode_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episode Tags
+-- case Tags
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episode_tags (
+CREATE TABLE IF NOT EXISTS case_tags (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(120) NOT NULL UNIQUE,
     slug       VARCHAR(140) NOT NULL UNIQUE,
@@ -62,12 +62,12 @@ CREATE TABLE IF NOT EXISTS episode_tags (
     updated_at DATETIME     NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS episode_tag_map (
-    episode_id INT UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS case_tag_map (
+    case_id INT UNSIGNED NOT NULL,
     tag_id     INT UNSIGNED NOT NULL,
-    PRIMARY KEY (episode_id, tag_id),
-    CONSTRAINT fk_etm_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE,
-    CONSTRAINT fk_etm_tag     FOREIGN KEY (tag_id)     REFERENCES episode_tags(id) ON DELETE CASCADE
+    PRIMARY KEY (case_id, tag_id),
+    CONSTRAINT fk_etm_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+    CONSTRAINT fk_etm_tag     FOREIGN KEY (tag_id)     REFERENCES case_tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS social_platform_preferences (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_post_queue (
     id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
-    episode_id       INT UNSIGNED   NULL,
+    case_id       INT UNSIGNED   NULL,
     clip_id          INT UNSIGNED   NULL,
     platform         VARCHAR(80)    NOT NULL,
     content_type     VARCHAR(80)    NOT NULL,
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     last_error       TEXT           NULL,
     created_at       DATETIME       NOT NULL,
     updated_at       DATETIME       NOT NULL,
-    CONSTRAINT fk_spq_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_spq_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
     INDEX idx_clip_platform (clip_id, platform),
     INDEX idx_status_scheduled (status, scheduled_for)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -178,19 +178,73 @@ CREATE TABLE IF NOT EXISTS social_post_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Chat Users  (public-facing accounts, separate from admin users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_users (
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username         VARCHAR(50)   NOT NULL UNIQUE,
+    email            VARCHAR(150)  NULL UNIQUE,
+    password_hash    VARCHAR(255)  NULL,
+    display_name     VARCHAR(80)   NOT NULL,
+    avatar_color     VARCHAR(7)    NOT NULL DEFAULT '#2EC4B6',
+    role             ENUM('guest','registered','moderator','admin','super_admin') NOT NULL DEFAULT 'registered',
+    status           ENUM('active','muted','banned') NOT NULL DEFAULT 'active',
+    muted_until      DATETIME      NULL,
+    badge_label      VARCHAR(50)   NULL,
+    remember_token   VARCHAR(64)   NULL,
+    last_message_at  DATETIME      NULL,
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    INDEX idx_cu_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat Rooms
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_rooms (
+    id                  INT UNSIGNED       AUTO_INCREMENT PRIMARY KEY,
+    slug                VARCHAR(120)       NOT NULL UNIQUE,
+    name                VARCHAR(255)       NOT NULL,
+    description         TEXT               NULL,
+    episode_id          INT UNSIGNED       NULL,
+    is_live             TINYINT(1)         NOT NULL DEFAULT 0,
+    slow_mode_seconds   SMALLINT UNSIGNED  NOT NULL DEFAULT 0,
+    members_only        TINYINT(1)         NOT NULL DEFAULT 0,
+    is_archived         TINYINT(1)         NOT NULL DEFAULT 0,
+    created_at          DATETIME           NOT NULL,
+    updated_at          DATETIME           NOT NULL,
+    CONSTRAINT fk_cr_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Chat Messages
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS chat_messages (
-    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    username    VARCHAR(50)   NOT NULL,
-    message     TEXT          NOT NULL,
-    status      ENUM('approved','flagged','blocked') NOT NULL DEFAULT 'approved',
-    emojis_json JSON          NULL,
-    ip_hash     VARCHAR(64)   NULL,   -- hashed IP for moderation (not raw)
-    created_at  DATETIME      NOT NULL,
-    updated_at  DATETIME      NOT NULL,
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username         VARCHAR(50)   NOT NULL,
+    message          TEXT          NOT NULL,
+    status           ENUM('approved','flagged','blocked') NOT NULL DEFAULT 'approved',
+    emojis_json      JSON          NULL,
+    ip_hash          VARCHAR(64)   NULL,   -- hashed IP for moderation (not raw)
+    chat_user_id     INT UNSIGNED  NULL,   -- linked registered chat user (NULL = anonymous)
+    room_id          INT UNSIGNED  NULL,   -- room this message belongs to
+    parent_id        INT UNSIGNED  NULL,   -- reply threading
+    is_pinned        TINYINT(1)    NOT NULL DEFAULT 0,
+    is_highlighted   TINYINT(1)    NOT NULL DEFAULT 0,  -- Super Chat equivalent
+    highlight_color  VARCHAR(7)    NULL,
+    highlight_amount DECIMAL(8,2)  NULL,
+    deleted_at       DATETIME      NULL,   -- soft delete
+    deleted_by       INT UNSIGNED  NULL,   -- chat_user_id who deleted
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    CONSTRAINT fk_cm_user       FOREIGN KEY (chat_user_id) REFERENCES chat_users(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_cm_room       FOREIGN KEY (room_id)      REFERENCES chat_rooms(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_cm_parent     FOREIGN KEY (parent_id)    REFERENCES chat_messages(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cm_deleted_by FOREIGN KEY (deleted_by)   REFERENCES chat_users(id)    ON DELETE SET NULL,
     INDEX idx_status (status),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_room_created (room_id, created_at),
+    INDEX idx_pinned (is_pinned)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -198,13 +252,46 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS chat_moderation_logs (
     id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    chat_message_id  INT UNSIGNED  NOT NULL,
-    moderator_id     INT UNSIGNED  NULL,
-    action           VARCHAR(50)   NOT NULL,   -- approved | flagged | blocked
+    chat_message_id  INT UNSIGNED  NULL,   -- NULL for user-level actions (mute/ban)
+    moderator_id     INT UNSIGNED  NULL,   -- admin users.id (NULL for chat-role moderators)
+    target_user_id   INT UNSIGNED  NULL,   -- chat_users.id who was acted on
+    action           VARCHAR(50)   NOT NULL,   -- approved | flagged | blocked | deleted | pinned | muted_user | banned_user | unbanned_user
     reason           VARCHAR(255)  NULL,
     created_at       DATETIME      NOT NULL,
-    CONSTRAINT fk_cml_message FOREIGN KEY (chat_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cml_user    FOREIGN KEY (moderator_id)    REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_cml_message     FOREIGN KEY (chat_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cml_user        FOREIGN KEY (moderator_id)    REFERENCES users(id)          ON DELETE SET NULL,
+    CONSTRAINT fk_cml_target_user FOREIGN KEY (target_user_id)  REFERENCES chat_users(id)     ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat Reactions  (per-user emoji reactions on messages)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_reactions (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    message_id    INT UNSIGNED  NOT NULL,
+    chat_user_id  INT UNSIGNED  NOT NULL,
+    reaction      VARCHAR(10)   NOT NULL,
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_creact_message FOREIGN KEY (message_id)   REFERENCES chat_messages(id) ON DELETE CASCADE,
+    CONSTRAINT fk_creact_user    FOREIGN KEY (chat_user_id) REFERENCES chat_users(id)    ON DELETE CASCADE,
+    UNIQUE KEY uq_reaction (message_id, chat_user_id, reaction)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat User Bans  (room-scoped or global bans)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_user_bans (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    chat_user_id  INT UNSIGNED  NOT NULL,
+    room_id       INT UNSIGNED  NULL,    -- NULL = global ban
+    banned_by     INT UNSIGNED  NOT NULL,
+    reason        TEXT          NULL,
+    expires_at    DATETIME      NULL,    -- NULL = permanent
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_cub_user      FOREIGN KEY (chat_user_id) REFERENCES chat_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cub_room      FOREIGN KEY (room_id)      REFERENCES chat_rooms(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cub_banned_by FOREIGN KEY (banned_by)    REFERENCES chat_users(id) ON DELETE CASCADE,
+    INDEX idx_cub_user_room (chat_user_id, room_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -212,15 +299,15 @@ CREATE TABLE IF NOT EXISTS chat_moderation_logs (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_generations (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    episode_id      INT UNSIGNED  NULL,
-    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | episode_field_suggestion
+    case_id      INT UNSIGNED  NULL,
+    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | case_field_suggestion
     input_prompt    TEXT          NOT NULL,
     output_text     MEDIUMTEXT    NOT NULL,
     model           VARCHAR(80)   NOT NULL,
     prompt_tokens   INT UNSIGNED  NOT NULL DEFAULT 0,
     response_tokens INT UNSIGNED  NOT NULL DEFAULT 0,
     created_at      DATETIME      NOT NULL,
-    CONSTRAINT fk_ag_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ag_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
     INDEX idx_feature (feature),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -285,11 +372,11 @@ CREATE TABLE IF NOT EXISTS overlay_batch_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Video Clips  (short-form clips extracted from episodes)
+-- Video Clips  (short-form clips extracted from cases)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS video_clips (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    episode_id      INT UNSIGNED  NULL,
+    case_id      INT UNSIGNED  NULL,
     label           VARCHAR(255)  NOT NULL,
     source_path     VARCHAR(255)  NOT NULL,   -- relative to /uploads
     output_path     VARCHAR(255)  NULL,       -- processed version
@@ -300,7 +387,102 @@ CREATE TABLE IF NOT EXISTS video_clips (
     status          ENUM('raw','processing','ready','queued','posted') NOT NULL DEFAULT 'raw',
     created_at      DATETIME      NOT NULL,
     updated_at      DATETIME      NOT NULL,
-    CONSTRAINT fk_vc_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+    CONSTRAINT fk_vc_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Posting Sites  (canonical list of social media posting targets)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS posting_sites (
+    id           INT UNSIGNED      AUTO_INCREMENT PRIMARY KEY,
+    site_key     VARCHAR(80)       NOT NULL UNIQUE,   -- stable slug: youtube, youtube_shorts, tiktok, etc.
+    display_name VARCHAR(120)      NOT NULL,          -- human-readable: YouTube, YouTube Shorts, etc.
+    is_active    TINYINT(1)        NOT NULL DEFAULT 1,
+    sort_order   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at   DATETIME          NOT NULL,
+    updated_at   DATETIME          NOT NULL,
+    INDEX idx_ps_active_order (is_active, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Site Posting Options  (per-site defaults for content + caption)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS site_posting_options (
+    id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    site_id                INT UNSIGNED NOT NULL UNIQUE,
+    default_content_type   VARCHAR(80)  NULL,
+    default_caption_prefix TEXT         NULL,
+    default_hashtags       VARCHAR(255) NULL,
+    default_status         ENUM('draft','queued','scheduled') NOT NULL DEFAULT 'queued',
+    created_at             DATETIME     NOT NULL,
+    updated_at             DATETIME     NOT NULL,
+    CONSTRAINT fk_spo_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Workflow Runs (topic -> asset -> posting lifecycle)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflows (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    topic             VARCHAR(255)  NOT NULL,
+    case_id           INT UNSIGNED  NULL,
+    source_clip_id    INT UNSIGNED  NULL,
+    source_asset_path VARCHAR(255)  NULL,
+    status            ENUM('draft','planned','queued','posting','completed','failed') NOT NULL DEFAULT 'planned',
+    notes             TEXT          NULL,
+    created_by        INT UNSIGNED  NULL,
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    CONSTRAINT fk_cw_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cw_clip FOREIGN KEY (source_clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cw_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_cw_status_created (status, created_at),
+    INDEX idx_cw_case (case_id),
+    INDEX idx_cw_clip (source_clip_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Workflow Asset Assignments
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflow_assets (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    workflow_id   INT UNSIGNED  NOT NULL,
+    asset_role    ENUM('primary_video','clip_video','thumbnail','overlay','other') NOT NULL DEFAULT 'other',
+    asset_path    VARCHAR(255)  NOT NULL,
+    clip_id       INT UNSIGNED  NULL,
+    site_id       INT UNSIGNED  NULL,
+    assigned_at   DATETIME      NOT NULL,
+    created_at    DATETIME      NOT NULL,
+    updated_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_cwa_workflow FOREIGN KEY (workflow_id) REFERENCES content_workflows(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwa_clip FOREIGN KEY (clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cwa_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE SET NULL,
+    INDEX idx_cwa_workflow_role (workflow_id, asset_role),
+    INDEX idx_cwa_site_role (site_id, asset_role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Workflow Posting Tasks
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflow_posts (
+    id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    workflow_id           INT UNSIGNED  NOT NULL,
+    site_id               INT UNSIGNED  NOT NULL,
+    queue_id              INT UNSIGNED  NULL,
+    platform_display_name VARCHAR(80)   NOT NULL,
+    content_type          VARCHAR(80)   NOT NULL,
+    caption               TEXT          NULL,
+    scheduled_for         DATETIME      NOT NULL,
+    status                ENUM('planned','queued','posted','failed','canceled') NOT NULL DEFAULT 'planned',
+    last_error            TEXT          NULL,
+    created_at            DATETIME      NOT NULL,
+    updated_at            DATETIME      NOT NULL,
+    CONSTRAINT fk_cwp_workflow FOREIGN KEY (workflow_id) REFERENCES content_workflows(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwp_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwp_queue FOREIGN KEY (queue_id) REFERENCES social_post_queue(id) ON DELETE SET NULL,
+    UNIQUE KEY uniq_cwp_workflow_site (workflow_id, site_id),
+    INDEX idx_cwp_status_schedule (status, scheduled_for),
+    INDEX idx_cwp_queue (queue_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

@@ -9,7 +9,7 @@
 require_once __DIR__ . '/inc/bootstrap.php';
 
 // ── Allowed public pages ──────────────────────────────────────────────────────
-$allowedPages = ['home', 'episodes', 'episode', 'about', 'contact', 'case-chat'];
+$allowedPages = ['home', 'cases', 'case', 'about', 'series', 'contact', 'case-chat', 'register', 'chat-login'];
 
 // ── Resolve page ──────────────────────────────────────────────────────────────
 $page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
@@ -19,26 +19,26 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'home';
 }
 
-// ── Episode detail — resolve slug early ───────────────────────────────────────
-$currentEpisode = null;
+// ── case detail — resolve slug early ───────────────────────────────────────
+$current_case = null;
 
-if ($page === 'episode') {
+if ($page === 'case') {
     $slug = isset($_GET['slug']) ? trim((string) $_GET['slug']) : '';
 
     if ($slug === '') {
-        redirect('/index.php?page=episodes', 'No episode selected.', 'warning');
+        redirect('/index.php?page=cases', 'No case selected.', 'warning');
     }
 
-    $currentEpisode = find_episode_by_slug($slug);
+    $current_case = find_case_by_slug($slug);
 
-    if (!$currentEpisode) {
+    if (!$current_case) {
         http_response_code(404);
-        redirect('/index.php?page=episodes', 'Episode not found.', 'warning');
+        redirect('/index.php?page=cases', 'case not found.', 'warning');
     }
 }
 
 // ── Page title ────────────────────────────────────────────────────────────────
-$pageTitle = page_title($page, $currentEpisode);
+$pageTitle = page_title($page, $current_case);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 include __DIR__ . '/inc/head.php';

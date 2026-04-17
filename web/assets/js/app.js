@@ -140,95 +140,412 @@ function fmtDateTime(str) {
 
 // ─── Case Chat system ─────────────────────────────────────────────────────────
 (function initCaseChat() {
+    const shellEl    = document.getElementById('caseChatShell');
     const messagesEl = document.getElementById('caseChatMessages');
     const formEl     = document.getElementById('caseChatForm');
-    if (!messagesEl || !formEl) return;
+    const pinnedEl   = document.getElementById('caseChatPinned');
+    if (!shellEl || !messagesEl) return;
 
-    const endpoint = messagesEl.dataset.endpoint ?? '/api/chat_messages.php';
-    let lastId = 0;
-    let polling = null;
+    const endpoint         = shellEl.dataset.endpoint         ?? '/api/chat_messages.php';
+    const reactEndpoint    = shellEl.dataset.reactEndpoint    ?? '/api/chat_react.php';
+    const moderateEndpoint = shellEl.dataset.moderateEndpoint ?? '/api/chat_moderate.php';
+    const roomSlug         = shellEl.dataset.room             ?? 'case-chat';
+    const isMod            = shellEl.dataset.isMod            === '1';
+    const currentUserId    = parseInt(shellEl.dataset.userId  ?? '0', 10);
 
-    function avatarInitial(username) {
-        return escHtml(String(username ?? '?')[0].toUpperCase());
+    let lastId     = 0;
+    let polling    = null;
+    let roomConfig = null;
+    let slowTimer  = null;
+
+    // ── Role badge ────────────────────────────────────────────────────────────
+    const ROLE_LABELS = { super_admin: 'Super Admin', admin: 'Admin', moderator: 'Mod' };
+    const ROLE_CLASSES = {
+        'super-admin': 'ptmd-chat-role-badge--super-admin',
+        'admin':       'ptmd-chat-role-badge--admin',
+        'moderator':   'ptmd-chat-role-badge--mod',
+    };
+
+    function roleBadgeHtml(role, badgeLabel) {
+        const slug  = String(role ?? '').replace('_', '-');
+        const label = badgeLabel || ROLE_LABELS[role] || '';
+        const cls   = ROLE_CLASSES[slug] || '';
+        if (!label || !cls) return '';
+        return `<span class="ptmd-chat-role-badge ${cls}">${escHtml(label)}</span>`;
     }
 
+    // ── Avatar ────────────────────────────────────────────────────────────────
+    function avatarHtml(name, color) {
+        return `<div class="ptmd-chat-avatar" style="--avatar-color:${escHtml(color || '#2EC4B6')}">${escHtml(String(name || '?')[0].toUpperCase())}</div>`;
+    }
+
+    // ── Reactions ─────────────────────────────────────────────────────────────
+    function reactionsHtml(reactions, msgId) {
+        const pills = Object.entries(reactions || {}).map(([emoji, cnt]) =>
+            `<button class="ptmd-chat-reaction" type="button"
+                     data-msg-id="${msgId}" data-reaction="${escHtml(emoji)}"
+                     title="React ${escHtml(emoji)}">${emoji} <span class="reaction-count">${escHtml(String(cnt))}</span></button>`
+        ).join('');
+        const addBtn = currentUserId > 0
+            ? `<button class="ptmd-chat-reaction ptmd-chat-reaction--add" type="button"
+                       data-msg-id="${msgId}" title="Add reaction">+</button>`
+            : '';
+        return `<div class="ptmd-chat-reactions" data-msg-id="${msgId}">${pills}${addBtn}</div>`;
+    }
+
+    // ── Mod context menu ──────────────────────────────────────────────────────
+    function modMenuHtml(msg) {
+        if (!isMod) return '';
+        const uid  = msg.chat_user_id || 0;
+        const pin  = msg.is_pinned ? 'Unpin' : 'Pin';
+        const pact = msg.is_pinned ? 'unpin' : 'pin';
+        const userItems = uid
+            ? `<li><hr class="dropdown-divider"></li>
+               <li><button class="dropdown-item" type="button" data-mod-action="mute_user" data-target-user-id="${uid}">
+                   <i class="fa-solid fa-microphone-slash me-2" style="color:var(--ptmd-warning)"></i>Mute User
+               </button></li>
+               <li><button class="dropdown-item" type="button" data-mod-action="ban_user" data-target-user-id="${uid}">
+                   <i class="fa-solid fa-ban me-2" style="color:var(--ptmd-error)"></i>Ban User
+               </button></li>`
+            : '';
+        return `<div class="ptmd-chat-mod-menu dropdown">
+            <button class="btn btn-ptmd-ghost btn-sm ptmd-chat-mod-btn dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Mod actions">⋮</button>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width:160px">
+                <li><button class="dropdown-item" type="button" data-mod-action="${pact}" data-msg-id="${msg.id}">
+                    <i class="fa-solid fa-thumbtack me-2"></i>${pin}
+                </button></li>
+                <li><button class="dropdown-item" type="button" data-mod-action="delete" data-msg-id="${msg.id}">
+                    <i class="fa-solid fa-trash me-2" style="color:var(--ptmd-error)"></i>Delete
+                </button></li>${userItems}
+            </ul>
+        </div>`;
+    }
+
+    // ── Render one bubble ─────────────────────────────────────────────────────
     function renderBubble(msg) {
-        const bubble = document.createElement('div');
-        bubble.className = 'ptmd-chat-bubble fade-in';
-        bubble.dataset.msgId = msg.id;
-        bubble.innerHTML = `
-            <div class="bubble-avatar">${avatarInitial(msg.username)}</div>
-            <div class="bubble-body">
-                <div class="bubble-username">${escHtml(msg.username)}</div>
-                <div class="bubble-text">${escHtml(msg.message)}</div>
-                <div class="bubble-time">${fmtDateTime(msg.created_at)}</div>
-            </div>
-        `;
-        return bubble;
+        const el = document.createElement('div');
+        el.className = 'ptmd-chat-bubble';
+        if (msg.is_highlighted) el.classList.add('ptmd-chat-bubble--highlighted');
+        if (msg.highlight_color) el.style.setProperty('--highlight-color', msg.highlight_color);
+        el.dataset.msgId = msg.id;
+
+        const name  = escHtml(msg.display_name || msg.username);
+        const color = msg.avatar_color || '#2EC4B6';
+
+        const supBanner = msg.is_highlighted
+            ? `<div class="ptmd-chat-super-banner" style="background:${escHtml(msg.highlight_color || '#FFD60A')}22;border-left:3px solid ${escHtml(msg.highlight_color || '#FFD60A')}">
+                   <i class="fa-solid fa-star me-1" style="color:${escHtml(msg.highlight_color || '#FFD60A')}"></i>
+                   ${msg.highlight_amount ? escHtml('$' + Number(msg.highlight_amount).toFixed(2)) : 'Highlighted'}
+               </div>` : '';
+
+        const replyRef = msg.parent_id
+            ? `<div class="ptmd-chat-reply-ref"><i class="fa-solid fa-reply me-1"></i>Reply to #${escHtml(String(msg.parent_id))}</div>`
+            : '';
+
+        const replyBtn = currentUserId > 0
+            ? `<button class="btn btn-ptmd-ghost btn-sm ptmd-chat-reply-btn py-0 px-2" type="button"
+                        data-msg-id="${msg.id}" data-display-name="${name}"
+                        title="Reply"><i class="fa-solid fa-reply"></i></button>`
+            : '';
+
+        el.innerHTML = `${supBanner}
+            <div class="d-flex gap-3 align-items-start">
+                ${avatarHtml(msg.display_name || msg.username, color)}
+                <div class="bubble-body flex-grow-1">
+                    ${replyRef}
+                    <div class="bubble-meta d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="bubble-username">${name}</span>
+                        ${roleBadgeHtml(msg.user_role, msg.badge_label)}
+                        <span class="bubble-time">${fmtDateTime(msg.created_at)}</span>
+                    </div>
+                    <div class="bubble-text">${escHtml(msg.message)}</div>
+                    <div class="bubble-actions d-flex align-items-center gap-1 mt-2 flex-wrap">
+                        ${reactionsHtml(msg.reactions, msg.id)}
+                        ${replyBtn}
+                        ${modMenuHtml(msg)}
+                    </div>
+                </div>
+            </div>`;
+        return el;
     }
 
+    // ── Pinned banner ─────────────────────────────────────────────────────────
+    function renderPinned(pinnedMsgs) {
+        if (!pinnedEl) return;
+        if (!pinnedMsgs?.length) { pinnedEl.classList.add('d-none'); pinnedEl.innerHTML = ''; return; }
+        pinnedEl.classList.remove('d-none');
+        pinnedEl.innerHTML = pinnedMsgs.map(p =>
+            `<div class="ptmd-chat-pinned-item">
+                <i class="fa-solid fa-thumbtack me-2 ptmd-text-yellow"></i>
+                <strong>${escHtml(p.display_name || p.username)}</strong>: ${escHtml(p.message)}
+             </div>`
+        ).join('');
+    }
+
+    // ── Load messages ─────────────────────────────────────────────────────────
     async function loadMessages(initialLoad = false) {
         try {
-            const res  = await fetch(endpoint, { credentials: 'same-origin' });
+            const url  = `${endpoint}?room=${encodeURIComponent(roomSlug)}&since=${initialLoad ? 0 : lastId}`;
+            const res  = await fetch(url, { credentials: 'same-origin' });
             const data = await res.json();
-            if (!data.ok) return;
+
+            if (!data.ok) {
+                if (data.members_only) {
+                    messagesEl.innerHTML = `<div class="ptmd-muted small text-center py-4">
+                        <i class="fa-solid fa-lock me-2"></i>Members only room.
+                        <a href="/index.php?page=chat-login" class="ptmd-text-teal">Sign in</a> to view messages.
+                    </div>`;
+                }
+                return;
+            }
+
+            if (data.room) { roomConfig = data.room; }
 
             const msgs = data.messages ?? [];
-
             if (initialLoad) {
                 messagesEl.innerHTML = '';
-                msgs.forEach(msg => messagesEl.appendChild(renderBubble(msg)));
+                msgs.forEach(m => messagesEl.appendChild(renderBubble(m)));
             } else {
                 const newMsgs = msgs.filter(m => Number(m.id) > lastId);
-                newMsgs.forEach(msg => messagesEl.appendChild(renderBubble(msg)));
+                newMsgs.forEach(m => messagesEl.appendChild(renderBubble(m)));
             }
+            if (msgs.length > 0) lastId = Math.max(...msgs.map(m => Number(m.id)));
 
-            if (msgs.length > 0) {
-                lastId = Math.max(...msgs.map(m => Number(m.id)));
-            }
-
-            // Scroll to bottom
+            renderPinned(data.pinned ?? []);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         } catch (err) {
             console.warn('[PTMD Chat] fetch error:', err);
         }
     }
 
-    formEl.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd  = new FormData(formEl);
-        const btn = formEl.querySelector('[type=submit]');
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-        try {
-            const res  = await fetch(endpoint, {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: fd,
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                formEl.reset();
-                await loadMessages();
+    // ── Slow mode countdown ────────────────────────────────────────────────────
+    function startSlowCountdown(seconds) {
+        const slowEl  = document.getElementById('caseChatSlowMode');
+        const countEl = document.getElementById('caseChatSlowCount');
+        const sendBtn = document.getElementById('caseChatSendBtn');
+        if (!slowEl || !countEl) return;
+        let remain = Math.max(1, seconds);
+        slowEl.classList.remove('d-none');
+        if (sendBtn) sendBtn.disabled = true;
+        countEl.textContent = String(remain);
+        clearInterval(slowTimer);
+        slowTimer = setInterval(() => {
+            remain--;
+            if (remain <= 0) {
+                clearInterval(slowTimer);
+                slowEl.classList.add('d-none');
+                if (sendBtn) sendBtn.disabled = false;
             } else {
-                Toast.error(data.error ?? 'Could not send message.');
+                countEl.textContent = String(remain);
             }
-        } catch {
-            Toast.error('Network error. Please try again.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send';
+        }, 1000);
+    }
+
+    // ── Form submission ────────────────────────────────────────────────────────
+    if (formEl) {
+        formEl.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd  = new FormData(formEl);
+            const btn = formEl.querySelector('[type=submit]');
+
+            // Attach highlight color if toggle is active
+            const highlightOpts  = document.getElementById('caseChatHighlightOpts');
+            const highlightColor = document.getElementById('caseChatHighlightColor');
+            if (highlightOpts && !highlightOpts.classList.contains('d-none') && highlightColor) {
+                fd.set('highlight_color', highlightColor.value);
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            try {
+                const res  = await fetch(endpoint, { method: 'POST', credentials: 'same-origin', body: fd });
+                const data = await res.json();
+
+                if (data.ok) {
+                    formEl.reset();
+                    // Clear reply context
+                    document.getElementById('caseChatReplyCtx')?.classList.add('d-none');
+                    if (document.getElementById('caseChatParentId')) document.getElementById('caseChatParentId').value = '';
+                    // Reset highlight toggle
+                    if (highlightOpts) highlightOpts.classList.add('d-none');
+                    document.getElementById('caseChatHighlightToggle')?.classList.remove('btn-ptmd-teal');
+                    await loadMessages(false);
+                    if (roomConfig?.slow_mode_seconds > 0) startSlowCountdown(roomConfig.slow_mode_seconds);
+                } else if (data.slow_mode) {
+                    startSlowCountdown(data.wait ?? roomConfig?.slow_mode_seconds ?? 0);
+                    Toast.warning(data.error ?? 'Slow mode active.');
+                } else {
+                    Toast.error(data.error ?? 'Could not send message.');
+                }
+            } catch {
+                Toast.error('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send';
+            }
+        });
+    }
+
+    // ── Emoji picker ──────────────────────────────────────────────────────────
+    const emojiBtn    = document.getElementById('caseChatEmojiBtn');
+    const emojiPicker = document.getElementById('caseChatEmojiPicker');
+    const msgInput    = document.getElementById('caseChatMessageInput');
+    if (emojiBtn && emojiPicker) {
+        emojiBtn.addEventListener('click', e => { e.stopPropagation(); emojiPicker.classList.toggle('d-none'); });
+        document.addEventListener('click', e => {
+            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.classList.add('d-none');
+        });
+        emojiPicker.addEventListener('click', e => {
+            const btn = e.target.closest('.ptmd-emoji-btn');
+            if (btn && msgInput) { msgInput.value += btn.textContent; msgInput.focus(); }
+        });
+    }
+
+    // ── Highlight toggle ──────────────────────────────────────────────────────
+    const highlightBtn  = document.getElementById('caseChatHighlightToggle');
+    const highlightOpts = document.getElementById('caseChatHighlightOpts');
+    if (highlightBtn && highlightOpts) {
+        highlightBtn.addEventListener('click', () => {
+            const open = !highlightOpts.classList.contains('d-none');
+            highlightOpts.classList.toggle('d-none', open);
+            highlightBtn.classList.toggle('btn-ptmd-teal', !open);
+        });
+    }
+
+    // ── Reply ─────────────────────────────────────────────────────────────────
+    messagesEl.addEventListener('click', e => {
+        const btn = e.target.closest('.ptmd-chat-reply-btn');
+        if (!btn) return;
+        const replyCtx   = document.getElementById('caseChatReplyCtx');
+        const replyLabel = document.getElementById('caseChatReplyLabel');
+        const parentId   = document.getElementById('caseChatParentId');
+        if (replyCtx && replyLabel && parentId) {
+            parentId.value         = btn.dataset.msgId;
+            replyLabel.textContent = `Replying to ${btn.dataset.displayName}`;
+            replyCtx.classList.remove('d-none');
+            msgInput?.focus();
         }
     });
+    document.getElementById('caseChatReplyClear')?.addEventListener('click', () => {
+        document.getElementById('caseChatReplyCtx')?.classList.add('d-none');
+        if (document.getElementById('caseChatParentId')) document.getElementById('caseChatParentId').value = '';
+    });
 
-    // Initial load + polling every 15 s
+    // ── Reactions ─────────────────────────────────────────────────────────────
+    if (currentUserId > 0) {
+        messagesEl.addEventListener('click', async e => {
+            const btn = e.target.closest('.ptmd-chat-reaction[data-reaction]');
+            if (!btn) return;
+            const csrfInput = formEl?.querySelector('[name=csrf_token]');
+            if (!csrfInput) return;
+            try {
+                const fd = new FormData();
+                fd.set('csrf_token',  csrfInput.value);
+                fd.set('message_id',  btn.dataset.msgId);
+                fd.set('reaction',    btn.dataset.reaction);
+                const res  = await fetch(reactEndpoint, { method: 'POST', credentials: 'same-origin', body: fd });
+                const data = await res.json();
+                if (data.ok) {
+                    const div = messagesEl.querySelector(`.ptmd-chat-reactions[data-msg-id="${btn.dataset.msgId}"]`);
+                    if (div) {
+                        const pills = Object.entries(data.counts || {}).map(([emoji, cnt]) =>
+                            `<button class="ptmd-chat-reaction" type="button"
+                                     data-msg-id="${btn.dataset.msgId}" data-reaction="${escHtml(emoji)}">${emoji}
+                                <span class="reaction-count">${escHtml(String(cnt))}</span></button>`
+                        ).join('');
+                        div.innerHTML = pills + `<button class="ptmd-chat-reaction ptmd-chat-reaction--add" type="button"
+                            data-msg-id="${btn.dataset.msgId}">+</button>`;
+                    }
+                }
+            } catch (err) { console.warn('[PTMD Chat] react error:', err); }
+        });
+    }
+
+    // ── Moderator actions ─────────────────────────────────────────────────────
+    if (isMod) {
+        document.addEventListener('click', async e => {
+            const btn = e.target.closest('[data-mod-action]');
+            if (!btn || !btn.closest('#caseChatShell')) return;
+
+            const action       = btn.dataset.modAction;
+            const msgId        = btn.dataset.msgId        ?? '';
+            const targetUserId = btn.dataset.targetUserId ?? '';
+            const csrfInput    = formEl?.querySelector('[name=csrf_token]');
+            if (!csrfInput) return;
+
+            let reason    = '';
+            let expiresAt = '';
+
+            if (['delete', 'mute_user', 'ban_user'].includes(action) && typeof Swal !== 'undefined') {
+                const durationHtml = ['mute_user', 'ban_user'].includes(action)
+                    ? `<select id="swal-dur" class="swal2-input" style="width:auto;display:block;margin-top:.5rem">
+                           <option value="">Permanent</option>
+                           <option value="+5 minutes">5 minutes</option>
+                           <option value="+1 hour">1 hour</option>
+                           <option value="+24 hours">24 hours</option>
+                           <option value="+7 days">7 days</option>
+                       </select>` : '';
+
+                const res = await Swal.fire({
+                    title: { delete: 'Delete message?', mute_user: 'Mute user?', ban_user: 'Ban user?' }[action],
+                    html: `<input id="swal-reason" class="swal2-input" placeholder="Reason (optional)">${durationHtml}`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Confirm',
+                    background: 'var(--ptmd-surface-2, #1a1d22)',
+                    color: 'var(--ptmd-white, #F5F5F3)',
+                    confirmButtonColor: 'var(--ptmd-red, #C1121F)',
+                    preConfirm: () => ({
+                        reason:   document.getElementById('swal-reason')?.value ?? '',
+                        duration: document.getElementById('swal-dur')?.value    ?? '',
+                    }),
+                });
+                if (!res.isConfirmed) return;
+                reason = res.value?.reason ?? '';
+                const dur = res.value?.duration ?? '';
+                if (dur) {
+                    const parts = dur.match(/\+(\d+)\s+(minutes?|hours?|days?)/i);
+                    if (parts) {
+                        const now = new Date();
+                        const n   = parseInt(parts[1], 10);
+                        const u   = parts[2].toLowerCase();
+                        if (u.startsWith('min'))      now.setMinutes(now.getMinutes() + n);
+                        else if (u.startsWith('h'))   now.setHours(now.getHours() + n);
+                        else if (u.startsWith('d'))   now.setDate(now.getDate() + n);
+                        expiresAt = now.toISOString().slice(0, 19).replace('T', ' ');
+                    }
+                }
+            }
+
+            try {
+                const fd = new FormData();
+                fd.set('csrf_token', csrfInput.value);
+                fd.set('action', action);
+                if (msgId)        fd.set('message_id',     msgId);
+                if (targetUserId) fd.set('target_user_id', targetUserId);
+                if (reason)       fd.set('reason',         reason);
+                if (expiresAt)    fd.set('expires_at',     expiresAt);
+
+                const r    = await fetch(moderateEndpoint, { method: 'POST', credentials: 'same-origin', body: fd });
+                const data = await r.json();
+                if (data.ok) {
+                    Toast.success('Done.');
+                    if (action === 'delete' && msgId) {
+                        messagesEl.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
+                    }
+                    if (action === 'pin' || action === 'unpin') await loadMessages(true);
+                } else {
+                    Toast.error(data.error ?? 'Action failed.');
+                }
+            } catch (err) { console.warn('[PTMD Chat] mod error:', err); Toast.error('Network error.'); }
+        });
+    }
+
+    // ── Initial load + polling ─────────────────────────────────────────────────
     loadMessages(true);
     polling = setInterval(() => loadMessages(false), 15000);
-
-    // Cleanup on unload
     window.addEventListener('unload', () => clearInterval(polling));
 })();
 

@@ -1,0 +1,18 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <rect width="1200" height="1200" fill="#0B0C10"/>
+  <circle cx="600" cy="600" r="470" fill="none" stroke="#F5F5F3" stroke-width="20"/>
+  <circle cx="600" cy="600" r="430" fill="none" stroke="#F5F5F3" stroke-width="8"/>
+  <text x="600" y="245" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" fill="#F5F5F3">
+    PAPER TRAIL MD
+  </text>
+  <text x="600" y="555" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="700" fill="#F5F5F3">
+    PTMD
+  </text>
+  <rect x="265" y="610" width="670" height="120" fill="none" stroke="#C1121F" stroke-width="12" transform="rotate(-10 600 670)"/>
+  <text x="600" y="690" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="88" font-weight="700" fill="#C1121F" transform="rotate(-10 600 670)">
+    EVIDENCE
+  </text>
+  <text x="600" y="960" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="40" fill="#FFD60A">
+    We Follow the Story Until It Breaks
+  </text>
+</svg>

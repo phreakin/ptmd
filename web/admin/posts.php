@@ -56,13 +56,23 @@ if ($pdo && is_post()) {
     $postAction = $_POST['_action'] ?? 'update_status';
 
     if ($postAction === 'add') {
-        $episodeId = (int) ($_POST['episode_id'] ?? 0) ?: null;
+        $caseId = (int) ($_POST['case_id'] ?? 0) ?: null;
         $clipId    = (int) ($_POST['clip_id'] ?? 0) ?: null;
         $platform  = trim((string) ($_POST['platform'] ?? ''));
         $contentType = trim((string) ($_POST['content_type'] ?? ''));
         $caption     = trim((string) ($_POST['caption'] ?? ''));
         $assetPath   = trim((string) ($_POST['asset_path'] ?? ''));
         $scheduledFor = trim((string) ($_POST['scheduled_for'] ?? ''));
+
+        // Check posting_sites.is_active for the selected platform
+        $siteCheck = $pdo->prepare(
+            'SELECT is_active FROM posting_sites WHERE site_key = :key LIMIT 1'
+        );
+        $siteCheck->execute(['key' => ptmd_platform_to_site_key($platform)]);
+        $siteRow = $siteCheck->fetch();
+        if ($siteRow !== false && (int) $siteRow['is_active'] !== 1) {
+            redirect('/admin/posts.php', 'This platform is currently inactive.', 'warning');
+        }
 
         $prefStmt = $pdo->prepare(
             'SELECT is_enabled, default_content_type, default_caption_prefix, default_hashtags, default_status
@@ -91,10 +101,10 @@ if ($pdo && is_post()) {
             : 'queued';
 
         $pdo->prepare(
-            'INSERT INTO social_post_queue (episode_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
+            'INSERT INTO social_post_queue (case_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
              VALUES (:eid, :clip_id, :platform, :ct, :caption, :asset, :sched, :status, NOW(), NOW())'
         )->execute([
-            'eid'      => $episodeId,
+            'eid'      => $caseId,
             'clip_id'  => $clipId,
             'platform' => $platform,
             'ct'       => $contentType,
@@ -220,10 +230,10 @@ if ($pdo && is_post()) {
             if ($item) {
                 $pdo->prepare(
                     'INSERT INTO social_post_queue
-                     (episode_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
+                     (case_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
                      VALUES (:eid, :clip_id, :platform, :ct, :caption, :asset, NOW(), "queued", NOW(), NOW())'
                 )->execute([
-                    'eid'      => $item['episode_id'] ? (int) $item['episode_id'] : null,
+                    'eid'      => $item['case_id'] ? (int) $item['case_id'] : null,
                     'clip_id'  => $item['clip_id'] ? (int) $item['clip_id'] : null,
                     'platform' => $item['platform'],
                     'ct'       => $item['content_type'],
@@ -249,19 +259,24 @@ if ($pdo && is_post()) {
 
 $queue = $pdo ? $pdo->query(
     'SELECT
-         q.id, q.episode_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
+         q.id, q.case_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
          q.scheduled_for, q.status, q.external_post_id, q.last_error, q.created_at, q.updated_at,
-         e.title AS episode_title,
+         e.title AS case_title,
          vc.label AS clip_label, vc.output_path AS clip_output_path, vc.source_path AS clip_source_path
      FROM social_post_queue q
-     LEFT JOIN episodes e ON e.id = q.episode_id
+     LEFT JOIN cases e ON e.id = q.case_id
      LEFT JOIN video_clips vc ON vc.id = q.clip_id
      ORDER BY q.scheduled_for ASC'
 )->fetchAll() : [];
 
-$episodes  = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
+$cases  = $pdo ? $pdo->query('SELECT id, title FROM cases ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-$platforms = ['YouTube','YouTube Shorts','TikTok','Instagram Reels','Facebook Reels','X'];
+
+// Load active platforms from DB; fall back to hardcoded list for graceful degradation
+$activeSites = get_posting_sites(true);
+$platforms   = $activeSites
+    ? array_column($activeSites, 'display_name')
+    : ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];
@@ -372,10 +387,10 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="form-label">Episode (optional)</label>
-                <select class="form-select" name="episode_id">
+                <label class="form-label">case (optional)</label>
+                <select class="form-select" name="case_id">
                     <option value="">— None (manual post) —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -413,7 +428,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                     class="form-control"
                     name="asset_path"
                     value="<?php ee($selectedClipAsset); ?>"
-                    placeholder="clips/..., episodes/..., or /uploads/..."
+                    placeholder="clips/..., cases/..., or /uploads/..."
                 >
             </div>
             <div class="col-12">
@@ -437,7 +452,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
-                    <tr><th>Platform</th><th>Video</th><th>Episode</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Platform</th><th>Video</th><th>case</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($queue as $item): ?>
@@ -456,7 +471,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                     —
                                 <?php endif; ?>
                             </td>
-                            <td class="ptmd-muted small"><?php ee($item['episode_title'] ?? '—'); ?></td>
+                            <td class="ptmd-muted small"><?php ee($item['case_title'] ?? '—'); ?></td>
                             <td class="ptmd-muted" style="font-size:var(--text-xs)">
                                 <?php echo $item['scheduled_for'] ? e(date('M j, Y g:ia', strtotime($item['scheduled_for']))) : '—'; ?>
                             </td>

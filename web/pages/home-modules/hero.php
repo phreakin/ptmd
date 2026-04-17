@@ -17,9 +17,9 @@
                 </p>
 
                 <div class="d-flex flex-wrap gap-3">
-                    <a class="btn btn-ptmd-primary btn-lg" href="/index.php?page=episodes">
+                    <a class="btn btn-ptmd-primary btn-lg" href="/index.php?page=cases">
                         <i class="fa-solid fa-play me-2"></i>
-                        <?php ee(site_setting('hero_cta_text', 'Watch Latest Episode')); ?>
+                        <?php ee(site_setting('hero_cta_text', 'Watch Latest case')); ?>
                     </a>
                     <a class="btn btn-ptmd-outline btn-lg" href="/index.php?page=contact">
                         <i class="fa-solid fa-paper-plane me-2"></i>

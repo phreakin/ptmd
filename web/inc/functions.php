@@ -42,10 +42,23 @@ function upload_url(string $path): string
 // SITE SETTINGS  (cached from DB on first call)
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns a reference to the shared settings cache array (or null when unloaded).
+ * Passing true resets the cache so the next call to site_setting() reloads from DB.
+ */
+function &_ptmd_settings_cache_ref(bool $reset = false): ?array
+{
+    static $cache = null;
+    if ($reset) {
+        $cache = null;
+    }
+    return $cache;
+}
+
 /** Read a site_setting value from the database (with in-request cache). */
 function site_setting(string $key, string $fallback = ''): string
 {
-    static $cache = null;
+    $cache = &_ptmd_settings_cache_ref();
 
     if ($cache === null) {
         $cache = [];
@@ -64,22 +77,7 @@ function site_setting(string $key, string $fallback = ''): string
 /** Force reload of the site_settings cache (call after saving). */
 function flush_settings_cache(): void
 {
-    // Trick: rebind static to null via closure
-    $fn = Closure::bind(static function () { $cache = null; }, null, null);
-    $fn();
-    // Simpler approach — just unset via a second static function
-    _settings_cache_bust();
-}
-
-function _settings_cache_bust(): void
-{
-    static $busted = false;
-    if (!$busted) {
-        $busted = true;
-        // On next call to site_setting() the null-check in static $cache will
-        // not help because it already has a value.  For simplicity we reload
-        // the page after saves (redirect), which clears the process cache.
-    }
+    _ptmd_settings_cache_ref(true);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,10 +208,10 @@ function slugify(string $text): string
 }
 
 // ---------------------------------------------------------------------------
-// EPISODES
+// cases
 // ---------------------------------------------------------------------------
 
-function get_featured_episode(): ?array
+function get_featured_case(): ?array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -221,14 +219,14 @@ function get_featured_episode(): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1'
+        'SELECT * FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT 1'
     );
     $stmt->execute(['status' => 'published']);
 
     return $stmt->fetch() ?: null;
 }
 
-function get_latest_episodes(int $limit = 6): array
+function get_latest_cases(int $limit = 6): array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -236,7 +234,7 @@ function get_latest_episodes(int $limit = 6): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT :limit'
+        'SELECT * FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT :limit'
     );
     $stmt->bindValue(':status', 'published');
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -245,7 +243,7 @@ function get_latest_episodes(int $limit = 6): array
     return $stmt->fetchAll();
 }
 
-function find_episode_by_slug(string $slug): ?array
+function find_case_by_slug(string $slug): ?array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -253,14 +251,14 @@ function find_episode_by_slug(string $slug): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE slug = :slug AND status = :status LIMIT 1'
+        'SELECT * FROM cases WHERE slug = :slug AND status = :status LIMIT 1'
     );
     $stmt->execute(['slug' => $slug, 'status' => 'published']);
 
     return $stmt->fetch() ?: null;
 }
 
-function get_episode_tags(int $episodeId): array
+function get_case_tags(int $caseId): array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -268,31 +266,79 @@ function get_episode_tags(int $episodeId): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT t.name FROM episode_tags t
-         INNER JOIN episode_tag_map m ON m.tag_id = t.id
-         WHERE m.episode_id = :id ORDER BY t.name'
+        'SELECT t.name FROM case_tags t
+         INNER JOIN case_tag_map m ON m.tag_id = t.id
+         WHERE m.case_id = :id ORDER BY t.name'
     );
-    $stmt->execute(['id' => $episodeId]);
+    $stmt->execute(['id' => $caseId]);
 
     return array_column($stmt->fetchAll(), 'name');
+}
+
+// ---------------------------------------------------------------------------
+// SOCIAL / POSTING SITES
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a platform display name or site_key string to the stable
+ * lowercase-underscore site_key used in the dispatch registry and the
+ * posting_sites table.
+ *
+ * Examples:
+ *   'YouTube Shorts' → 'youtube_shorts'
+ *   'Instagram Reels' → 'instagram_reels'
+ *   'X' → 'x'
+ */
+function ptmd_platform_to_site_key(string $platform): string
+{
+    return strtolower(str_replace(' ', '_', trim($platform)));
+}
+
+/**
+ * Load all (or only active) posting sites from the DB, ordered by
+ * sort_order then display_name.
+ *
+ * Returns an empty array when the DB is unavailable so callers can
+ * fall back gracefully.
+ *
+ * Each row contains: id, site_key, display_name, is_active, sort_order,
+ * created_at, updated_at.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function get_posting_sites(bool $activeOnly = true): array
+{
+    $pdo = get_db();
+    if (!$pdo) {
+        return [];
+    }
+
+    $sql = $activeOnly
+        ? 'SELECT * FROM posting_sites WHERE is_active = 1 ORDER BY sort_order, display_name'
+        : 'SELECT * FROM posting_sites ORDER BY sort_order, display_name';
+
+    return $pdo->query($sql)->fetchAll();
 }
 
 // ---------------------------------------------------------------------------
 // PAGE TITLE
 // ---------------------------------------------------------------------------
 
-function page_title(string $page, ?array $episode = null): string
+function page_title(string $page, ?array $case = null): string
 {
-    if ($page === 'episode' && $episode) {
-        return e($episode['title']) . ' | ' . e(site_setting('site_name', 'Paper Trail MD'));
+    if ($page === 'case' && $case) {
+        return e($case['title']) . ' | ' . e(site_setting('site_name', 'Paper Trail MD'));
     }
 
     $map = [
-        'home'      => site_setting('site_name', 'Paper Trail MD'),
-        'episodes'  => 'Episodes | ' . site_setting('site_name', 'Paper Trail MD'),
-        'about'     => 'About | '    . site_setting('site_name', 'Paper Trail MD'),
-        'contact'   => 'Contact | '  . site_setting('site_name', 'Paper Trail MD'),
-        'case-chat' => 'Case Chat | '. site_setting('site_name', 'Paper Trail MD'),
+        'home'       => site_setting('site_name', 'Paper Trail MD'),
+        'cases'      => 'Cases | '       . site_setting('site_name', 'Paper Trail MD'),
+        'about'      => 'About | '       . site_setting('site_name', 'Paper Trail MD'),
+        'series'     => 'Series | '      . site_setting('site_name', 'Paper Trail MD'),
+        'contact'    => 'Contact | '     . site_setting('site_name', 'Paper Trail MD'),
+        'case-chat'  => 'Case Chat | '   . site_setting('site_name', 'Paper Trail MD'),
+        'register'   => 'Register | '    . site_setting('site_name', 'Paper Trail MD'),
+        'chat-login' => 'Sign In | '     . site_setting('site_name', 'Paper Trail MD'),
     ];
 
     return $map[$page] ?? site_setting('site_name', 'Paper Trail MD');
@@ -409,7 +455,7 @@ function save_ai_generation(
     string $model,
     int $promptTokens,
     int $responseTokens,
-    ?int $episodeId = null
+    ?int $caseId = null
 ): int {
     $pdo = get_db();
     if (!$pdo) {
@@ -418,12 +464,12 @@ function save_ai_generation(
 
     $stmt = $pdo->prepare(
         'INSERT INTO ai_generations
-         (episode_id, feature, input_prompt, output_text, model, prompt_tokens, response_tokens, created_at)
-         VALUES (:episode_id, :feature, :input_prompt, :output_text, :model, :prompt_tokens, :response_tokens, NOW())'
+         (case_id, feature, input_prompt, output_text, model, prompt_tokens, response_tokens, created_at)
+         VALUES (:case_id, :feature, :input_prompt, :output_text, :model, :prompt_tokens, :response_tokens, NOW())'
     );
 
     $stmt->execute([
-        'episode_id'      => $episodeId,
+        'case_id'      => $caseId,
         'feature'         => $feature,
         'input_prompt'    => $inputPrompt,
         'output_text'     => $outputText,
@@ -505,16 +551,16 @@ function ptmd_copilot_context(): string
     $parts = [];
 
     if ($pdo) {
-        $epTotal  = (int) $pdo->query('SELECT COUNT(*) FROM episodes')->fetchColumn();
-        $epPub    = (int) $pdo->query('SELECT COUNT(*) FROM episodes WHERE status = "published"')->fetchColumn();
-        $parts[]  = "Episodes: {$epTotal} total, {$epPub} published.";
+        $epTotal  = (int) $pdo->query('SELECT COUNT(*) FROM cases')->fetchColumn();
+        $epPub    = (int) $pdo->query('SELECT COUNT(*) FROM cases WHERE status = "published"')->fetchColumn();
+        $parts[]  = "cases: {$epTotal} total, {$epPub} published.";
 
         $latestEps = $pdo->query(
-            'SELECT title, status FROM episodes ORDER BY created_at DESC LIMIT 5'
+            'SELECT title, status FROM cases ORDER BY created_at DESC LIMIT 5'
         )->fetchAll();
         if ($latestEps) {
             $epList  = array_map(fn($e) => '  - "' . $e['title'] . '" (' . $e['status'] . ')', $latestEps);
-            $parts[] = "Recent episodes:\n" . implode("\n", $epList);
+            $parts[] = "Recent cases:\n" . implode("\n", $epList);
         }
 
         $queuePending = (int) $pdo->query(
@@ -551,7 +597,7 @@ CURRENT SITE SNAPSHOT:
 {$context}
 
 ADMIN MODULES YOU CAN HELP WITH:
-- Episodes (create, edit, publish, archive) → /admin/episodes.php
+- cases (create, edit, publish, archive) → /admin/cases.php
 - Video Processor (trim clips, extract short-form content) → /admin/video-processor.php
 - Overlay Tool (apply branded overlays to clips) → /admin/overlay-tool.php
 - Media Library (thumbnails, intros, watermarks, overlays, clips) → /admin/media.php
