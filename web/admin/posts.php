@@ -14,6 +14,10 @@ require_once __DIR__ . '/../inc/social_services.php';
 
 $pdo = get_db();
 
+/**
+ * Validate and normalize a relative uploads path.
+ * Returns empty string when the path is invalid or unsafe.
+ */
 function safe_upload_rel_path(?string $path): string
 {
     $clean = trim((string) $path);
@@ -39,6 +43,11 @@ function safe_upload_rel_path(?string $path): string
     return implode('/', $segments);
 }
 
+function clip_asset_path(array $clip): string
+{
+    return (string) ($clip['output_path'] ?? $clip['source_path'] ?? '');
+}
+
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         redirect('/admin/posts.php', 'Invalid CSRF token.', 'danger');
@@ -55,7 +64,12 @@ if ($pdo && is_post()) {
         $assetPath   = trim((string) ($_POST['asset_path'] ?? ''));
         $scheduledFor = trim((string) ($_POST['scheduled_for'] ?? ''));
 
-        $prefStmt = $pdo->prepare('SELECT * FROM social_platform_preferences WHERE platform = :platform LIMIT 1');
+        $prefStmt = $pdo->prepare(
+            'SELECT is_enabled, default_content_type, default_caption_prefix, default_hashtags, default_status
+             FROM social_platform_preferences
+             WHERE platform = :platform
+             LIMIT 1'
+        );
         $prefStmt->execute(['platform' => $platform]);
         $pref = $prefStmt->fetch();
 
@@ -261,7 +275,7 @@ foreach ($clips as $clip) {
 
 $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
 $selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
-$selectedClipAsset = safe_upload_rel_path($selectedClip['output_path'] ?? $selectedClip['source_path'] ?? '');
+$selectedClipAsset = safe_upload_rel_path($selectedClip ? clip_asset_path($selectedClip) : '');
 
 $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
@@ -431,7 +445,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                             <td class="fw-500"><?php ee($item['platform']); ?></td>
                             <td class="ptmd-muted small">
                                 <?php if (!empty($item['clip_id'])): ?>
-                                    <?php $safeClipPath = safe_upload_rel_path($item['clip_output_path'] ?: $item['clip_source_path']); ?>
+                                    <?php $safeClipPath = safe_upload_rel_path(clip_asset_path(['output_path' => $item['clip_output_path'], 'source_path' => $item['clip_source_path']])); ?>
                                     <div class="fw-500"><?php ee($item['clip_label'] ?: ('Clip #' . $item['clip_id'])); ?></div>
                                     <?php if ($safeClipPath !== ''): ?>
                                         <a href="/uploads/<?php ee($safeClipPath); ?>" target="_blank" rel="noopener" style="font-size:var(--text-xs)">
