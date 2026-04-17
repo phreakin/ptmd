@@ -75,3 +75,71 @@ foreach ($stubCalls as $stub) {
     ptmd_assert_same($stub['result']['external_post_id'], null, "{$stub['name']} keeps external_post_id null");
     ptmd_assert_same($stub['result']['error'] ?? null, $stub['expected'], "{$stub['name']} returns expected TODO error");
 }
+
+// ── get_social_image_requirements ────────────────────────────────────────────
+
+$reqs = get_social_image_requirements();
+ptmd_assert_true(is_array($reqs), 'get_social_image_requirements returns an array');
+ptmd_assert_true(array_key_exists('YouTube', $reqs), 'get_social_image_requirements includes YouTube');
+ptmd_assert_true(array_key_exists('thumbnail', $reqs['YouTube']), 'YouTube requirements include thumbnail');
+
+$ytThumb = $reqs['YouTube']['thumbnail'];
+ptmd_assert_same($ytThumb['recommended_width'],  1280, 'YouTube thumbnail recommended_width is 1280');
+ptmd_assert_same($ytThumb['recommended_height'], 720,  'YouTube thumbnail recommended_height is 720');
+ptmd_assert_same($ytThumb['aspect_ratio_w'],     16,   'YouTube thumbnail aspect_ratio_w is 16');
+ptmd_assert_same($ytThumb['aspect_ratio_h'],     9,    'YouTube thumbnail aspect_ratio_h is 9');
+ptmd_assert_same($ytThumb['max_file_size'],      2 * 1024 * 1024, 'YouTube thumbnail max_file_size is 2 MB');
+
+foreach (['YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels'] as $platform) {
+    ptmd_assert_true(array_key_exists($platform, $reqs), "get_social_image_requirements includes {$platform}");
+    ptmd_assert_true(array_key_exists('cover', $reqs[$platform]), "{$platform} requirements include cover");
+}
+ptmd_assert_true(array_key_exists('X', $reqs), 'get_social_image_requirements includes X');
+
+// ── validate_social_image ─────────────────────────────────────────────────────
+
+// Exact match — should be valid
+$result = validate_social_image('YouTube', 'thumbnail', 1280, 720, 1024 * 1024);
+ptmd_assert_same($result['is_valid'], true, 'validate_social_image: YouTube thumbnail exact dimensions is valid');
+ptmd_assert_same($result['errors'], [], 'validate_social_image: YouTube thumbnail exact has no errors');
+
+// Wrong dimensions — should be invalid
+$result = validate_social_image('YouTube', 'thumbnail', 640, 480, 500 * 1024);
+ptmd_assert_same($result['is_valid'], false, 'validate_social_image: YouTube thumbnail wrong dimensions is invalid');
+ptmd_assert_true(!empty($result['errors']), 'validate_social_image: YouTube thumbnail wrong dimensions has errors');
+
+// File too large — should be invalid
+$result = validate_social_image('YouTube', 'thumbnail', 1280, 720, 3 * 1024 * 1024);
+ptmd_assert_same($result['is_valid'], false, 'validate_social_image: YouTube thumbnail oversized file is invalid');
+ptmd_assert_true(!empty($result['errors']), 'validate_social_image: YouTube thumbnail oversized file has errors');
+
+// Unknown platform — no requirements defined, treated as valid
+$result = validate_social_image('LinkedIn', 'thumbnail', 1200, 627, 1024 * 1024);
+ptmd_assert_same($result['is_valid'], true, 'validate_social_image: unknown platform returns valid (no requirements)');
+ptmd_assert_same($result['errors'], [], 'validate_social_image: unknown platform has no errors');
+
+// Unknown image type on known platform — treated as valid
+$result = validate_social_image('YouTube', 'story', 1080, 1920, 1024 * 1024);
+ptmd_assert_same($result['is_valid'], true, 'validate_social_image: undefined image type returns valid');
+
+// Null dimensions — should flag error
+$result = validate_social_image('YouTube', 'thumbnail', null, null, 500 * 1024);
+ptmd_assert_same($result['is_valid'], false, 'validate_social_image: null dimensions is invalid');
+ptmd_assert_true(!empty($result['errors']), 'validate_social_image: null dimensions has errors');
+
+// Instagram Reels cover — correct 9:16
+$result = validate_social_image('Instagram Reels', 'cover', 1080, 1920, 4 * 1024 * 1024);
+ptmd_assert_same($result['is_valid'], true, 'validate_social_image: Instagram Reels cover exact is valid');
+
+// Instagram Reels cover — file too large (>8 MB)
+$result = validate_social_image('Instagram Reels', 'cover', 1080, 1920, 9 * 1024 * 1024);
+ptmd_assert_same($result['is_valid'], false, 'validate_social_image: Instagram Reels cover oversized is invalid');
+
+// X banner — correct 3:1
+$result = validate_social_image('X', 'banner', 1500, 500, 1024 * 1024);
+ptmd_assert_same($result['is_valid'], true, 'validate_social_image: X banner correct dimensions is valid');
+
+// Aspect ratio mismatch (wrong ratio, not matching recommended size either)
+$result = validate_social_image('X', 'thumbnail', 800, 800, 500 * 1024);
+ptmd_assert_same($result['is_valid'], false, 'validate_social_image: X thumbnail 1:1 aspect ratio is invalid (expects 16:9)');
+ptmd_assert_true(!empty($result['errors']), 'validate_social_image: X thumbnail 1:1 has errors');

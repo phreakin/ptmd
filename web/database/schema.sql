@@ -328,4 +328,23 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
     INDEX idx_aam_session_created (session_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Social Platform Images  (per-platform image assets + validation)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS social_platform_images (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    platform            VARCHAR(80)   NOT NULL,
+    image_type          VARCHAR(80)   NOT NULL,   -- thumbnail | cover | profile | banner | story
+    image_path          VARCHAR(255)  NOT NULL,   -- relative to /uploads
+    width               INT UNSIGNED  NULL,       -- detected pixel width
+    height              INT UNSIGNED  NULL,       -- detected pixel height
+    file_size           BIGINT UNSIGNED NULL,     -- bytes
+    is_valid            TINYINT(1)    NOT NULL DEFAULT 0,
+    validation_errors   JSON          NULL,       -- array of error strings
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    INDEX idx_spi_platform (platform),
+    INDEX idx_spi_platform_type (platform, image_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

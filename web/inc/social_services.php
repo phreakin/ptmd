@@ -67,6 +67,173 @@ function dispatch_social_post(array $queueItem): array
 }
 
 // ---------------------------------------------------------------------------
+// Platform Image Requirements
+// ---------------------------------------------------------------------------
+
+/**
+ * Return per-platform image requirements keyed by image_type.
+ * Each entry: max_file_size (bytes), recommended_width, recommended_height,
+ *             aspect_ratio_w, aspect_ratio_h, max_width, max_height.
+ * A null dimension means no strict requirement.
+ *
+ * @return array<string, array<string, array<string, int|null>>>
+ */
+function get_social_image_requirements(): array
+{
+    return [
+        'YouTube' => [
+            'thumbnail' => [
+                'recommended_width'  => 1280,
+                'recommended_height' => 720,
+                'aspect_ratio_w'     => 16,
+                'aspect_ratio_h'     => 9,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 2 * 1024 * 1024,   // 2 MB
+            ],
+        ],
+        'YouTube Shorts' => [
+            'cover' => [
+                'recommended_width'  => 1080,
+                'recommended_height' => 1920,
+                'aspect_ratio_w'     => 9,
+                'aspect_ratio_h'     => 16,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 2 * 1024 * 1024,   // 2 MB
+            ],
+            'thumbnail' => [
+                'recommended_width'  => 1280,
+                'recommended_height' => 720,
+                'aspect_ratio_w'     => 16,
+                'aspect_ratio_h'     => 9,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 2 * 1024 * 1024,
+            ],
+        ],
+        'TikTok' => [
+            'cover' => [
+                'recommended_width'  => 1080,
+                'recommended_height' => 1920,
+                'aspect_ratio_w'     => 9,
+                'aspect_ratio_h'     => 16,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 10 * 1024 * 1024,  // 10 MB
+            ],
+        ],
+        'Instagram Reels' => [
+            'cover' => [
+                'recommended_width'  => 1080,
+                'recommended_height' => 1920,
+                'aspect_ratio_w'     => 9,
+                'aspect_ratio_h'     => 16,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 8 * 1024 * 1024,   // 8 MB
+            ],
+        ],
+        'Facebook Reels' => [
+            'cover' => [
+                'recommended_width'  => 1080,
+                'recommended_height' => 1920,
+                'aspect_ratio_w'     => 9,
+                'aspect_ratio_h'     => 16,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 10 * 1024 * 1024,
+            ],
+        ],
+        'X' => [
+            'thumbnail' => [
+                'recommended_width'  => 1200,
+                'recommended_height' => 675,
+                'aspect_ratio_w'     => 16,
+                'aspect_ratio_h'     => 9,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 5 * 1024 * 1024,   // 5 MB
+            ],
+            'profile' => [
+                'recommended_width'  => 400,
+                'recommended_height' => 400,
+                'aspect_ratio_w'     => 1,
+                'aspect_ratio_h'     => 1,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 2 * 1024 * 1024,
+            ],
+            'banner' => [
+                'recommended_width'  => 1500,
+                'recommended_height' => 500,
+                'aspect_ratio_w'     => 3,
+                'aspect_ratio_h'     => 1,
+                'max_width'          => null,
+                'max_height'         => null,
+                'max_file_size'      => 5 * 1024 * 1024,
+            ],
+        ],
+    ];
+}
+
+/**
+ * Validate an image against the requirements for a given platform and image type.
+ *
+ * @param string   $platform   Platform name (e.g. 'YouTube')
+ * @param string   $imageType  Image type key (e.g. 'thumbnail')
+ * @param int|null $width      Detected image width in pixels (null = unknown)
+ * @param int|null $height     Detected image height in pixels (null = unknown)
+ * @param int|null $fileSize   File size in bytes (null = unknown)
+ * @return array{is_valid: bool, errors: string[]}
+ */
+function validate_social_image(string $platform, string $imageType, ?int $width, ?int $height, ?int $fileSize): array
+{
+    $errors = [];
+    $allRequirements = get_social_image_requirements();
+    $req = $allRequirements[$platform][$imageType] ?? null;
+
+    if ($req === null) {
+        // No specific requirements defined — treat as valid.
+        return ['is_valid' => true, 'errors' => []];
+    }
+
+    // File size check
+    if ($fileSize !== null && $req['max_file_size'] !== null && $fileSize > $req['max_file_size']) {
+        $maxMb = number_format($req['max_file_size'] / (1024 * 1024), 1);
+        $actualMb = number_format($fileSize / (1024 * 1024), 1);
+        $errors[] = "File size {$actualMb} MB exceeds the {$maxMb} MB limit for {$platform} {$imageType}.";
+    }
+
+    if ($width !== null && $height !== null && $width > 0 && $height > 0) {
+        // Aspect ratio check — allow 1% tolerance for rounding
+        $ratioW = $req['aspect_ratio_w'];
+        $ratioH = $req['aspect_ratio_h'];
+        if ($ratioW !== null && $ratioH !== null) {
+            $expected = $ratioW / $ratioH;
+            $actual   = $width / $height;
+            if (abs($actual - $expected) / $expected > 0.01) {
+                $errors[] = "Aspect ratio {$width}×{$height} does not match the required {$ratioW}:{$ratioH} for {$platform} {$imageType}.";
+            }
+        }
+
+        // Recommended dimension check (warning-level only — flags as invalid)
+        $recW = $req['recommended_width'];
+        $recH = $req['recommended_height'];
+        if ($recW !== null && $recH !== null && ($width !== $recW || $height !== $recH)) {
+            $errors[] = "Dimensions {$width}×{$height} differ from the recommended {$recW}×{$recH} for {$platform} {$imageType}.";
+        }
+    } elseif ($width === null || $height === null) {
+        $errors[] = "Image dimensions could not be detected.";
+    }
+
+    return [
+        'is_valid' => empty($errors),
+        'errors'   => $errors,
+    ];
+}
+
+// ---------------------------------------------------------------------------
 // YouTube — full documentary upload
 // ---------------------------------------------------------------------------
 
