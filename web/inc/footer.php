@@ -21,7 +21,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     >
                 </div>
                 <p class="ptmd-muted small">
-                    <?php ee(site_setting('site_tagline', 'Investigative. Sharp. Cinematic.')); ?>
+                    <?php ee(site_setting('site_tagline', 'Follow the trail. Receipts matter.')); ?>
                 </p>
                 <p class="ptmd-muted small mb-0">
                     <a href="mailto:<?php ee(site_setting('site_email', 'papertrailmd@gmail.com')); ?>">
@@ -36,6 +36,8 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 <ul class="list-unstyled ptmd-footer-links">
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/index.php?page=cases">Open Cases</a></li>
+                    <li><a href="/index.php?page=about">About</a></li>
+                    <li><a href="/index.php?page=series">Series</a></li>
                     <li><a href="/index.php?page=cases">Closed Cases</a></li>
                     <li><a href="/index.php?page=cases">Cold Cases</a></li>
                     <li><a href="/index.php?page=cases">Most Wanted</a></li>
@@ -80,13 +82,13 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 
             <!-- CTA column -->
             <div class="col-lg-3">
-                <h6 class="ptmd-footer-heading">Submit a Tip</h6>
+                <h6 class="ptmd-footer-heading">Drop a Tip</h6>
                 <p class="ptmd-muted small">
-                    Have a lead? A tip? A document that proves something?
-                    We want to know.
+                    Have a lead? A receipt? A document that proves something?
+                    The timeline never lies — show us yours.
                 </p>
-                <a href="/index.php?page=contact" class="btn btn-ptmd-success btn-sm">
-                   Submit a Tip
+                <a href="/index.php?page=contact" class="btn btn-ptmd-secondary btn-sm">
+                    <i class="fa-solid fa-paper-plane me-1"></i>Drop a Tip
                 </a>
             </div>
 
@@ -98,7 +100,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 &copy; <?php echo date('Y'); ?> <?php ee($siteName); ?>. All rights reserved.
             </p>
             <p class="ptmd-muted small mb-0">
-                Built with intent.
+                🧾 Receipts matter.
             </p>
         </div>
     </div>

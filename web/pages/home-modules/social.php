@@ -3,7 +3,7 @@
     <div class="ptmd-panel p-xl text-center">
         <h2 class="mb-3">Follow the Paper Trail</h2>
         <p class="ptmd-text-muted mb-4" style="max-width:50ch;margin-inline:auto">
-            New cases every week. Receipts always included.
+            New episodes every week. Timelines reconstructed. Receipts always included. 🧾
         </p>
         <div class="d-flex flex-wrap gap-3 justify-content-center">
             <?php if (site_setting('social_youtube')): ?>

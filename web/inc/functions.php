@@ -334,6 +334,7 @@ function page_title(string $page, ?array $case = null): string
         'home'       => site_setting('site_name', 'Paper Trail MD'),
         'cases'      => 'Cases | '       . site_setting('site_name', 'Paper Trail MD'),
         'about'      => 'About | '       . site_setting('site_name', 'Paper Trail MD'),
+        'series'     => 'Series | '      . site_setting('site_name', 'Paper Trail MD'),
         'contact'    => 'Contact | '     . site_setting('site_name', 'Paper Trail MD'),
         'case-chat'  => 'Case Chat | '   . site_setting('site_name', 'Paper Trail MD'),
         'register'   => 'Register | '    . site_setting('site_name', 'Paper Trail MD'),
