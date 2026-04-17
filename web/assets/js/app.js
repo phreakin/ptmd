@@ -293,3 +293,22 @@ setTimeout(() => {
 setTimeout(() => {
     showOverlay('/assets/brand/overlays/lower-thirds/lower-third-red-case.png');
 }, 12000);
+
+async function loadChat() {
+    const res = await fetch('/fetch_chat.php');
+    const data = await res.json();
+
+    const container = document.getElementById('chatFeed');
+    container.innerHTML = '';
+
+    data.forEach(msg => {
+        container.innerHTML += `
+            <div class="chat-message">
+                <div class="chat-user">${msg.user}</div>
+                <div class="chat-text">${msg.message}</div>
+            </div>
+        `;
+    });
+}
+
+setInterval(loadChat, 2000);
