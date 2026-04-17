@@ -38,27 +38,27 @@ $flash = pull_flash();
             <div class="collapse navbar-collapse" id="ptmdNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php" style="color: var(--ptmd-red); font-weight: 700;">
+                        <a class="nav-link" href="/index.php">
                             <i class="fa-solid fa-house fa-sm me-1"></i>Home
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=cases" style="color: var(--ptmd-red); font-weight: 700;">
+                        <a class="nav-link" href="/index.php?page=cases">
                             <i class="fa-solid fa-film fa-sm me-1"></i>Open Cases
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=cold-cases" style="color: var(--ptmd-red); font-weight: 700;">
+                        <a class="nav-link" href="/index.php?page=cold-cases">
                             <i class="fa-solid fa-book fa-sm me-1"></i>Cold Cases
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=case-chat" style="color: var(--ptmd-red); font-weight: 700;">
+                        <a class="nav-link" href="/index.php?page=case-chat">
                             <i class="fa-solid fa-comments fa-sm me-1"></i>Case Chat
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=most-wanted" style="color: var(--ptmd-red); font-weight: 700;">
+                        <a class="nav-link" href="/index.php?page=most-wanted">
                             <i class="fa-solid fa-envelope fa-sm me-1"></i>Most Wanted
                         </a>
                     </li>
