@@ -105,6 +105,9 @@ if ($pdo) {
                 <a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-calendar me-2"></i>Schedule Post
                 </a>
+                <a href="/admin/monitor.php" class="btn btn-ptmd-outline">
+                    <i class="fa-solid fa-chart-line me-2"></i>Monitor
+                </a>
             </div>
         </div>
     </div>

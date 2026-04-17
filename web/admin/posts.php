@@ -7,6 +7,8 @@ $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
 $pageHeading  = 'Social Post Queue';
 $pageSubheading = 'Manage and track all scheduled social media posts.';
+$pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
 
 include __DIR__ . '/_admin_head.php';
 

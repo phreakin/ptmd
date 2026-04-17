@@ -14,6 +14,8 @@ $pageTitle    = 'Video Processor | PTMD Admin';
 $activePage   = 'video-processor';
 $pageHeading  = 'Video Processor';
 $pageSubheading = 'Upload videos, extract clips, and prepare them for overlay processing and social publishing.';
+$pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
 
 include __DIR__ . '/_admin_head.php';
 
