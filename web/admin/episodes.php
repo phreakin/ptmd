@@ -7,14 +7,16 @@ $pageTitle   = 'Episodes | PTMD Admin';
 $activePage  = 'episodes';
 $pageHeading = 'Episodes';
 
+// Load config, session, DB layer, and helpers BEFORE any call to get_db()/is_post()/etc.
+require_once __DIR__ . '/../inc/bootstrap.php';
+require_login();
+
 $pdo    = get_db();
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 
 // ── Handle POST ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
-    require_once __DIR__ . '/../inc/bootstrap.php';
-
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         redirect('/admin/episodes.php', 'Invalid CSRF token.', 'danger');
     }
