@@ -11,10 +11,6 @@ $pdo    = get_db();
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 
-if ($editId > 0 && !isset($_GET['action'])) {
-    $action = 'edit';
-}
-
 // ── Handle POST ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
     require_once __DIR__ . '/../inc/bootstrap.php';
@@ -131,15 +127,16 @@ if ($pdo && is_post()) {
             }
 
             $pdo->prepare(
-                'INSERT INTO episode_tags (name, slug, created_at, updated_at)
-                 VALUES (:name, :slug, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE updated_at = NOW(), id = LAST_INSERT_ID(id)'
+                'INSERT IGNORE INTO episode_tags (name, slug, created_at, updated_at)
+                 VALUES (:name, :slug, NOW(), NOW())'
             )->execute([
                 'name' => $keyword,
                 'slug' => $tagSlug,
             ]);
 
-            $tagId = (int) $pdo->lastInsertId();
+            $tagStmt = $pdo->prepare('SELECT id FROM episode_tags WHERE slug = :slug LIMIT 1');
+            $tagStmt->execute(['slug' => $tagSlug]);
+            $tagId = (int) ($tagStmt->fetchColumn() ?: 0);
             if ($tagId > 0) {
                 $pdo->prepare(
                     'INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
