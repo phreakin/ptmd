@@ -113,5 +113,76 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 <!-- PTMD App JS -->
 <script src="/assets/js/app.js"></script>
 
+<!-- PTMD First-party Analytics (non-blocking) -->
+<script>
+(function () {
+    'use strict';
+
+    // Episode ID is passed from the PHP context (null on non-episode pages)
+    var episodeId = <?php echo isset($currentEpisode['id']) ? (int) $currentEpisode['id'] : 'null'; ?>;
+
+    /**
+     * Send an event to the track_event API.
+     * Uses sendBeacon when available so it fires reliably on page unload.
+     */
+    function sendEvent(type, extra) {
+        var payload = { event_type: type };
+        if (episodeId) { payload.episode_id = episodeId; }
+        if (extra)     { payload.extra       = extra; }
+
+        try {
+            var body = JSON.stringify(payload);
+            if (navigator.sendBeacon) {
+                // Wrap in a Blob to send with application/json content-type
+                navigator.sendBeacon(
+                    '/api/track_event.php',
+                    new Blob([body], { type: 'application/json' })
+                );
+            } else {
+                fetch('/api/track_event.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body,
+                    keepalive: true,
+                }).catch(function () { /* silent */ });
+            }
+        } catch (err) { /* silent */ }
+    }
+
+    // Page view — fires on every public page load
+    sendEvent('page_view');
+
+    // Social link clicks — tracks outbound social link engagement
+    document.querySelectorAll(
+        'a[href*="youtube.com"], a[href*="tiktok.com"], a[href*="instagram.com"], a[href*="x.com/"], a[href*="twitter.com"], a[href*="facebook.com"]'
+    ).forEach(function (el) {
+        el.addEventListener('click', function () {
+            sendEvent('link_click', { href: el.href.substring(0, 100) });
+        });
+    });
+
+    // HTML5 video tracking — for self-hosted videos rendered with id="ptmdPlayer"
+    var video = document.getElementById('ptmdPlayer');
+    if (video) {
+        var playFired     = false;
+        var completeFired = false;
+
+        video.addEventListener('play', function () {
+            if (!playFired) {
+                playFired = true;
+                sendEvent('video_play');
+            }
+        });
+
+        video.addEventListener('timeupdate', function () {
+            if (!completeFired && video.duration > 0 && (video.currentTime / video.duration) >= 0.9) {
+                completeFired = true;
+                sendEvent('video_complete');
+            }
+        });
+    }
+}());
+</script>
+
 </body>
 </html>
