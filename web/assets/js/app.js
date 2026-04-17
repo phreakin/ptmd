@@ -273,3 +273,23 @@ document.addEventListener('change', (e) => {
 
 // ─── Expose Toast globally for inline use ─────────────────────────────────────
 window.PTMDToast = Toast;
+
+const overlayImage = document.getElementById("overlayImage");
+
+function showOverlay(src, duration = 2000) {
+    overlayImage.src = src;
+    overlayImage.style.opacity = "1";
+
+    setTimeout(() => {
+        overlayImage.style.opacity = "0";
+    }, duration);
+}
+
+// EXAMPLES
+setTimeout(() => {
+    showOverlay('/assets/brand/overlays/stamps/evidence-stamp.png');
+}, 5000);
+
+setTimeout(() => {
+    showOverlay('/assets/brand/overlays/lower-thirds/lower-third-red-case.png');
+}, 12000);
