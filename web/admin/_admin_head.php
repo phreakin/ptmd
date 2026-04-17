@@ -16,6 +16,7 @@ $activePage = $activePage ?? '';
 
 $navItems = [
     ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
+    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-up-down-left-right', 'id' => 'site-editor'],
     ['href' => '/admin/episodes.php',        'label' => 'Episodes',        'icon' => 'fa-film',           'id' => 'episodes'],
     ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
     ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
@@ -131,7 +132,7 @@ $navItems = [
         <!-- Site & Content -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Content</div>
-            <?php foreach (array_slice($navItems, 0, 5) as $item): ?>
+            <?php foreach (array_slice($navItems, 0, 6) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -147,7 +148,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 5, 4) as $item): ?>
+            <?php foreach (array_slice($navItems, 6, 4) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -164,13 +165,13 @@ $navItems = [
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
             <a
-                href="<?php ee($navItems[9]['href']); ?>"
+                href="<?php ee($navItems[10]['href']); ?>"
                 class="ptmd-nav-item <?php echo $activePage === 'settings' ? 'active' : ''; ?>"
             >
                 <span class="nav-icon">
-                    <i class="fa-solid <?php ee($navItems[9]['icon']); ?>"></i>
+                    <i class="fa-solid <?php ee($navItems[10]['icon']); ?>"></i>
                 </span>
-                <?php ee($navItems[9]['label']); ?>
+                <?php ee($navItems[10]['label']); ?>
             </a>
             <a href="/admin/logout.php" class="ptmd-nav-item">
                 <span class="nav-icon"><i class="fa-solid fa-right-from-bracket" style="color:var(--ptmd-error)"></i></span>
