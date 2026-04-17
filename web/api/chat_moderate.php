@@ -45,8 +45,8 @@ $roomId       = (int) ($_POST['room_id']       ?? 0);
 
 $caller   = current_chat_user();
 $callerId = $caller ? (int) $caller['id'] : 0;
+$hideReason = trim(strip_tags((string)($_POST['hide_reason'] ?? $reason)));
 
-$allowed = ['pin', 'unpin', 'delete', 'restore', 'mute_user', 'unmute_user', 'ban_user', 'unban_user'];
 if (!in_array($action, $allowed, true)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Invalid action.']);
@@ -54,7 +54,7 @@ if (!in_array($action, $allowed, true)) {
 }
 
 // Only admins may act on other moderators+
-if (in_array($action, ['mute_user', 'ban_user'], true) && $targetUserId > 0) {
+if (in_array($action, ['mute_user', 'ban_user', 'add_strike', 'hide', 'delete'], true) && $targetUserId > 0) {
     $targetRow = get_chat_user_by_id($targetUserId);
     if ($targetRow && chat_role_rank($targetRow['role']) >= chat_role_rank('moderator')) {
         if (!chat_user_has_role('admin')) {
@@ -159,6 +159,56 @@ switch ($action) {
         }
         _cml_log($pdo, null, $callerId, $targetUserId, 'unbanned_user', $reason);
         echo json_encode(['ok' => true]);
+        break;
+
+    case 'hide':
+        if ($messageId <= 0) { echo json_encode(['ok'=>false,'error'=>'message_id required']); exit; }
+        // Load message author for rank check
+        $msgStmt = $pdo->prepare('SELECT chat_user_id FROM chat_messages WHERE id = :id LIMIT 1');
+        $msgStmt->execute(['id' => $messageId]);
+        $msgRow = $msgStmt->fetch();
+        if (!$msgRow) { echo json_encode(['ok'=>false,'error'=>'Message not found']); exit; }
+        $msgAuthor = $msgRow['chat_user_id'] ? get_chat_user_by_id((int)$msgRow['chat_user_id']) : null;
+        if (!chat_can('hide', $caller, $msgAuthor ?? ['role'=>'guest'])) {
+            http_response_code(403);
+            echo json_encode(['ok'=>false,'error'=>'Insufficient rank to hide this message.']);
+            exit;
+        }
+        $pdo->prepare(
+            'UPDATE chat_messages SET hidden_at = NOW(), hidden_by = :by, hide_reason = :reason, updated_at = NOW() WHERE id = :id'
+        )->execute(['by' => $callerId ?: null, 'reason' => $hideReason ?: null, 'id' => $messageId]);
+        _cml_log($pdo, $messageId, $callerId, (int)($msgRow['chat_user_id'] ?? 0), 'hidden', $reason);
+        echo json_encode(['ok' => true]);
+        break;
+
+    case 'unhide':
+        if ($messageId <= 0) { echo json_encode(['ok'=>false,'error'=>'message_id required']); exit; }
+        $pdo->prepare(
+            'UPDATE chat_messages SET hidden_at = NULL, hidden_by = NULL, hide_reason = NULL, updated_at = NOW() WHERE id = :id'
+        )->execute(['id' => $messageId]);
+        _cml_log($pdo, $messageId, $callerId, null, 'unhidden', $reason);
+        echo json_encode(['ok' => true]);
+        break;
+
+    case 'add_strike':
+        if ($targetUserId <= 0) { echo json_encode(['ok'=>false,'error'=>'target_user_id required']); exit; }
+        $targetRow = get_chat_user_by_id($targetUserId);
+        if (!chat_can('add_strike', $caller, $targetRow)) {
+            http_response_code(403);
+            echo json_encode(['ok'=>false,'error'=>'Insufficient rank to strike this user.']);
+            exit;
+        }
+        $pdo->prepare(
+            'UPDATE chat_users SET strike_count = strike_count + 1, last_strike_at = NOW(), updated_at = NOW() WHERE id = :id'
+        )->execute(['id' => $targetUserId]);
+        // Auto-mute on 3 strikes
+        $newCount = (int)$pdo->query("SELECT strike_count FROM chat_users WHERE id = {$targetUserId} LIMIT 1")->fetchColumn();
+        if ($newCount >= 3) {
+            $pdo->prepare('UPDATE chat_users SET status = "muted", muted_until = DATE_ADD(NOW(), INTERVAL 24 HOUR), updated_at = NOW() WHERE id = :id')
+                ->execute(['id' => $targetUserId]);
+        }
+        _cml_log($pdo, $messageId > 0 ? $messageId : null, $callerId, $targetUserId, 'strike_added', $reason);
+        echo json_encode(['ok' => true, 'strike_count' => $newCount, 'auto_muted' => $newCount >= 3]);
         break;
 }
 
