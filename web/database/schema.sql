@@ -328,4 +328,45 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
     INDEX idx_aam_session_created (session_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Live Streams  (scheduled and active live broadcasts)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS live_streams (
+    id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    title           VARCHAR(255)  NOT NULL,
+    description     TEXT          NULL,
+    provider        ENUM('site','youtube','twitch','instagram','rumble') NOT NULL DEFAULT 'youtube',
+    stream_mode     ENUM('site','external') NOT NULL DEFAULT 'external',
+    status          ENUM('draft','scheduled','live','ended') NOT NULL DEFAULT 'draft',
+    starts_at       DATETIME      NULL,
+    ends_at         DATETIME      NULL,
+    embed_url       VARCHAR(1000) NULL,
+    playback_url    VARCHAR(1000) NULL,
+    chat_url        VARCHAR(1000) NULL,
+    is_featured     TINYINT(1)    NOT NULL DEFAULT 0,
+    created_by      INT UNSIGNED  NULL,
+    created_at      DATETIME      NOT NULL,
+    updated_at      DATETIME      NOT NULL,
+    CONSTRAINT fk_ls_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_ls_status (status),
+    INDEX idx_ls_featured_status (is_featured, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Live Stream Destinations  (optional multi-destination tracking)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS live_stream_destinations (
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    live_stream_id   INT UNSIGNED  NOT NULL,
+    platform         VARCHAR(80)   NOT NULL,
+    destination_url  VARCHAR(1000) NULL,
+    external_id      VARCHAR(255)  NULL,
+    status           ENUM('pending','active','ended','error') NOT NULL DEFAULT 'pending',
+    last_error       TEXT          NULL,
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    CONSTRAINT fk_lsd_stream FOREIGN KEY (live_stream_id) REFERENCES live_streams(id) ON DELETE CASCADE,
+    INDEX idx_lsd_stream (live_stream_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
