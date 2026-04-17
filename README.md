@@ -44,3 +44,29 @@ web/database/migration_posting_sites.sql
 This creates the two new tables and backfills rows from existing platform
 strings in `social_platform_preferences`, `social_post_queue`, and
 `social_post_schedules`.
+
+If your install predates the content workflow automation tables, also run:
+
+```
+web/database/migration_content_workflow.sql
+```
+
+### Content Workflow Automation
+
+Use `/admin/content-workflow.php` to run an end-to-end workflow from a topic to
+scheduled posting:
+
+1. Topic input creates (or links) a draft case
+2. Asset path assignment links the clip/video to the workflow
+3. Queue items are auto-created for all active rows in `posting_sites`
+4. Due posts can be auto-dispatched from the same page
+
+The workflow is persisted in:
+
+- `content_workflows`
+- `content_workflow_assets`
+- `content_workflow_posts`
+
+Automated dispatch endpoint for cron:
+
+`/api/social_dispatch_worker.php?token=<automation_worker_token>`
