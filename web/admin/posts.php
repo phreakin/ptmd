@@ -64,6 +64,16 @@ if ($pdo && is_post()) {
         $assetPath   = trim((string) ($_POST['asset_path'] ?? ''));
         $scheduledFor = trim((string) ($_POST['scheduled_for'] ?? ''));
 
+        // Check posting_sites.is_active for the selected platform
+        $siteCheck = $pdo->prepare(
+            'SELECT is_active FROM posting_sites WHERE site_key = :key LIMIT 1'
+        );
+        $siteCheck->execute(['key' => ptmd_platform_to_site_key($platform)]);
+        $siteRow = $siteCheck->fetch();
+        if ($siteRow !== false && (int) $siteRow['is_active'] !== 1) {
+            redirect('/admin/posts.php', 'This platform is currently inactive.', 'warning');
+        }
+
         $prefStmt = $pdo->prepare(
             'SELECT is_enabled, default_content_type, default_caption_prefix, default_hashtags, default_status
              FROM social_platform_preferences
@@ -261,7 +271,12 @@ $queue = $pdo ? $pdo->query(
 
 $episodes  = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-$platforms = ['YouTube','YouTube Shorts','TikTok','Instagram Reels','Facebook Reels','X'];
+
+// Load active platforms from DB; fall back to hardcoded list for graceful degradation
+$activeSites = get_posting_sites(true);
+$platforms   = $activeSites
+    ? array_column($activeSites, 'display_name')
+    : ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];
