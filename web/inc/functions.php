@@ -276,6 +276,51 @@ function get_case_tags(int $caseId): array
 }
 
 // ---------------------------------------------------------------------------
+// SOCIAL / POSTING SITES
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a platform display name or site_key string to the stable
+ * lowercase-underscore site_key used in the dispatch registry and the
+ * posting_sites table.
+ *
+ * Examples:
+ *   'YouTube Shorts' → 'youtube_shorts'
+ *   'Instagram Reels' → 'instagram_reels'
+ *   'X' → 'x'
+ */
+function ptmd_platform_to_site_key(string $platform): string
+{
+    return strtolower(str_replace(' ', '_', trim($platform)));
+}
+
+/**
+ * Load all (or only active) posting sites from the DB, ordered by
+ * sort_order then display_name.
+ *
+ * Returns an empty array when the DB is unavailable so callers can
+ * fall back gracefully.
+ *
+ * Each row contains: id, site_key, display_name, is_active, sort_order,
+ * created_at, updated_at.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function get_posting_sites(bool $activeOnly = true): array
+{
+    $pdo = get_db();
+    if (!$pdo) {
+        return [];
+    }
+
+    $sql = $activeOnly
+        ? 'SELECT * FROM posting_sites WHERE is_active = 1 ORDER BY sort_order, display_name'
+        : 'SELECT * FROM posting_sites ORDER BY sort_order, display_name';
+
+    return $pdo->query($sql)->fetchAll();
+}
+
+// ---------------------------------------------------------------------------
 // PAGE TITLE
 // ---------------------------------------------------------------------------
 

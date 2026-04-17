@@ -304,6 +304,35 @@ CREATE TABLE IF NOT EXISTS video_clips (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Posting Sites  (canonical list of social media posting targets)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS posting_sites (
+    id           INT UNSIGNED      AUTO_INCREMENT PRIMARY KEY,
+    site_key     VARCHAR(80)       NOT NULL UNIQUE,   -- stable slug: youtube, youtube_shorts, tiktok, etc.
+    display_name VARCHAR(120)      NOT NULL,          -- human-readable: YouTube, YouTube Shorts, etc.
+    is_active    TINYINT(1)        NOT NULL DEFAULT 1,
+    sort_order   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at   DATETIME          NOT NULL,
+    updated_at   DATETIME          NOT NULL,
+    INDEX idx_ps_active_order (is_active, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Site Posting Options  (per-site defaults for content + caption)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS site_posting_options (
+    id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    site_id                INT UNSIGNED NOT NULL UNIQUE,
+    default_content_type   VARCHAR(80)  NULL,
+    default_caption_prefix TEXT         NULL,
+    default_hashtags       VARCHAR(255) NULL,
+    default_status         ENUM('draft','queued','scheduled') NOT NULL DEFAULT 'queued',
+    created_at             DATETIME     NOT NULL,
+    updated_at             DATETIME     NOT NULL,
+    CONSTRAINT fk_spo_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Admin Copilot — Conversation sessions
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_assistant_sessions (

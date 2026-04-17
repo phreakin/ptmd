@@ -110,6 +110,52 @@ SELECT e.id, t.id FROM cases e
 JOIN case_tags t ON t.slug IN ('local-government','corruption','follow-the-money')
 WHERE e.slug = 'the-permit-maze';
 
+-- Canonical posting sites (idempotent — keyed on site_key unique index)
+INSERT INTO posting_sites (site_key, display_name, is_active, sort_order, created_at, updated_at) VALUES
+('youtube',          'YouTube',          1, 10, NOW(), NOW()),
+('youtube_shorts',   'YouTube Shorts',   1, 20, NOW(), NOW()),
+('tiktok',           'TikTok',           1, 30, NOW(), NOW()),
+('instagram_reels',  'Instagram Reels',  1, 40, NOW(), NOW()),
+('facebook_reels',   'Facebook Reels',   1, 50, NOW(), NOW()),
+('x',                'X',                1, 60, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    display_name = VALUES(display_name),
+    is_active    = VALUES(is_active),
+    sort_order   = VALUES(sort_order),
+    updated_at   = NOW();
+
+-- Default posting options per site (idempotent — keyed on site_id unique index)
+INSERT INTO site_posting_options
+    (site_id, default_content_type, default_caption_prefix, default_hashtags, default_status, created_at, updated_at)
+SELECT
+    ps.id,
+    v.default_content_type,
+    v.default_caption_prefix,
+    v.default_hashtags,
+    v.default_status,
+    NOW(),
+    NOW()
+FROM posting_sites ps
+JOIN (
+    SELECT 'youtube'          AS site_key, 'full documentary' AS default_content_type, 'New episode from Paper Trail MD.'   AS default_caption_prefix, '#investigation #documentary' AS default_hashtags, 'queued' AS default_status
+    UNION ALL
+    SELECT 'youtube_shorts',  'teaser',           'Short cut from Paper Trail MD.',     '#shorts #investigation',      'queued'
+    UNION ALL
+    SELECT 'tiktok',          'teaser',           'Fresh PTMD clip just dropped.',       '#tiktok #investigation',      'queued'
+    UNION ALL
+    SELECT 'instagram_reels', 'teaser',           'New reel from Paper Trail MD.',       '#reels #investigation',       'queued'
+    UNION ALL
+    SELECT 'facebook_reels',  'clip',             'Watch this Paper Trail MD clip.',     '#reels #news',                'queued'
+    UNION ALL
+    SELECT 'x',               'launch post',      'New post from Paper Trail MD.',       '#news #journalism',           'queued'
+) AS v ON v.site_key = ps.site_key
+ON DUPLICATE KEY UPDATE
+    default_content_type   = VALUES(default_content_type),
+    default_caption_prefix = VALUES(default_caption_prefix),
+    default_hashtags       = VALUES(default_hashtags),
+    default_status         = VALUES(default_status),
+    updated_at             = NOW();
+
 -- Default social posting cadence (PTMD recommended schedule — Phoenix time)
 INSERT INTO social_post_schedules (platform, content_type, day_of_week, post_time, timezone, is_active, created_at, updated_at) VALUES
 ('YouTube Shorts',   'teaser',              'Friday',    '17:00:00', 'America/Phoenix', 1, NOW(), NOW()),
