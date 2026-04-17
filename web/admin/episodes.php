@@ -384,7 +384,7 @@ else:
                 </div>
 
                 <div class="ptmd-panel p-xl mb-4">
-                    <h2 class="h6 mb-3">AI Field Suggestions</h2>
+                    <h2 class="h6 mb-3">AI Field Suggestions &amp; Optimization</h2>
                     <?php if (!$apiKeySet): ?>
                         <p class="ptmd-muted small mb-0">
                             OpenAI API key is not configured. Set it in
@@ -411,6 +411,9 @@ else:
                         </div>
                         <button class="btn btn-ptmd-outline w-100 mb-3" type="button" id="ai_suggest_btn">
                             <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Suggest Field
+                        </button>
+                        <button class="btn btn-ptmd-outline w-100 mb-3" type="button" id="ai_optimize_btn">
+                            <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Optimize Field
                         </button>
                         <div id="ai_suggest_result_wrap" style="display:none">
                             <label class="form-label" for="ai_suggest_result">Suggestion</label>
@@ -462,55 +465,87 @@ const guidanceInput = document.getElementById('ai_suggest_guidance');
 const resultWrap = document.getElementById('ai_suggest_result_wrap');
 const resultInput = document.getElementById('ai_suggest_result');
 const applyBtn = document.getElementById('ai_apply_suggestion_btn');
+const optimizeBtn = document.getElementById('ai_optimize_btn');
 const csrfInput = document.querySelector('input[name="csrf_token"]');
 const episodeIdInput = document.getElementById('ep_id');
 
+async function runFieldAiAction(button, runningLabel, idleLabel, feature, extraPayload = {}) {
+    if (!button || !fieldSelect || !resultWrap || !resultInput || !csrfInput) {
+        return;
+    }
+    const selectedField = fieldSelect.value;
+    button.disabled = true;
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>${runningLabel}`;
+    resultWrap.style.display = 'block';
+    resultInput.value = `${runningLabel}...`;
+
+    try {
+        const fd = new FormData();
+        fd.set('csrf_token', csrfInput.value);
+        fd.set('feature', feature);
+        fd.set('suggest_field', selectedField);
+        fd.set('suggest_guidance', guidanceInput?.value ?? '');
+        fd.set('suggest_episode', episodeIdInput?.value ?? '');
+        fd.set('context_title', document.getElementById('ep_title')?.value ?? '');
+        fd.set('context_excerpt', document.getElementById('ep_excerpt')?.value ?? '');
+        fd.set('context_body', document.getElementById('ep_body')?.value ?? '');
+        fd.set('context_keywords', document.getElementById('ep_keywords')?.value ?? '');
+        fd.set('context_video_url', document.getElementById('ep_video_url')?.value ?? '');
+        fd.set('context_duration', document.getElementById('ep_duration')?.value ?? '');
+        fd.set('context_thumbnail_image', document.getElementById('ep_thumb_url')?.value ?? '');
+        Object.entries(extraPayload).forEach(([k, v]) => fd.set(k, v));
+
+        const res = await fetch('/api/ai_generate.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: fd,
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+            resultInput.value = data.text ?? '';
+            window.PTMDToast?.success(idleLabel + ' generated.');
+        } else {
+            resultInput.value = '⚠ ' + (data.error ?? idleLabel + ' failed.');
+            window.PTMDToast?.error(data.error ?? idleLabel + ' failed.');
+        }
+    } catch (err) {
+        resultInput.value = '⚠ Network error. Please try again.';
+        window.PTMDToast?.error('Network error.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-2"></i>${idleLabel}`;
+    }
+}
+
 if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfInput) {
     suggestBtn.addEventListener('click', async () => {
-        const selectedField = fieldSelect.value;
-
-        suggestBtn.disabled = true;
-        suggestBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Generating...';
-        resultWrap.style.display = 'block';
-        resultInput.value = 'Generating suggestion...';
-
-        try {
-            const fd = new FormData();
-            fd.set('csrf_token', csrfInput.value);
-            fd.set('feature', 'episode_field_suggestion');
-            fd.set('suggest_field', selectedField);
-            fd.set('suggest_guidance', guidanceInput?.value ?? '');
-            fd.set('suggest_episode', episodeIdInput?.value ?? '');
-            fd.set('context_title', document.getElementById('ep_title')?.value ?? '');
-            fd.set('context_excerpt', document.getElementById('ep_excerpt')?.value ?? '');
-            fd.set('context_body', document.getElementById('ep_body')?.value ?? '');
-            fd.set('context_keywords', document.getElementById('ep_keywords')?.value ?? '');
-            fd.set('context_video_url', document.getElementById('ep_video_url')?.value ?? '');
-            fd.set('context_duration', document.getElementById('ep_duration')?.value ?? '');
-            fd.set('context_thumbnail_image', document.getElementById('ep_thumb_url')?.value ?? '');
-
-            const res = await fetch('/api/ai_generate.php', {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: fd,
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                resultInput.value = data.text ?? '';
-                window.PTMDToast?.success('Suggestion generated.');
-            } else {
-                resultInput.value = '⚠ ' + (data.error ?? 'Suggestion failed.');
-                window.PTMDToast?.error(data.error ?? 'Suggestion failed.');
-            }
-        } catch (err) {
-            resultInput.value = '⚠ Network error. Please try again.';
-            window.PTMDToast?.error('Network error.');
-        } finally {
-            suggestBtn.disabled = false;
-            suggestBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-2"></i>Suggest Field';
-        }
+        await runFieldAiAction(suggestBtn, 'Generating suggestion', 'Suggest Field', 'episode_field_suggestion');
     });
+
+    if (optimizeBtn) {
+        optimizeBtn.addEventListener('click', async () => {
+            const selectedField = fieldSelect.value;
+            const targetId = fieldToElementIdMap[selectedField];
+            const target = targetId ? document.getElementById(targetId) : null;
+            const sourceText = target?.value ?? '';
+            if (!target) {
+                window.PTMDToast?.error('Target field not found.');
+                return;
+            }
+            if (sourceText.trim() === '') {
+                window.PTMDToast?.error('Add field content before optimizing.');
+                return;
+            }
+            await runFieldAiAction(
+                optimizeBtn,
+                'Optimizing field',
+                'Optimize Field',
+                'episode_field_optimize',
+                { optimize_source: sourceText }
+            );
+        });
+    }
 
     applyBtn.addEventListener('click', () => {
         const selectedField = fieldSelect.value;

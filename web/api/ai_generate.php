@@ -109,7 +109,7 @@ if (!verify_csrf($_POST['csrf_token'] ?? null)) {
 
 $feature = trim((string) ($_POST['feature'] ?? ''));
 
-$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept', 'episode_field_suggestion'];
+$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept', 'episode_field_suggestion', 'episode_field_optimize'];
 if (!in_array($feature, $allowed, true)) {
     echo json_encode(['ok' => false, 'error' => 'Unknown feature: ' . e($feature)]);
     exit;
@@ -379,6 +379,104 @@ switch ($feature) {
             . "Output rules:\n"
             . "- Return only the suggestion text, no labels\n"
             . "- Keep tone investigative, sharp, credible\n"
+            . "- {$fieldRule}\n";
+        break;
+
+    case 'episode_field_optimize':
+        $field = trim((string) ($_POST['suggest_field'] ?? ''));
+        $allowedFields = [
+            'title' => 'Title',
+            'slug' => 'Slug',
+            'excerpt' => 'Excerpt',
+            'body' => 'Body',
+            'keywords' => 'Keywords',
+            'video_url' => 'Video URL',
+            'duration' => 'Duration',
+            'thumbnail_image' => 'Thumbnail image path/URL',
+        ];
+        if (!isset($allowedFields[$field])) {
+            echo json_encode(['ok' => false, 'error' => 'Unknown field requested.']);
+            exit;
+        }
+
+        $epId = (int) ($_POST['suggest_episode'] ?? 0);
+        $episodeId = $epId ?: null;
+        $guidance = trim((string) ($_POST['suggest_guidance'] ?? ''));
+
+        $contextTitle = trim((string) ($_POST['context_title'] ?? ''));
+        $contextExcerpt = trim((string) ($_POST['context_excerpt'] ?? ''));
+        $contextBody = trim((string) ($_POST['context_body'] ?? ''));
+        $contextKeywords = trim((string) ($_POST['context_keywords'] ?? ''));
+        $contextVideoUrl = trim((string) ($_POST['context_video_url'] ?? ''));
+        $contextDuration = trim((string) ($_POST['context_duration'] ?? ''));
+        $contextThumbnail = trim((string) ($_POST['context_thumbnail_image'] ?? ''));
+        $sourceText = trim((string) ($_POST['optimize_source'] ?? ''));
+
+        if ($epId > 0) {
+            $pdo = get_db();
+            if ($pdo) {
+                $ep = $pdo->prepare('SELECT title, excerpt, body, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep->execute(['id' => $epId]);
+                $epRow = $ep->fetch();
+                if ($epRow) {
+                    $contextTitle = $contextTitle !== '' ? $contextTitle : (string) ($epRow['title'] ?? '');
+                    $contextExcerpt = $contextExcerpt !== '' ? $contextExcerpt : (string) ($epRow['excerpt'] ?? '');
+                    $contextBody = $contextBody !== '' ? $contextBody : (string) ($epRow['body'] ?? '');
+                    $contextVideoUrl = $contextVideoUrl !== '' ? $contextVideoUrl : (string) ($epRow['video_url'] ?? '');
+                    $contextDuration = $contextDuration !== '' ? $contextDuration : (string) ($epRow['duration'] ?? '');
+                    $contextThumbnail = $contextThumbnail !== '' ? $contextThumbnail : (string) ($epRow['thumbnail_image'] ?? '');
+                }
+            }
+        }
+
+        if ($sourceText === '') {
+            $fallbackMap = [
+                'title' => $contextTitle,
+                'slug' => '',
+                'excerpt' => $contextExcerpt,
+                'body' => $contextBody,
+                'keywords' => $contextKeywords,
+                'video_url' => $contextVideoUrl,
+                'duration' => $contextDuration,
+                'thumbnail_image' => $contextThumbnail,
+            ];
+            $sourceText = trim((string) ($fallbackMap[$field] ?? ''));
+        }
+
+        if ($sourceText === '') {
+            echo json_encode(['ok' => false, 'error' => 'Add field text before optimizing.']);
+            exit;
+        }
+
+        $context = "Title: {$contextTitle}\n"
+            . "Excerpt: {$contextExcerpt}\n"
+            . "Body: " . mb_substr($contextBody, 0, 900) . "\n"
+            . "Keywords: {$contextKeywords}\n"
+            . "Video URL: {$contextVideoUrl}\n"
+            . "Duration: {$contextDuration}\n"
+            . "Thumbnail: {$contextThumbnail}\n";
+
+        $guidanceClause = $guidance !== '' ? "Additional admin guidance: {$guidance}\n\n" : '';
+        $optimizationRules = [
+            'title' => 'Return one improved title line only (max 120 chars).',
+            'slug' => 'Return one URL-safe lowercase slug line only using letters, numbers, and hyphens.',
+            'excerpt' => 'Return one improved excerpt paragraph (1-2 sentences, max 300 chars).',
+            'body' => 'Return one improved body section with clearer structure and flow (about 180-320 words).',
+            'keywords' => 'Return one improved comma-separated list of 8-12 relevant keywords.',
+            'video_url' => 'Return one cleaned or corrected embed URL line only.',
+            'duration' => 'Return one duration value in mm:ss format only.',
+            'thumbnail_image' => 'Return one cleaned and sensible thumbnail path/URL line only.',
+        ];
+        $fieldRule = $optimizationRules[$field];
+
+        $userPrompt = "Optimize the existing '{$allowedFields[$field]}' text for a PTMD episode edit form.\n\n"
+            . $guidanceClause
+            . "Current field text to optimize:\n{$sourceText}\n\n"
+            . "Current episode context:\n{$context}\n"
+            . "Output rules:\n"
+            . "- Return only the optimized text, no labels\n"
+            . "- Preserve factual meaning and avoid adding unsupported claims\n"
+            . "- Keep tone investigative, sharp, and credible\n"
             . "- {$fieldRule}\n";
         break;
 
