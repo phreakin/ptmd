@@ -9,10 +9,19 @@
 require_once __DIR__ . '/inc/bootstrap.php';
 
 // ── Allowed public pages ──────────────────────────────────────────────────────
-$allowedPages = ['home', 'cases', 'case', 'about', 'series', 'contact', 'case-chat', 'register', 'chat-login'];
+$allowedPages = ['home', 'cases', 'case', 'about', 'series', 'contact', 'case-chat', 'register', 'chat-login', 'login', 'account'];
 
 // ── Resolve page ──────────────────────────────────────────────────────────────
 $page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
+
+// ── Logout — inline handler, no template needed ───────────────────────────────
+if ($page === 'logout') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        viewer_logout();
+    }
+    header('Location: /index.php');
+    exit;
+}
 
 if (!in_array($page, $allowedPages, true)) {
     http_response_code(404);

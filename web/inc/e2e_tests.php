@@ -129,6 +129,8 @@ function run_ptmd_e2e_tests(): array
         '/index.php?page=open-cases' => 200,
         '/index.php?page=case-detail' => 200,
         '/index.php?page=case-detail&slug=test-case' => 200,
+        '/index.php?page=login' => 200,
+        '/index.php?page=account' => 302,  // redirects to login when not authenticated
     ];
 
     foreach ($publicRoutes as $route => $expectedStatus) {
@@ -265,6 +267,15 @@ function run_ptmd_e2e_tests(): array
         && (($chatTooLong['json']['ok'] ?? true) === false);
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (message too long)', $chatTooLongOk, $chatTooLongOk ? 'Validation rejects overlong chat messages' : 'Overlong chat validation failed', ['actual_status' => $chatTooLong['status'] ?? null]);
 
+    // Viewer toggle_favorite endpoint — anonymous → 405 on GET, 401 on POST
+    $favAnon = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php');
+    $favAnonOk = $favAnon['ok'] && (($favAnon['status'] ?? 0) === 405);
+    ptmd_e2e_record($api, 'GET /api/toggle_favorite.php (anonymous, wrong method)', $favAnonOk, $favAnonOk ? 'Method guard returns 405' : 'toggle_favorite method guard failed', ['actual_status' => $favAnon['status'] ?? null]);
+
+    $favAnonPost = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php', 'POST', ['episode_id' => 1, 'csrf_token' => 'invalid']);
+    $favAnonPostOk = $favAnonPost['ok'] && (($favAnonPost['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'POST /api/toggle_favorite.php (anonymous)', $favAnonPostOk, $favAnonPostOk ? 'Unauthenticated returns 401' : 'toggle_favorite auth guard failed', ['actual_status' => $favAnonPost['status'] ?? null]);
+
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
@@ -336,6 +347,64 @@ function run_ptmd_e2e_tests(): array
         ptmd_e2e_record($api, 'POST /api/apply_overlays.php (invalid csrf)', $overlayPostInvalidCsrfOk, $overlayPostInvalidCsrfOk ? 'CSRF protection enforced' : 'Overlay CSRF check failed', ['actual_status' => $overlayPostInvalidCsrf['status'] ?? null]);
     } else {
         ptmd_e2e_record($api, 'Authenticated apply_overlays checks', true, 'Skipped: active admin session is required');
+    }
+
+    // edit_jobs API
+    $editJobsAnon = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php');
+    $editJobsAnonOk = $editJobsAnon['ok'] && (($editJobsAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/edit_jobs.php (anonymous)', $editJobsAnonOk, $editJobsAnonOk ? 'Unauthorized as expected' : 'Anonymous edit_jobs auth check failed', ['actual_status' => $editJobsAnon['status'] ?? null]);
+
+    if ($sessionIsValid) {
+        $editJobsAuth = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php', 'GET', [], $authCookie);
+        $editJobsAuthOk = $editJobsAuth['ok']
+            && (($editJobsAuth['status'] ?? 0) === 200)
+            && is_array($editJobsAuth['json'])
+            && (($editJobsAuth['json']['ok'] ?? false) === true)
+            && array_key_exists('jobs', $editJobsAuth['json']);
+        ptmd_e2e_record($api, 'GET /api/edit_jobs.php (admin session)', $editJobsAuthOk, $editJobsAuthOk ? 'Edit jobs API returns jobs list' : 'Edit jobs API GET failed', ['actual_status' => $editJobsAuth['status'] ?? null]);
+
+        $editJobsInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => 'invalid', '_action' => 'create'],
+            $authCookie
+        );
+        $editJobsCsrfOk = $editJobsInvalidCsrf['ok'] && (($editJobsInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (invalid csrf)', $editJobsCsrfOk, $editJobsCsrfOk ? 'CSRF protection enforced' : 'Edit jobs CSRF check failed', ['actual_status' => $editJobsInvalidCsrf['status'] ?? null]);
+
+        $editJobsNoPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => ''],
+            $authCookie
+        );
+        $editJobsNoPathOk = $editJobsNoPath['ok']
+            && (($editJobsNoPath['status'] ?? 0) === 200)
+            && is_array($editJobsNoPath['json'])
+            && (($editJobsNoPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (missing source_path)', $editJobsNoPathOk, $editJobsNoPathOk ? 'Validation rejects empty source_path' : 'Edit jobs source_path validation failed', ['actual_status' => $editJobsNoPath['status'] ?? null]);
+
+        $editJobsBadPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => '../../../../etc/passwd'],
+            $authCookie
+        );
+        $editJobsBadPathOk = $editJobsBadPath['ok']
+            && (($editJobsBadPath['status'] ?? 0) === 200)
+            && is_array($editJobsBadPath['json'])
+            && (($editJobsBadPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (path traversal)', $editJobsBadPathOk, $editJobsBadPathOk ? 'Path traversal rejected' : 'Edit jobs path traversal check failed', ['actual_status' => $editJobsBadPath['status'] ?? null]);
+
+        // process_edit_jobs worker auth
+        $workerAnon = ptmd_e2e_request($baseUrl, '/api/process_edit_jobs.php');
+        $workerAnonOk = $workerAnon['ok'] && (($workerAnon['status'] ?? 0) === 401);
+        ptmd_e2e_record($api, 'GET /api/process_edit_jobs.php (anonymous)', $workerAnonOk, $workerAnonOk ? 'Unauthorized as expected' : 'Worker anonymous auth check failed', ['actual_status' => $workerAnon['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated edit_jobs checks', true, 'Skipped: active admin session is required');
     }
 
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];

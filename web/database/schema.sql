@@ -511,6 +511,73 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Edit Jobs  (first-class automation job: source → renders → publish)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS edit_jobs (
+    id              INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
+    label           VARCHAR(255)    NOT NULL DEFAULT 'Untitled Edit Job',
+    source_clip_id  INT UNSIGNED    NULL,              -- FK to video_clips (nullable for path-only jobs)
+    source_path     VARCHAR(255)    NOT NULL,           -- relative to /uploads
+    caption_mode    ENUM('none','embedded','sidecar') NOT NULL DEFAULT 'none',
+    platforms_json  JSON            NULL,               -- array of platform target strings
+    status          ENUM('pending','processing','completed','failed','canceled') NOT NULL DEFAULT 'pending',
+    retry_count     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    max_retries     TINYINT UNSIGNED NOT NULL DEFAULT 3,
+    error_message   TEXT            NULL,
+    created_by      INT UNSIGNED    NULL,
+    created_at      DATETIME        NOT NULL,
+    updated_at      DATETIME        NOT NULL,
+    CONSTRAINT fk_ej_clip FOREIGN KEY (source_clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ej_user FOREIGN KEY (created_by)     REFERENCES users(id)       ON DELETE SET NULL,
+    INDEX idx_ej_status (status),
+    INDEX idx_ej_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Edit Job Outputs  (one row per platform variant / render target)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS edit_job_outputs (
+    id                 INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
+    job_id             INT UNSIGNED    NOT NULL,
+    platform           VARCHAR(80)     NOT NULL DEFAULT 'generic',
+    caption_mode       ENUM('none','embedded','sidecar') NOT NULL DEFAULT 'none',
+    overlay_path       VARCHAR(255)    NULL,            -- primary overlay image relative to /web root
+    image_layers_json  JSON            NULL,            -- [{path,position,scale,opacity,start_sec,end_sec}, …]
+    render_config_json JSON            NULL,            -- extra ffmpeg / render options
+    output_path        VARCHAR(255)    NULL,            -- relative to /uploads
+    status             ENUM('pending','processing','done','failed') NOT NULL DEFAULT 'pending',
+    error_message      TEXT            NULL,
+    ffmpeg_command     TEXT            NULL,            -- stored for debugging / replay
+    retry_count        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    queue_item_id      INT UNSIGNED    NULL,            -- FK to social_post_queue when queued for publish
+    created_at         DATETIME        NOT NULL,
+    updated_at         DATETIME        NOT NULL,
+    CONSTRAINT fk_ejo_job FOREIGN KEY (job_id) REFERENCES edit_jobs(id) ON DELETE CASCADE,
+    INDEX idx_ejo_job_status (job_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Clip Captions  (caption text / sidecar files linked to clips or jobs)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clip_captions (
+    id                INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
+    clip_id           INT UNSIGNED    NULL,
+    job_id            INT UNSIGNED    NULL,
+    caption_mode      ENUM('embedded','sidecar') NOT NULL DEFAULT 'embedded',
+    caption_text      TEXT            NULL,             -- plain text caption / SRT source
+    srt_path          VARCHAR(255)    NULL,             -- relative to /uploads
+    vtt_path          VARCHAR(255)    NULL,             -- relative to /uploads
+    ai_generation_id  INT UNSIGNED    NULL,
+    created_at        DATETIME        NOT NULL,
+    updated_at        DATETIME        NOT NULL,
+    CONSTRAINT fk_cc_clip FOREIGN KEY (clip_id)          REFERENCES video_clips(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_cc_job  FOREIGN KEY (job_id)           REFERENCES edit_jobs(id)      ON DELETE SET NULL,
+    CONSTRAINT fk_cc_ai   FOREIGN KEY (ai_generation_id) REFERENCES ai_generations(id) ON DELETE SET NULL,
+    INDEX idx_cc_clip (clip_id),
+    INDEX idx_cc_job  (job_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Text & Media Assets  (reusable content blocks for automation)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS assets (
@@ -836,6 +903,50 @@ CREATE TABLE IF NOT EXISTS content_status_log (
     created_at   DATETIME      NOT NULL,
     INDEX idx_csl_entity  (entity_type, entity_id),
     INDEX idx_csl_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Viewer Users  (public-facing accounts, separate from admin users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS viewer_users (
+    id                 INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username           VARCHAR(50)   NOT NULL UNIQUE,
+    email              VARCHAR(150)  NOT NULL UNIQUE,
+    password_hash      VARCHAR(255)  NOT NULL,
+    display_name       VARCHAR(100)  NULL,
+    avatar_url         VARCHAR(255)  NULL,
+    status             ENUM('active','suspended') NOT NULL DEFAULT 'active',
+    email_verified_at  DATETIME      NULL,
+    created_at         DATETIME      NOT NULL,
+    updated_at         DATETIME      NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Viewer Sessions  (token-based sessions for viewer_users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS viewer_sessions (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    viewer_id     INT UNSIGNED  NOT NULL,
+    session_token VARCHAR(64)   NOT NULL UNIQUE,
+    expires_at    DATETIME      NOT NULL,
+    ip_hash       VARCHAR(64)   NULL,
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_vs_viewer FOREIGN KEY (viewer_id) REFERENCES viewer_users(id) ON DELETE CASCADE,
+    INDEX idx_vs_token (session_token),
+    INDEX idx_vs_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Episode Favorites  (per-viewer saved episodes)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS episode_favorites (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    viewer_id   INT UNSIGNED  NOT NULL,
+    episode_id  INT UNSIGNED  NOT NULL,
+    created_at  DATETIME      NOT NULL,
+    UNIQUE KEY uq_viewer_episode (viewer_id, episode_id),
+    CONSTRAINT fk_ef_viewer  FOREIGN KEY (viewer_id)  REFERENCES viewer_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ef_episode FOREIGN KEY (episode_id) REFERENCES episodes(id)     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
