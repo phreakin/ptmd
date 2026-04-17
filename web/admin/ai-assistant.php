@@ -153,6 +153,15 @@ if ($pdo) {
 <script>
 'use strict';
 
+// ── Local HTML-escape helper (self-contained; app.js loads after this block) ──
+const escHtml = (str) =>
+    String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let activeSessionId = null;
 const ENDPOINT      = '/api/ai_assistant.php';
