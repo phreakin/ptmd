@@ -45,6 +45,12 @@ This creates the two new tables and backfills rows from existing platform
 strings in `social_platform_preferences`, `social_post_queue`, and
 `social_post_schedules`.
 
+If your install predates the content workflow automation tables, also run:
+
+```
+web/database/migration_content_workflow.sql
+```
+
 ### Content Workflow Automation
 
 Use `/admin/content-workflow.php` to run an end-to-end workflow from a topic to
