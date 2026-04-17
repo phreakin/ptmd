@@ -38,28 +38,33 @@ $flash = pull_flash();
             <div class="collapse navbar-collapse" id="ptmdNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php">
+                        <a class="nav-link" href="/index.php" style="color: var(--ptmd-red); font-weight: 700;">
                             <i class="fa-solid fa-house fa-sm me-1"></i>Home
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=cases">
-                            <i class="fa-solid fa-film fa-sm me-1"></i>cases
+                        <a class="nav-link" href="/index.php?page=cases" style="color: var(--ptmd-red); font-weight: 700;">
+                            <i class="fa-solid fa-film fa-sm me-1"></i>Open Cases
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=case-chat">
+                        <a class="nav-link" href="/index.php?page=cold-cases" style="color: var(--ptmd-red); font-weight: 700;">
+                            <i class="fa-solid fa-book fa-sm me-1"></i>Cold Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=case-chat" style="color: var(--ptmd-red); font-weight: 700;">
                             <i class="fa-solid fa-comments fa-sm me-1"></i>Case Chat
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=about">
-                            <i class="fa-solid fa-circle-info fa-sm me-1"></i>About
+                        <a class="nav-link" href="/index.php?page=most-wanted" style="color: var(--ptmd-red); font-weight: 700;">
+                            <i class="fa-solid fa-envelope fa-sm me-1"></i>Most Wanted
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=contact">
-                            <i class="fa-solid fa-envelope fa-sm me-1"></i>Contact
+                        <a class="nav-link" href="/index.php?page=solved-cases">
+                            <i class="fa-solid fa-check fa-sm me-1"></i>Solved Cases
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">

@@ -34,17 +34,17 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
             <div class="col-6 col-lg-2">
                 <h6 class="ptmd-footer-heading">Site</h6>
                 <ul class="list-unstyled ptmd-footer-links">
-                    <li><a href="/index.php">Home</a></li>
-                    <li><a href="/index.php?page=series">Series</a></li>
-                    <li><a href="/index.php?page=cases">Cases</a></li>
-                    <li><a href="/index.php?page=case-chat">Case Chat</a></li>
-                    <li><a href="/index.php?page=contact">Contact</a></li>
+                    <li><a href="/index.php"><i class="fa-solid fa-house me-1"></i>Home</a></li>
+                    <li><a href="/index.php?page=series"><i class="fa-solid fa-book me-1"></i>Series</a></li>
+                    <li><a href="/index.php?page=cases"><i class="fa-solid fa-gavel me-1"></i>Cases</a></li>
+                    <li><a href="/index.php?page=case-chat"><i class="fa-solid fa-comments me-1"></i>Case Chat</a></li>
+                    <li><a href="/index.php?page=contact"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
                 </ul>
             </div>
 
             <!-- Social column -->
             <div class="col-6 col-lg-3">
-                <h6 class="ptmd-footer-heading">Follow</h6>
+                <h6 class="ptmd-footer-heading"><i class="fa-solid fa-share-nodes me-1"></i>Follow Us</h6>
                 <div class="d-flex flex-column gap-2 ptmd-footer-links">
                     <?php if (site_setting('social_youtube')): ?>
                         <a href="<?php ee(site_setting('social_youtube')); ?>" target="_blank" rel="noopener">
@@ -53,7 +53,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     <?php endif; ?>
                     <?php if (site_setting('social_x')): ?>
                         <a href="<?php ee(site_setting('social_x')); ?>" target="_blank" rel="noopener">
-                            <i class="fa-brands fa-x-twitter me-2"></i>X / Twitter
+                            <i class="fa-brands fa-x-twitter me-2" style="color:var(--ptmd-x-blue)"></i>X (Twitter)
                         </a>
                     <?php endif; ?>
                     <?php if (site_setting('social_instagram')): ?>
@@ -76,7 +76,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 
             <!-- CTA column -->
             <div class="col-lg-3">
-                <h6 class="ptmd-footer-heading">Pitch a Story</h6>
+                <h6 class="ptmd-footer-heading">Submit a Tip</h6>
                 <p class="ptmd-muted small">
                     Have a lead? A tip? A document that proves something?
                     We want to know.
