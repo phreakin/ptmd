@@ -3,6 +3,8 @@
  * PTMD Admin — Episodes CRUD
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle   = 'Episodes | PTMD Admin';
 $activePage  = 'episodes';
 $pageHeading = 'Episodes';
@@ -13,8 +15,6 @@ $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 
 // ── Handle POST ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
-    require_once __DIR__ . '/../inc/bootstrap.php';
-
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         redirect('/admin/episodes.php', 'Invalid CSRF token.', 'danger');
     }

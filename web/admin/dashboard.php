@@ -3,9 +3,11 @@
  * PTMD Admin — Dashboard
  */
 
-$pageTitle    = 'Dashboard | PTMD Admin';
-$activePage   = 'dashboard';
-$pageHeading  = 'Dashboard';
+require_once __DIR__ . '/../inc/bootstrap.php';
+
+$pageTitle      = 'Dashboard | PTMD Admin';
+$activePage     = 'dashboard';
+$pageHeading    = 'Dashboard';
 $pageSubheading = 'Welcome back, ' . (current_admin()['username'] ?? 'Admin');
 
 include __DIR__ . '/_admin_head.php';
