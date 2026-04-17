@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS chat_moderation_logs (
 CREATE TABLE IF NOT EXISTS ai_generations (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     episode_id      INT UNSIGNED  NULL,
-    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept
+    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | episode_field_suggestion
     input_prompt    TEXT          NOT NULL,
     output_text     MEDIUMTEXT    NOT NULL,
     model           VARCHAR(80)   NOT NULL,
@@ -206,6 +206,27 @@ CREATE TABLE IF NOT EXISTS ai_generations (
     CONSTRAINT fk_ag_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
     INDEX idx_feature (feature),
     INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- AI Video Ideas  (structured ideas generated for U.S./world context)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_video_ideas (
+    id                 INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    generation_id      INT UNSIGNED  NULL,
+    created_by         INT UNSIGNED  NULL,
+    scope              ENUM('us','world','both') NOT NULL DEFAULT 'both',
+    context_notes      TEXT          NULL,
+    idea_title         VARCHAR(255)  NOT NULL,
+    premise            TEXT          NOT NULL,
+    suggested_angle    TEXT          NOT NULL,
+    rank_order         SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    created_at         DATETIME      NOT NULL,
+    updated_at         DATETIME      NOT NULL,
+    CONSTRAINT fk_avi_generation FOREIGN KEY (generation_id) REFERENCES ai_generations(id) ON DELETE SET NULL,
+    CONSTRAINT fk_avi_user       FOREIGN KEY (created_by)    REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_avi_created (created_at),
+    INDEX idx_avi_scope_created (scope, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

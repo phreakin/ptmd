@@ -158,6 +158,7 @@ if ($pdo && is_post()) {
 
 $pageSubheading = $action === 'edit' ? 'Edit Episode' : ($action === 'new' ? 'New Episode' : 'All Episodes');
 $pageActions    = '';
+$apiKeySet = site_setting('openai_api_key', '') !== '';
 if ($action === 'list') {
     $pageActions = '<a href="/admin/episodes.php?action=new" class="btn btn-ptmd-primary"><i class="fa-solid fa-plus me-2"></i>New Episode</a>';
 } elseif ($action === 'edit' || $action === 'new') {
@@ -382,6 +383,45 @@ else:
                     </div>
                 </div>
 
+                <div class="ptmd-panel p-xl mb-4">
+                    <h2 class="h6 mb-3">AI Field Suggestions</h2>
+                    <?php if (!$apiKeySet): ?>
+                        <p class="ptmd-muted small mb-0">
+                            OpenAI API key is not configured. Set it in
+                            <a href="/admin/settings.php">Settings</a> to enable suggestions.
+                        </p>
+                    <?php else: ?>
+                        <div class="mb-3">
+                            <label class="form-label" for="ai_suggest_field">Field to suggest</label>
+                            <select class="form-select" id="ai_suggest_field">
+                                <option value="title">Title</option>
+                                <option value="slug">Slug</option>
+                                <option value="excerpt">Excerpt</option>
+                                <option value="body">Body</option>
+                                <option value="keywords">Keywords</option>
+                                <option value="video_url">Video URL</option>
+                                <option value="duration">Duration</option>
+                                <option value="thumbnail_image">Thumbnail URL/path</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="ai_suggest_guidance">Extra guidance (optional)</label>
+                            <textarea class="form-control" id="ai_suggest_guidance" rows="2"
+                                placeholder="Add any direction for tone, angle, or emphasis..."></textarea>
+                        </div>
+                        <button class="btn btn-ptmd-outline w-100 mb-3" type="button" id="ai_suggest_btn">
+                            <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Suggest Field
+                        </button>
+                        <div id="ai_suggest_result_wrap" style="display:none">
+                            <label class="form-label" for="ai_suggest_result">Suggestion</label>
+                            <textarea class="form-control mb-2" id="ai_suggest_result" rows="6"></textarea>
+                            <button class="btn btn-ptmd-primary btn-sm w-100" type="button" id="ai_apply_suggestion_btn">
+                                <i class="fa-solid fa-check me-2"></i>Apply Suggestion to Selected Field
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="d-grid gap-2">
                     <button class="btn btn-ptmd-primary" type="submit">
                         <i class="fa-solid fa-floppy-disk me-2"></i>
@@ -400,5 +440,93 @@ else:
 <?php
 endif;
 
-include __DIR__ . '/_admin_footer.php';
+if ($action !== 'list' && $apiKeySet) {
+    $extraScripts = <<<'HTML'
+<script>
+'use strict';
+
+const fieldToElementIdMap = {
+    title: 'ep_title',
+    slug: 'ep_slug',
+    excerpt: 'ep_excerpt',
+    body: 'ep_body',
+    keywords: 'ep_keywords',
+    video_url: 'ep_video_url',
+    duration: 'ep_duration',
+    thumbnail_image: 'ep_thumb_url',
+};
+
+const suggestBtn = document.getElementById('ai_suggest_btn');
+const fieldSelect = document.getElementById('ai_suggest_field');
+const guidanceInput = document.getElementById('ai_suggest_guidance');
+const resultWrap = document.getElementById('ai_suggest_result_wrap');
+const resultInput = document.getElementById('ai_suggest_result');
+const applyBtn = document.getElementById('ai_apply_suggestion_btn');
+const csrfInput = document.querySelector('input[name="csrf_token"]');
+
+if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfInput) {
+    suggestBtn.addEventListener('click', async () => {
+        const selectedField = fieldSelect.value;
+
+        suggestBtn.disabled = true;
+        suggestBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Generating...';
+        resultWrap.style.display = 'block';
+        resultInput.value = 'Generating suggestion...';
+
+        try {
+            const fd = new FormData();
+            fd.set('csrf_token', csrfInput.value);
+            fd.set('feature', 'episode_field_suggestion');
+            fd.set('suggest_field', selectedField);
+            fd.set('suggest_guidance', guidanceInput?.value ?? '');
+            fd.set('suggest_episode', document.querySelector('input[name="id"]')?.value ?? '');
+            fd.set('context_title', document.getElementById('ep_title')?.value ?? '');
+            fd.set('context_excerpt', document.getElementById('ep_excerpt')?.value ?? '');
+            fd.set('context_body', document.getElementById('ep_body')?.value ?? '');
+            fd.set('context_keywords', document.getElementById('ep_keywords')?.value ?? '');
+            fd.set('context_video_url', document.getElementById('ep_video_url')?.value ?? '');
+            fd.set('context_duration', document.getElementById('ep_duration')?.value ?? '');
+            fd.set('context_thumbnail_image', document.getElementById('ep_thumb_url')?.value ?? '');
+
+            const res = await fetch('/api/ai_generate.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: fd,
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                resultInput.value = data.text ?? '';
+                window.PTMDToast?.success('Suggestion generated.');
+            } else {
+                resultInput.value = '⚠ ' + (data.error ?? 'Suggestion failed.');
+                window.PTMDToast?.error(data.error ?? 'Suggestion failed.');
+            }
+        } catch (err) {
+            resultInput.value = '⚠ Network error. Please try again.';
+            window.PTMDToast?.error('Network error.');
+        } finally {
+            suggestBtn.disabled = false;
+            suggestBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-2"></i>Suggest Field';
+        }
+    });
+
+    applyBtn.addEventListener('click', () => {
+        const selectedField = fieldSelect.value;
+        const targetId = fieldToElementIdMap[selectedField];
+        const target = targetId ? document.getElementById(targetId) : null;
+        if (!target) {
+            window.PTMDToast?.error('Target field not found.');
+            return;
+        }
+        target.value = resultInput.value;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        window.PTMDToast?.success('Suggestion applied.');
+    });
+}
+</script>
+HTML;
+}
 ?>
+
+<?php include __DIR__ . '/_admin_footer.php'; ?>
