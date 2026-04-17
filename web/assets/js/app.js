@@ -140,31 +140,85 @@ function fmtDateTime(str) {
 
 // ─── Case Chat system ─────────────────────────────────────────────────────────
 (function initCaseChat() {
-    const messagesEl = document.getElementById('caseChatMessages');
-    const formEl     = document.getElementById('caseChatForm');
+    const messagesEl   = document.getElementById('caseChatMessages');
+    const formEl       = document.getElementById('caseChatForm');
     if (!messagesEl || !formEl) return;
 
-    const endpoint = messagesEl.dataset.endpoint ?? '/api/chat_messages.php';
-    let lastId = 0;
-    let polling = null;
+    const endpoint     = messagesEl.dataset.endpoint ?? '/api/chat_messages.php';
+    let lastId         = 0;
+    let polling        = null;
+    let autoScroll     = true;
+    let showTimestamps = true;
+    let compactView    = false;
 
-    function avatarInitial(username) {
-        return escHtml(String(username ?? '?')[0].toUpperCase());
+    // Wire toggles
+    const toggleScroll     = document.getElementById('toggleAutoScroll');
+    const toggleTimestamps = document.getElementById('toggleTimestamps');
+    const toggleCompact    = document.getElementById('toggleCompact');
+    if (toggleScroll)     toggleScroll.addEventListener('change',     () => { autoScroll     = toggleScroll.checked; });
+    if (toggleTimestamps) toggleTimestamps.addEventListener('change', () => {
+        showTimestamps = toggleTimestamps.checked;
+        messagesEl.querySelectorAll('.msg-time').forEach(el => {
+            el.style.display = showTimestamps ? '' : 'none';
+        });
+    });
+    if (toggleCompact)    toggleCompact.addEventListener('change',    () => {
+        compactView = toggleCompact.checked;
+        messagesEl.classList.toggle('compact', compactView);
+    });
+
+    // Role detection (simple heuristic from username prefix or known values)
+    function detectRole(username) {
+        const u = String(username ?? '').toLowerCase();
+        if (u.startsWith('host') || u === 'ptmd' || u === 'papertrailmd') return 'host';
+        if (u.startsWith('mod')  || u.includes('_mod'))  return 'mod';
+        if (u.startsWith('vip')  || u.includes('_vip'))  return 'vip';
+        return 'viewer';
     }
 
-    function renderBubble(msg) {
-        const bubble = document.createElement('div');
-        bubble.className = 'ptmd-chat-bubble fade-in';
-        bubble.dataset.msgId = msg.id;
-        bubble.innerHTML = `
-            <div class="bubble-avatar">${avatarInitial(msg.username)}</div>
-            <div class="bubble-body">
-                <div class="bubble-username">${escHtml(msg.username)}</div>
-                <div class="bubble-text">${escHtml(msg.message)}</div>
-                <div class="bubble-time">${fmtDateTime(msg.created_at)}</div>
+    function roleBadgeHtml(role) {
+        const labels = { host: 'HOST', mod: 'MOD', vip: 'VIP', viewer: 'VIEWER' };
+        return `<span class="ptmd-role ptmd-role--${role}">${labels[role] ?? 'VIEWER'}</span>`;
+    }
+
+    function statusClass(status) {
+        if (status === 'flagged') return 'ptmd-msg-card--flagged';
+        if (status === 'blocked') return 'ptmd-msg-card--blocked';
+        return 'ptmd-msg-card--approved';
+    }
+
+    function renderMsg(msg) {
+        const el    = document.createElement('div');
+        const role  = detectRole(msg.username);
+        const state = statusClass(msg.status ?? 'approved');
+
+        el.className = `ptmd-msg-card ${state}`;
+        el.dataset.msgId = msg.id;
+        el.innerHTML = `
+            <div class="msg-header">
+                <span class="msg-username">${escHtml(msg.username)}</span>
+                ${roleBadgeHtml(role)}
+                <span class="msg-time" ${showTimestamps ? '' : 'style="display:none"'}>${fmtDateTime(msg.created_at)}</span>
             </div>
+            <div class="msg-text">${escHtml(msg.message)}</div>
         `;
-        return bubble;
+        return el;
+    }
+
+    function updateStats(msgs) {
+        const approved = msgs.filter(m => !m.status || m.status === 'approved').length;
+        const flagged  = msgs.filter(m => m.status === 'flagged').length;
+        const blocked  = msgs.filter(m => m.status === 'blocked').length;
+
+        const saEl = document.getElementById('statApproved');
+        const sfEl = document.getElementById('statFlagged');
+        const sbEl = document.getElementById('statBlocked');
+        const mcEl = document.getElementById('msgCount');
+
+        if (saEl) saEl.textContent = approved;
+        if (sfEl) sfEl.textContent = flagged;
+        if (sbEl) sbEl.textContent = blocked;
+        if (mcEl) mcEl.textContent = `${msgs.length} message${msgs.length !== 1 ? 's' : ''}`;
     }
 
     async function loadMessages(initialLoad = false) {
@@ -177,18 +231,21 @@ function fmtDateTime(str) {
 
             if (initialLoad) {
                 messagesEl.innerHTML = '';
-                msgs.forEach(msg => messagesEl.appendChild(renderBubble(msg)));
+                msgs.forEach(msg => messagesEl.appendChild(renderMsg(msg)));
             } else {
                 const newMsgs = msgs.filter(m => Number(m.id) > lastId);
-                newMsgs.forEach(msg => messagesEl.appendChild(renderBubble(msg)));
+                newMsgs.forEach(msg => messagesEl.appendChild(renderMsg(msg)));
             }
 
             if (msgs.length > 0) {
                 lastId = Math.max(...msgs.map(m => Number(m.id)));
             }
 
-            // Scroll to bottom
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            updateStats(msgs);
+
+            if (autoScroll) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         } catch (err) {
             console.warn('[PTMD Chat] fetch error:', err);
         }
@@ -220,7 +277,7 @@ function fmtDateTime(str) {
             Toast.error('Network error. Please try again.');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send';
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
         }
     });
 
@@ -230,6 +287,24 @@ function fmtDateTime(str) {
 
     // Cleanup on unload
     window.addEventListener('unload', () => clearInterval(polling));
+})();
+
+// ─── Viewer count simulation (live investigation feel) ────────────────────────
+(function initViewerCount() {
+    const el = document.getElementById('viewerCount');
+    if (!el) return;
+
+    // Start with a plausible base
+    let count = Math.floor(Math.random() * 300) + 150;
+    el.textContent = count.toLocaleString();
+
+    setInterval(() => {
+        // Random drift: mostly +1..+3, occasionally -1
+        const delta = Math.random() < 0.2 ? -Math.floor(Math.random() * 2 + 1)
+                                           :  Math.floor(Math.random() * 4 + 1);
+        count = Math.max(50, count + delta);
+        el.textContent = count.toLocaleString();
+    }, 2200);
 })();
 
 // ─── Generic confirm-delete via SweetAlert2 ───────────────────────────────────
