@@ -520,7 +520,7 @@ async function runFieldAiAction(button, runningLabel, idleLabel, feature, extraP
 
 if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfInput) {
     suggestBtn.addEventListener('click', async () => {
-        await runFieldAiAction(suggestBtn, 'Generating suggestion', 'Suggest Field', 'episode_field_suggestion');
+        await runFieldAiAction(suggestBtn, 'Suggesting field', 'Suggest Field', 'episode_field_suggestion');
     });
 
     if (optimizeBtn) {
