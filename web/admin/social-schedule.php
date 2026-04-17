@@ -68,8 +68,12 @@ $schedules = $pdo
            ->fetchAll()
     : [];
 
-$platforms = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
-$days      = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+// Load active platforms from DB; fall back to hardcoded list for graceful degradation
+$activeSites = get_posting_sites(true);
+$platforms   = $activeSites
+    ? array_column($activeSites, 'display_name')
+    : ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
+$days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 ?>
 
 <!-- Add schedule form -->

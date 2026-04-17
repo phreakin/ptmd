@@ -1,19 +1,19 @@
-<!-- ── Featured Episode ───────────────────────────────────────────────────── -->
+<!-- ── Featured case ───────────────────────────────────────────────────── -->
 <section class="container mb-5" data-animate>
     <div class="d-flex align-items-center gap-3 mb-4">
-        <h2 class="mb-0">Featured Episode</h2>
+        <h2 class="mb-0">Featured case</h2>
         <span class="ptmd-badge-teal">Latest</span>
     </div>
 
-    <?php if ($featuredEpisode): ?>
+    <?php if ($featuredcase): ?>
         <article class="ptmd-card-featured p-0 overflow-hidden">
             <div class="row g-0">
                 <div class="col-lg-5">
                     <div class="ptmd-ep-thumb" style="border-radius:0;height:100%;min-height:220px">
-                        <?php if ($featuredEpisode['thumbnail_image']): ?>
+                        <?php if ($featuredcase['thumbnail_image']): ?>
                             <img
-                                src="<?php ee($featuredEpisode['thumbnail_image']); ?>"
-                                alt="<?php ee($featuredEpisode['title']); ?>"
+                                src="<?php ee($featuredcase['thumbnail_image']); ?>"
+                                alt="<?php ee($featuredcase['title']); ?>"
                                 loading="lazy"
                             >
                         <?php endif; ?>
@@ -25,21 +25,21 @@
                 <div class="col-lg-7 p-5 d-flex flex-column justify-content-center">
                     <small class="ptmd-muted mb-2">
                         <i class="fa-solid fa-calendar-days me-1"></i>
-                        <?php echo e(date('F j, Y', strtotime($featuredEpisode['published_at']))); ?>
+                        <?php echo e(date('F j, Y', strtotime($featuredcase['published_at']))); ?>
                         &nbsp;·&nbsp;
                         <i class="fa-solid fa-clock me-1"></i>
-                        <?php ee($featuredEpisode['duration']); ?>
+                        <?php ee($featuredcase['duration']); ?>
                     </small>
                     <h2 class="h3 mb-3">
-                        <?php ee($featuredEpisode['title']); ?>
+                        <?php ee($featuredcase['title']); ?>
                     </h2>
                     <p class="ptmd-text-muted mb-4">
-                        <?php ee($featuredEpisode['excerpt']); ?>
+                        <?php ee($featuredcase['excerpt']); ?>
                     </p>
                     <div>
                         <a
                             class="btn btn-ptmd-primary"
-                            href="/index.php?page=episode&amp;slug=<?php ee($featuredEpisode['slug']); ?>"
+                            href="/index.php?page=case&amp;slug=<?php ee($featuredcase['slug']); ?>"
                         >
                             <i class="fa-solid fa-play me-2"></i>Watch + Read
                         </a>
@@ -51,8 +51,8 @@
     <?php else: ?>
         <div class="ptmd-panel p-lg ptmd-text-muted">
             <i class="fa-solid fa-circle-info me-2"></i>
-            No published episodes yet. Import <code>database/seed.sql</code> or add one via
-            <a href="/admin/episodes.php">Admin → Episodes</a>.
+            No published cases yet. Import <code>database/seed.sql</code> or add one via
+            <a href="/admin/cases.php">Admin → cases</a>.
         </div>
     <?php endif; ?>
 </section>

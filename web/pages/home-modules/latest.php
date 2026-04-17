@@ -1,14 +1,14 @@
-<!-- ── Latest Episodes Grid ──────────────────────────────────────────────── -->
+<!-- ── Latest cases Grid ──────────────────────────────────────────────── -->
 <section class="container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4" data-animate>
-        <h2 class="mb-0">Latest Episodes</h2>
-        <a class="btn btn-ptmd-outline" href="/index.php?page=episodes">
+        <h2 class="mb-0">Latest cases</h2>
+        <a class="btn btn-ptmd-outline" href="/index.php?page=cases">
             Browse All <i class="fa-solid fa-arrow-right ms-2"></i>
         </a>
     </div>
 
     <div class="row g-4">
-        <?php foreach ($latestEpisodes as $i => $ep): ?>
+        <?php foreach ($latestcases as $i => $ep): ?>
             <div class="col-md-6 col-lg-4" data-animate data-animate-delay="<?php echo $i * 80; ?>">
                 <article class="ptmd-card h-100 d-flex flex-column overflow-hidden">
 
@@ -41,7 +41,7 @@
                             </small>
                             <a
                                 class="btn btn-ptmd-outline btn-sm"
-                                href="/index.php?page=episode&amp;slug=<?php ee($ep['slug']); ?>"
+                                href="/index.php?page=case&amp;slug=<?php ee($ep['slug']); ?>"
                             >
                                 Open <i class="fa-solid fa-arrow-right ms-1"></i>
                             </a>
@@ -51,9 +51,9 @@
             </div>
         <?php endforeach; ?>
 
-        <?php if (!$latestEpisodes): ?>
+        <?php if (!$latestcases): ?>
             <div class="col-12">
-                <div class="ptmd-panel p-lg ptmd-text-muted">No episodes yet.</div>
+                <div class="ptmd-panel p-lg ptmd-text-muted">No cases yet.</div>
             </div>
         <?php endif; ?>
     </div>

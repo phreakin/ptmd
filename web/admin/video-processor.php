@@ -6,7 +6,7 @@
  *  1. Upload a source video
  *  2. Define clip segments (start/end time)
  *  3. Extract clips via FFmpeg
- *  4. Track clips and link to episodes
+ *  4. Track clips and link to cases
  *  5. Send clips to the overlay tool or social queue
  */
 
@@ -38,7 +38,7 @@ if ($pdo && is_post()) {
 
         $savedPath = save_upload(
             $_FILES['video_file'],
-            'episodes',
+            'cases',
             $GLOBALS['config']['allowed_video_ext']
         );
 
@@ -48,18 +48,18 @@ if ($pdo && is_post()) {
 
         // Insert video_clip row for this raw upload
         $label     = trim((string) ($_POST['label'] ?? basename((string) $savedPath)));
-        $episodeId = (int) ($_POST['episode_id'] ?? 0) ?: null;
+        $caseId = (int) ($_POST['case_id'] ?? 0) ?: null;
 
         $absPath = $GLOBALS['config']['upload_dir'] . '/' . $savedPath;
         $meta    = probe_video($absPath);
         $duration = $meta['duration'] ?? null;
 
         $stmt = $pdo->prepare(
-            'INSERT INTO video_clips (episode_id, label, source_path, duration_sec, status, created_at, updated_at)
+            'INSERT INTO video_clips (case_id, label, source_path, duration_sec, status, created_at, updated_at)
              VALUES (:eid, :label, :src, :dur, "raw", NOW(), NOW())'
         );
         $stmt->execute([
-            'eid'   => $episodeId,
+            'eid'   => $caseId,
             'label' => $label,
             'src'   => $savedPath,
             'dur'   => $duration,
@@ -99,12 +99,12 @@ if ($pdo && is_post()) {
         $relPath = 'clips/' . basename($outAbs);
 
         $stmt = $pdo->prepare(
-            'INSERT INTO video_clips (episode_id, label, source_path, output_path, start_time, end_time,
+            'INSERT INTO video_clips (case_id, label, source_path, output_path, start_time, end_time,
              platform_target, status, created_at, updated_at)
              VALUES (:eid, :label, :src, :out, :start, :end, :platform, "ready", NOW(), NOW())'
         );
         $stmt->execute([
-            'eid'      => $parentClip['episode_id'],
+            'eid'      => $parentClip['case_id'],
             'label'    => $label,
             'src'      => $parentClip['source_path'],
             'out'      => $relPath,
@@ -117,14 +117,14 @@ if ($pdo && is_post()) {
     }
 }
 
-// Load episodes for dropdown
-$episodes = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
+// Load cases for dropdown
+$cases = $pdo ? $pdo->query('SELECT id, title FROM cases ORDER BY title')->fetchAll() : [];
 
 // Load all clips
 $clips = $pdo ? $pdo->query(
-    'SELECT vc.*, e.title AS episode_title
+    'SELECT vc.*, e.title AS case_title
      FROM video_clips vc
-     LEFT JOIN episodes e ON e.id = vc.episode_id
+     LEFT JOIN cases e ON e.id = vc.case_id
      ORDER BY vc.created_at DESC'
 )->fetchAll() : [];
 ?>
@@ -149,13 +149,13 @@ $clips = $pdo ? $pdo->query(
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="vp_label">Label</label>
-                <input class="form-control" id="vp_label" name="label" placeholder="e.g. Episode 1 raw footage">
+                <input class="form-control" id="vp_label" name="label" placeholder="e.g. case 1 raw footage">
             </div>
             <div class="col-md-3">
-                <label class="form-label" for="vp_episode">Link to Episode (optional)</label>
-                <select class="form-select" id="vp_episode" name="episode_id">
+                <label class="form-label" for="vp_case">Link to case (optional)</label>
+                <select class="form-select" id="vp_case" name="case_id">
                     <option value="">— None —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -251,7 +251,7 @@ if ($rawClips):
                 <thead>
                     <tr>
                         <th>Label</th>
-                        <th>Episode</th>
+                        <th>case</th>
                         <th>Duration</th>
                         <th>Platform</th>
                         <th>Status</th>
@@ -263,7 +263,7 @@ if ($rawClips):
                     <?php foreach ($clips as $clip): ?>
                         <tr>
                             <td class="fw-500 ptmd-text-muted"><?php ee($clip['label']); ?></td>
-                            <td class="ptmd-muted small"><?php ee($clip['episode_title'] ?? '—'); ?></td>
+                            <td class="ptmd-muted small"><?php ee($clip['case_title'] ?? '—'); ?></td>
                             <td class="ptmd-muted small">
                                 <?php echo $clip['duration_sec'] ? e(gmdate('H:i:s', (int) $clip['duration_sec'])) : '—'; ?>
                             </td>

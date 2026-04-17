@@ -4,6 +4,11 @@
  */
 
 $episodes = get_latest_episodes(24);
+
+// Viewer favorites (for heart state on cards)
+$viewer       = current_viewer();
+$viewerFavIds = $viewer ? get_viewer_favorites((int) $viewer['id']) : [];
+$csrfToken    = csrf_token();
 ?>
 
 <section class="container py-5">
@@ -30,11 +35,16 @@ $episodes = get_latest_episodes(24);
         <?php endif; ?>
 
         <?php foreach ($episodes as $i => $ep): ?>
+            <?php
+                $epId       = (int) $ep['id'];
+                $favorited  = in_array($epId, $viewerFavIds, true);
+                $loginHref  = '/index.php?page=login&return=episode&slug=' . urlencode($ep['slug']);
+            ?>
             <div class="col-md-6 col-lg-4" data-animate data-animate-delay="<?php echo $i * 60; ?>">
                 <article class="ptmd-card h-100 d-flex flex-column overflow-hidden">
 
                     <?php if ($ep['thumbnail_image']): ?>
-                        <div class="ptmd-ep-thumb" style="border-radius:0">
+                        <div class="ptmd-ep-thumb position-relative" style="border-radius:0">
                             <img
                                 src="<?php ee($ep['thumbnail_image']); ?>"
                                 alt="<?php ee($ep['title']); ?>"
@@ -43,6 +53,28 @@ $episodes = get_latest_episodes(24);
                             <div class="ptmd-ep-play">
                                 <span><i class="fa-solid fa-play"></i></span>
                             </div>
+                            <!-- Favorite overlay -->
+                            <?php if ($viewer): ?>
+                                <button
+                                    class="ptmd-favorite-btn <?php echo $favorited ? 'is-favorited' : ''; ?> position-absolute"
+                                    style="top:0.5rem;right:0.5rem"
+                                    data-favorite-episode="<?php ee((string) $epId); ?>"
+                                    data-csrf="<?php ee($csrfToken); ?>"
+                                    aria-label="<?php echo $favorited ? 'Remove from favorites' : 'Add to favorites'; ?>"
+                                    aria-pressed="<?php echo $favorited ? 'true' : 'false'; ?>"
+                                >
+                                    <i class="<?php echo $favorited ? 'fa-solid' : 'fa-regular'; ?> fa-heart"></i>
+                                </button>
+                            <?php else: ?>
+                                <a
+                                    href="<?php ee($loginHref); ?>"
+                                    class="ptmd-favorite-btn position-absolute"
+                                    style="top:0.5rem;right:0.5rem"
+                                    aria-label="Sign in to save"
+                                >
+                                    <i class="fa-regular fa-heart"></i>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 

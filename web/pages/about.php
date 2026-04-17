@@ -6,12 +6,12 @@
 <section class="container py-5">
 
     <div class="mb-5" data-animate>
-        <span class="ptmd-badge-teal mb-3 d-inline-block">
-            <i class="fa-solid fa-circle-info me-1"></i> About
+        <span class="ptmd-badge-red mb-3 d-inline-block">
+            🧾 PAPER TRAIL MD
         </span>
         <h1 class="mb-3">About Paper Trail MD</h1>
         <p class="ptmd-hero-sub">
-            Documentary-first. Evidence-obsessed. Occasionally hilarious.
+            Forensic storytelling. Receipt-based. The timeline never lies.
         </p>
     </div>
 
@@ -23,12 +23,12 @@
                     <i class="fa-solid fa-magnifying-glass me-2"></i>What We Do
                 </h2>
                 <p class="ptmd-text-muted">
-                    Paper Trail MD builds short-form investigative documentary content for the digital generation.
-                    We chase receipts, source documents, and follow money trails so our audience doesn't have to.
+                    Paper Trail MD is a digital investigation experience. We reconstruct timelines, surface receipts,
+                    and break down social + pop culture moments that the internet almost forgot.
                 </p>
                 <p class="ptmd-text-muted mb-0">
-                    The tone is sharp and modern — cinematic production values wrapped around genuinely important
-                    stories. We believe the truth is best served with a side of dry wit.
+                    The tone is confident, punchy, and suspense-driven — gritty crime and medical documentary energy
+                    wrapped in a format built for the short-attention-span era. Occasionally very funny.
                 </p>
             </div>
 
@@ -38,24 +38,24 @@
                 </h2>
                 <div class="d-flex flex-column gap-4">
                     <div class="d-flex gap-3">
-                        <i class="fa-solid fa-scale-balanced ptmd-text-teal mt-1" style="width:20px;flex-shrink:0"></i>
+                        <span style="width:20px;flex-shrink:0" class="mt-1">🧾</span>
                         <div>
-                            <strong class="d-block mb-1">Power &amp; Accountability</strong>
-                            <p class="ptmd-muted small mb-0">Who holds the levers, who paid for them, and what they're doing with them.</p>
+                            <strong class="d-block mb-1">Receipts &amp; Timeline Reconstruction</strong>
+                            <p class="ptmd-muted small mb-0">The timeline doesn't support that. We show our work.</p>
                         </div>
                     </div>
                     <div class="d-flex gap-3">
-                        <i class="fa-solid fa-masks-theater ptmd-text-yellow mt-1" style="width:20px;flex-shrink:0"></i>
+                        <span style="width:20px;flex-shrink:0" class="mt-1">👀</span>
                         <div>
-                            <strong class="d-block mb-1">Culture &amp; Consequence</strong>
-                            <p class="ptmd-muted small mb-0">When the zeitgeist collides with documented reality.</p>
+                            <strong class="d-block mb-1">Social &amp; Pop Culture Breakdowns</strong>
+                            <p class="ptmd-muted small mb-0">When the internet's receipts tell a better story than anyone officially admits.</p>
                         </div>
                     </div>
                     <div class="d-flex gap-3">
-                        <i class="fa-solid fa-landmark ptmd-text-gold mt-1" style="width:20px;flex-shrink:0"></i>
+                        <span style="width:20px;flex-shrink:0" class="mt-1">🚨</span>
                         <div>
-                            <strong class="d-block mb-1">Political Absurdity</strong>
-                            <p class="ptmd-muted small mb-0">Democracy's highlight reel — explained without the spin.</p>
+                            <strong class="d-block mb-1">Crime &amp; Medical Docs</strong>
+                            <p class="ptmd-muted small mb-0">Gritty, fact-first storytelling. Dark themes, dry wit, zero sensationalism.</p>
                         </div>
                     </div>
                 </div>
@@ -68,19 +68,29 @@
                     <i class="fa-solid fa-bullseye me-2 ptmd-text-red"></i>The Mission
                 </h2>
                 <p class="ptmd-text-muted mb-0">
-                    Make investigative journalism accessible, watchable, and worth sharing —
-                    without sacrificing the rigor that makes it matter.
+                    Paper Trail MD is NOT a blog. It is NOT a news site. It is a digital investigation experience —
+                    data-driven but entertaining, suspense-built, always receipt-backed.
+                    <strong class="d-block mt-2 ptmd-text-teal">Follow the trail.</strong>
+                </p>
+            </div>
+            <div class="ptmd-panel p-xl mb-4">
+                <h2 class="h5 mb-3">
+                    <i class="fa-solid fa-comments me-2 ptmd-text-teal"></i>Case Chat
+                </h2>
+                <p class="ptmd-text-muted small mb-0">
+                    Our signature format: a live-feeling chat overlay reacting to events like a Reddit × Twitch × Twitter hybrid.
+                    Fast-moving, reactive, slightly chaotic — but always controlled.
                 </p>
             </div>
             <div class="ptmd-panel p-xl">
                 <h2 class="h5 mb-3">
-                    <i class="fa-solid fa-newspaper me-2 ptmd-text-teal"></i>Format
+                    <i class="fa-solid fa-film me-2 ptmd-text-teal"></i>Format
                 </h2>
                 <ul class="list-unstyled d-flex flex-column gap-2 ptmd-text-muted small mb-0">
-                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Mini-documentaries: 12–25 minutes</li>
-                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Short-form clips for YouTube Shorts, TikTok &amp; Reels</li>
-                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Source documents linked when legally permissible</li>
-                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Weekly release cadence</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Mini-docs: 15–30 minutes</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Short-form clips (30–90 sec) for TikTok, Shorts &amp; Reels</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Case Chat highlights &amp; receipts breakdowns</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Source documents linked where legally permissible</li>
                 </ul>
             </div>
         </div>

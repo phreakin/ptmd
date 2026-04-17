@@ -8,6 +8,12 @@
 $tags       = get_episode_tags((int) $currentEpisode['id']);
 $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
             . '/index.php?page=episode&slug=' . urlencode($currentEpisode['slug']);
+
+// Viewer favorite state
+$viewer        = current_viewer();
+$viewerFavIds  = $viewer ? get_viewer_favorites((int) $viewer['id']) : [];
+$isFavorited   = in_array((int) $currentEpisode['id'], $viewerFavIds, true);
+$loginReturn   = '/index.php?page=login&return=episode&slug=' . urlencode($currentEpisode['slug']);
 ?>
 
 <section class="container py-5">
@@ -52,8 +58,8 @@ $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
                 Published <?php echo e(date('F j, Y', strtotime($currentEpisode['published_at']))); ?>
             </small>
 
-            <!-- Share row -->
-            <div class="d-flex gap-2 mt-4 flex-wrap">
+            <!-- Share row + Favorite -->
+            <div class="d-flex gap-2 mt-4 flex-wrap align-items-center">
                 <button
                     class="btn btn-ptmd-outline btn-sm"
                     data-clipboard-text="<?php ee($shareUrl); ?>"
@@ -68,6 +74,54 @@ $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
                         class="btn btn-ptmd-ghost btn-sm"
                     >
                         <i class="fa-brands fa-x-twitter me-1"></i> Share on X
+                    </a>
+                <?php endif; ?>
+                <?php if (site_setting('social_facebook')): ?>
+                    <a
+                        href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode($shareUrl); ?>"
+                        target="_blank" rel="noopener"
+                        class="btn btn-ptmd-ghost btn-sm"
+                    >
+                        <i class="fa-brands fa-facebook me-1"></i> Facebook
+                    </a>
+                <?php endif; ?>
+                <a
+                    href="https://www.linkedin.com/sharing/share-offsite/?url=<?php echo urlencode($shareUrl); ?>"
+                    target="_blank" rel="noopener"
+                    class="btn btn-ptmd-ghost btn-sm"
+                >
+                    <i class="fa-brands fa-linkedin me-1"></i> LinkedIn
+                </a>
+                <button
+                    id="btnNativeShare"
+                    class="btn btn-ptmd-ghost btn-sm"
+                    style="display:none"
+                    data-share-title="<?php ee($currentEpisode['title']); ?>"
+                    data-share-url="<?php ee($shareUrl); ?>"
+                >
+                    <i class="fa-solid fa-share-nodes me-1"></i> Share
+                </button>
+
+                <!-- Favorite button -->
+                <?php if ($viewer): ?>
+                    <button
+                        class="ptmd-favorite-btn <?php echo $isFavorited ? 'is-favorited' : ''; ?> ms-auto"
+                        data-favorite-episode="<?php ee((string) $currentEpisode['id']); ?>"
+                        data-csrf="<?php ee(csrf_token()); ?>"
+                        aria-label="<?php echo $isFavorited ? 'Remove from favorites' : 'Add to favorites'; ?>"
+                        aria-pressed="<?php echo $isFavorited ? 'true' : 'false'; ?>"
+                        data-tippy-content="<?php echo $isFavorited ? 'Remove from favorites' : 'Add to favorites'; ?>"
+                    >
+                        <i class="<?php echo $isFavorited ? 'fa-solid' : 'fa-regular'; ?> fa-heart"></i>
+                    </button>
+                <?php else: ?>
+                    <a
+                        href="<?php ee($loginReturn); ?>"
+                        class="ptmd-favorite-btn ms-auto"
+                        aria-label="Sign in to save"
+                        data-tippy-content="Sign in to save"
+                    >
+                        <i class="fa-regular fa-heart"></i>
                     </a>
                 <?php endif; ?>
             </div>
