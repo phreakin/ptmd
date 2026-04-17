@@ -568,6 +568,8 @@ function render_with_profile(
     $abr = $profile['audio_bitrate'];
 
     $extraFlags = trim((string) ($profile['extra_ffmpeg_flags'] ?? ''));
+    // extra_ffmpeg_flags is set by authenticated admins only; it is intentionally
+    // passed without shell-escaping to allow raw FFmpeg flag syntax.
 
     $cmd = sprintf(
         '%s -y -i %s -vf "scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2" -r %d -b:v %s -c:v libx264 -crf 20 -preset fast -b:a %s -c:a aac %s -movflags +faststart %s 2>&1',
