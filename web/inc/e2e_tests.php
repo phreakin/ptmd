@@ -132,7 +132,9 @@ function run_ptmd_e2e_tests(): array
     $episodeSlug = '';
     $pdo = get_db();
     if ($pdo) {
-        $episodeSlug = (string) $pdo->query('SELECT slug FROM episodes WHERE status = "published" ORDER BY published_at DESC LIMIT 1')->fetchColumn();
+        $slugStmt = $pdo->prepare('SELECT slug FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1');
+        $slugStmt->execute(['status' => 'published']);
+        $episodeSlug = (string) $slugStmt->fetchColumn();
     }
     if ($episodeSlug !== '') {
         $epPath = '/index.php?page=episode&slug=' . rawurlencode($episodeSlug);
@@ -151,10 +153,13 @@ function run_ptmd_e2e_tests(): array
     ptmd_e2e_record($auth, 'GET /admin/login.php (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
 
     $anonDashboard = ptmd_e2e_request($baseUrl, '/admin/dashboard.php');
-    $anonDashOk = $anonDashboard['ok'] && (($anonDashboard['status'] ?? 0) === 302) && str_contains((string) ($anonDashboard['location'] ?? ''), '/admin/login.php');
+    $anonLocation = (string) ($anonDashboard['location'] ?? '');
+    $redirectsToLogin = str_contains($anonLocation, '/admin/login.php');
+    $anonDashOk = $anonDashboard['ok'] && (($anonDashboard['status'] ?? 0) === 302) && $redirectsToLogin;
     ptmd_e2e_record($auth, 'GET /admin/dashboard.php (anonymous)', $anonDashOk, $anonDashOk ? 'Redirected to login' : 'Auth redirect failed', ['actual_status' => $anonDashboard['status'] ?? null, 'location' => $anonDashboard['location'] ?? null]);
 
     $adminFiles = glob(__DIR__ . '/../admin/*.php') ?: [];
+    // Exclude partials and auth endpoints that are not standard in-session page views.
     $adminFiles = array_filter($adminFiles, static function (string $file): bool {
         $name = basename($file);
         return $name[0] !== '_' && !in_array($name, ['login.php', 'logout.php'], true);

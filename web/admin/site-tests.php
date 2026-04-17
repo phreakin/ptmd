@@ -6,7 +6,7 @@
 $pageTitle      = 'Site Tests | PTMD Admin';
 $activePage     = 'site-tests';
 $pageHeading    = 'Site End-to-End Tests';
-$pageSubheading = 'Run a full smoke + access suite across public pages, admin pages, and APIs.';
+$pageSubheading = 'Run a full smoke test and access control suite across public pages, admin pages, and APIs.';
 
 include __DIR__ . '/_admin_head.php';
 require_once __DIR__ . '/../inc/e2e_tests.php';
