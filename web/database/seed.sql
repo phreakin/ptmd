@@ -244,3 +244,13 @@ VALUES
      '/assets/brand/overlays/ptmd_overlay_lower_third.png',
      'branding', 'active', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+-- ------------------------------------------------------------
+-- Viewer Accounts (DEV ONLY — DO NOT seed in production)
+-- viewer_users / episode_favorites rows would go here in
+-- development or testing environments only.
+-- Example (commented out):
+--
+-- INSERT INTO viewer_users (username, email, password_hash, display_name, status, created_at, updated_at)
+-- VALUES ('testviewer', 'viewer@dev.local', '<bcrypt>', 'Test Viewer', 'active', NOW(), NOW());
+-- ------------------------------------------------------------

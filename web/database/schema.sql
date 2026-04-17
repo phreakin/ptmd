@@ -615,6 +615,50 @@ CREATE TABLE IF NOT EXISTS clip_blueprints (
     INDEX idx_cb_status        (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Viewer Users  (public-facing accounts, separate from admin users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS viewer_users (
+    id                 INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username           VARCHAR(50)   NOT NULL UNIQUE,
+    email              VARCHAR(150)  NOT NULL UNIQUE,
+    password_hash      VARCHAR(255)  NOT NULL,
+    display_name       VARCHAR(100)  NULL,
+    avatar_url         VARCHAR(255)  NULL,
+    status             ENUM('active','suspended') NOT NULL DEFAULT 'active',
+    email_verified_at  DATETIME      NULL,
+    created_at         DATETIME      NOT NULL,
+    updated_at         DATETIME      NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Viewer Sessions  (token-based sessions for viewer_users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS viewer_sessions (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    viewer_id     INT UNSIGNED  NOT NULL,
+    session_token VARCHAR(64)   NOT NULL UNIQUE,
+    expires_at    DATETIME      NOT NULL,
+    ip_hash       VARCHAR(64)   NULL,
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_vs_viewer FOREIGN KEY (viewer_id) REFERENCES viewer_users(id) ON DELETE CASCADE,
+    INDEX idx_vs_token (session_token),
+    INDEX idx_vs_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Episode Favorites  (per-viewer saved episodes)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS episode_favorites (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    viewer_id   INT UNSIGNED  NOT NULL,
+    episode_id  INT UNSIGNED  NOT NULL,
+    created_at  DATETIME      NOT NULL,
+    UNIQUE KEY uq_viewer_episode (viewer_id, episode_id),
+    CONSTRAINT fk_ef_viewer  FOREIGN KEY (viewer_id)  REFERENCES viewer_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ef_episode FOREIGN KEY (episode_id) REFERENCES episodes(id)     ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
