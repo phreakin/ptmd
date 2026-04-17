@@ -63,9 +63,56 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
-                        <a class="btn btn-ptmd-outline btn-sm" href="/admin/login.php">
-                            <i class="fa-solid fa-lock fa-sm me-1"></i>Admin
-                        </a>
+                        <?php
+                        $navViewer     = current_viewer();
+                        $navAdminLoggedIn = !empty($_SESSION['admin_user_id']);
+                        ?>
+                        <?php if ($navViewer): ?>
+                            <!-- Logged-in viewer dropdown -->
+                            <div class="dropdown ptmd-viewer-menu">
+                                <button
+                                    class="btn btn-ptmd-teal btn-sm dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fa-solid fa-circle-user fa-sm me-1"></i>
+                                    <?php ee($navViewer['display_name'] ?: $navViewer['username']); ?>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end ptmd-viewer-dropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="/index.php?page=account">
+                                            <i class="fa-solid fa-heart fa-sm me-2" style="color:var(--ptmd-teal)"></i>Saved Episodes
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="/index.php?page=logout" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fa-solid fa-right-from-bracket fa-sm me-2"></i>Sign Out
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <?php if ($navAdminLoggedIn): ?>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item ptmd-muted" href="/admin/dashboard.php">
+                                                <i class="fa-solid fa-lock fa-sm me-2"></i>Admin
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        <?php else: ?>
+                            <!-- Not logged in -->
+                            <a class="btn btn-ptmd-teal btn-sm me-2" href="/index.php?page=login">
+                                <i class="fa-solid fa-right-to-bracket fa-sm me-1"></i>Sign In
+                            </a>
+                            <a class="btn btn-ptmd-ghost btn-sm" href="/admin/login.php" style="font-size:var(--text-xs);opacity:0.7">
+                                <i class="fa-solid fa-lock fa-sm me-1"></i>Admin
+                            </a>
+                        <?php endif; ?>
                     </li>
                 </ul>
             </div>

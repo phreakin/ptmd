@@ -162,3 +162,14 @@ INSERT INTO chat_messages (username, message, status, emojis_json, created_at, u
 ('SkepticMode',          'Love the dry humor but also genuinely horrified. Appreciate the sourcing. 😅',             'approved', JSON_ARRAY('😅'),      NOW() - INTERVAL 90 MINUTE, NOW() - INTERVAL 90 MINUTE),
 ('CivicNerd99',          'The school board episode connects dots I had never considered. Shared everywhere.',         'approved', JSON_ARRAY(),          NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 45 MINUTE),
 ('PermitSurvivor',       'Episode 3 is my whole life as a small business owner. How is this legal?? 😤',            'approved', JSON_ARRAY('😤'),      NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 20 MINUTE);
+
+
+-- ------------------------------------------------------------
+-- Viewer Accounts (DEV ONLY — DO NOT seed in production)
+-- viewer_users / episode_favorites rows would go here in
+-- development or testing environments only.
+-- Example (commented out):
+--
+-- INSERT INTO viewer_users (username, email, password_hash, display_name, status, created_at, updated_at)
+-- VALUES ('testviewer', 'viewer@dev.local', '<bcrypt>', 'Test Viewer', 'active', NOW(), NOW());
+-- ------------------------------------------------------------

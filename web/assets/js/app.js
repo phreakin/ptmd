@@ -273,3 +273,86 @@ document.addEventListener('change', (e) => {
 
 // ─── Expose Toast globally for inline use ─────────────────────────────────────
 window.PTMDToast = Toast;
+
+// ─── Episode Favorite buttons ─────────────────────────────────────────────────
+(function initFavorites() {
+    const buttons = document.querySelectorAll('[data-favorite-episode]');
+    if (!buttons.length) return;
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            const episodeId = btn.dataset.favoriteEpisode;
+            const csrf      = btn.dataset.csrf;
+
+            if (!episodeId || !csrf) return;
+
+            btn.disabled = true;
+
+            try {
+                const res  = await fetch('/api/toggle_favorite.php', {
+                    method:      'POST',
+                    credentials: 'same-origin',
+                    headers:     { 'Content-Type': 'application/json' },
+                    body:        JSON.stringify({ episode_id: parseInt(episodeId, 10), csrf_token: csrf }),
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) {
+                    Toast.error(data.error ?? 'Could not update favorite.');
+                    return;
+                }
+
+                const favorited = data.favorited === true;
+                const icon      = btn.querySelector('i');
+
+                if (favorited) {
+                    btn.classList.add('is-favorited');
+                    btn.setAttribute('aria-pressed', 'true');
+                    btn.setAttribute('aria-label', 'Remove from favorites');
+                    if (icon) {
+                        icon.classList.remove('fa-regular');
+                        icon.classList.add('fa-solid');
+                    }
+                    Toast.success('Saved to favorites');
+                } else {
+                    btn.classList.remove('is-favorited');
+                    btn.setAttribute('aria-pressed', 'false');
+                    btn.setAttribute('aria-label', 'Add to favorites');
+                    if (icon) {
+                        icon.classList.remove('fa-solid');
+                        icon.classList.add('fa-regular');
+                    }
+                    Toast.info('Removed from favorites');
+                }
+            } catch {
+                Toast.error('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+})();
+
+// ─── Native Share API ─────────────────────────────────────────────────────────
+(function initNativeShare() {
+    const btn = document.getElementById('btnNativeShare');
+    if (!btn || !navigator.share) return;
+
+    btn.style.display = '';   // reveal only when API is available
+
+    btn.addEventListener('click', async () => {
+        const title = btn.dataset.shareTitle ?? document.title;
+        const url   = btn.dataset.shareUrl   ?? window.location.href;
+
+        try {
+            await navigator.share({ title, url });
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                Toast.error('Share failed. Please try another option.');
+            }
+        }
+    });
+})();
+

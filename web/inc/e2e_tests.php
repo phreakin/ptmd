@@ -125,6 +125,8 @@ function run_ptmd_e2e_tests(): array
         '/index.php?page=about' => 200,
         '/index.php?page=contact' => 200,
         '/index.php?page=case-chat' => 200,
+        '/index.php?page=login' => 200,
+        '/index.php?page=account' => 302,  // redirects to login when not authenticated
         '/index.php?page=missing-page' => 404,
     ];
 
@@ -265,6 +267,15 @@ function run_ptmd_e2e_tests(): array
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
+
+    // Viewer toggle_favorite endpoint — anonymous → 401
+    $favAnon = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php');
+    $favAnonOk = $favAnon['ok'] && (($favAnon['status'] ?? 0) === 405);
+    ptmd_e2e_record($api, 'GET /api/toggle_favorite.php (anonymous, wrong method)', $favAnonOk, $favAnonOk ? 'Method guard returns 405' : 'toggle_favorite method guard failed', ['actual_status' => $favAnon['status'] ?? null]);
+
+    $favAnonPost = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php', 'POST', ['episode_id' => 1, 'csrf_token' => 'invalid']);
+    $favAnonPostOk = $favAnonPost['ok'] && (($favAnonPost['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'POST /api/toggle_favorite.php (anonymous)', $favAnonPostOk, $favAnonPostOk ? 'Unauthenticated returns 401' : 'toggle_favorite auth guard failed', ['actual_status' => $favAnonPost['status'] ?? null]);
 
     if ($sessionIsValid) {
         $aiAuth = ptmd_e2e_request($baseUrl, '/api/ai_generate.php', 'GET', [], $authCookie);

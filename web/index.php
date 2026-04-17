@@ -9,10 +9,18 @@
 require_once __DIR__ . '/inc/bootstrap.php';
 
 // ── Allowed public pages ──────────────────────────────────────────────────────
-$allowedPages = ['home', 'episodes', 'episode', 'about', 'contact', 'case-chat'];
+$allowedPages = ['home', 'episodes', 'episode', 'about', 'contact', 'case-chat', 'login', 'account'];
 
 // ── Resolve page ──────────────────────────────────────────────────────────────
 $page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
+
+// ── Logout — inline handler, no template needed ───────────────────────────────
+if ($page === 'logout') {
+    if (is_post() && verify_csrf($_POST['csrf_token'] ?? null)) {
+        viewer_logout();
+    }
+    redirect('/index.php', 'You have been signed out.', 'success');
+}
 
 if (!in_array($page, $allowedPages, true)) {
     http_response_code(404);

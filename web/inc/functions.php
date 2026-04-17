@@ -293,6 +293,8 @@ function page_title(string $page, ?array $episode = null): string
         'about'     => 'About | '    . site_setting('site_name', 'Paper Trail MD'),
         'contact'   => 'Contact | '  . site_setting('site_name', 'Paper Trail MD'),
         'case-chat' => 'Case Chat | '. site_setting('site_name', 'Paper Trail MD'),
+        'login'     => 'Sign In | '  . site_setting('site_name', 'Paper Trail MD'),
+        'account'   => 'My Account | '. site_setting('site_name', 'Paper Trail MD'),
     ];
 
     return $map[$page] ?? site_setting('site_name', 'Paper Trail MD');
