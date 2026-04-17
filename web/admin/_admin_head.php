@@ -16,7 +16,7 @@ $activePage = $activePage ?? '';
 
 $navItems = [
     ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
-    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-up-down-left-right', 'id' => 'site-editor'],
+    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-sliders',       'id' => 'site-editor'],
     ['href' => '/admin/episodes.php',        'label' => 'Episodes',        'icon' => 'fa-film',           'id' => 'episodes'],
     ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
     ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
