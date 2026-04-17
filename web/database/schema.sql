@@ -127,11 +127,27 @@ CREATE TABLE IF NOT EXISTS social_post_schedules (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Social Platform Preferences
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS social_platform_preferences (
+    id                     INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    platform               VARCHAR(80)   NOT NULL UNIQUE,
+    default_content_type   VARCHAR(80)   NULL,
+    default_caption_prefix TEXT          NULL,
+    default_hashtags       VARCHAR(255)  NULL,
+    default_status         ENUM('draft','queued','scheduled') NOT NULL DEFAULT 'queued',
+    is_enabled             TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at             DATETIME      NOT NULL,
+    updated_at             DATETIME      NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Social Post Queue
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_post_queue (
     id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
     episode_id       INT UNSIGNED   NULL,
+    clip_id          INT UNSIGNED   NULL,
     platform         VARCHAR(80)    NOT NULL,
     content_type     VARCHAR(80)    NOT NULL,
     caption          TEXT           NULL,
@@ -143,6 +159,7 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     created_at       DATETIME       NOT NULL,
     updated_at       DATETIME       NOT NULL,
     CONSTRAINT fk_spq_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    INDEX idx_clip_platform (clip_id, platform),
     INDEX idx_status_scheduled (status, scheduled_for)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
