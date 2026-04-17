@@ -1262,3 +1262,23 @@
 .chat-text {
     color: #F5F5F3;
 }
+
+.flash {
+    animation: flash 0.3s;
+}
+
+@keyframes flash {
+    0% { background: white; }
+    100% { background: transparent; }
+}
+
+.glitch {
+    animation: glitch 0.2s;
+}
+
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-3px, 2px); }
+    40% { transform: translate(3px, -2px); }
+    100% { transform: translate(0); }
+}
