@@ -219,3 +219,28 @@ INSERT INTO chat_messages (username, message, status, emojis_json, created_at, u
 UPDATE chat_messages
 SET    room_id = (SELECT id FROM chat_rooms WHERE slug = 'case-chat' LIMIT 1)
 WHERE  room_id IS NULL;
+
+-- Starter assets (hooks, overlays — idempotent via slug UNIQUE key)
+INSERT INTO assets (asset_type, slug, content_text, tone, category, status, approved, created_at, updated_at)
+VALUES
+    ('hook',     'hook-not-illegal-but-should',
+     'This doesn't look illegal… but it should.',
+     'dark, investigative', 'intro', 'active', 1, NOW(), NOW()),
+    ('one_liner','one-liner-technically-legal',
+     'Technically legal. Morally… that's a different department.',
+     'dark, sarcastic', 'punchline', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+INSERT INTO assets (asset_type, slug, content_json, category, status, approved, created_at, updated_at)
+VALUES
+    ('subtitle', 'subtitle-not-illegal-srt',
+     JSON_OBJECT('format','srt','content','1\n00:00:00,000 --> 00:00:02,000\nThis doesn't look illegal...\n'),
+     'subtitle', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+INSERT INTO assets (asset_type, slug, file_path, category, status, approved, created_at, updated_at)
+VALUES
+    ('overlay', 'overlay-lower-third-default',
+     '/assets/brand/overlays/ptmd_overlay_lower_third.png',
+     'branding', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();

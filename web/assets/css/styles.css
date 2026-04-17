@@ -257,17 +257,18 @@
     .ptmd-admin-shell {
         display: grid;
         grid-template-columns: 260px 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 60px 1fr;
         min-height: 100dvh;
+        overflow-x: hidden;
 
-        & .ptmd-admin-topbar   { grid-column: 1 / -1; }
+        & .ptmd-admin-topbar   { grid-column: 1 / -1; grid-row: 1; }
         & .ptmd-admin-sidebar  { grid-column: 1; grid-row: 2; }
-        & .ptmd-admin-content  { grid-column: 2; grid-row: 2; }
+        & .ptmd-admin-content  { grid-column: 2; grid-row: 2; padding: 2rem; overflow-x: hidden; }
 
         @media (max-width: 1024px) {
             grid-template-columns: 1fr;
             & .ptmd-admin-sidebar { display: none; }
-            & .ptmd-admin-content { grid-column: 1; grid-row: 2; }
+            & .ptmd-admin-content { grid-column: 1; grid-row: 2; padding: 1.25rem; }
         }
     }
 
@@ -1934,6 +1935,32 @@
 } /* end @layer components */
 
 /* ----------------------------------------------------------------
+   Admin — Site Editor module list
+   ---------------------------------------------------------------- */
+@layer components {
+
+    .ptmd-module-item {
+        background: var(--ptmd-surface-2);
+        border: 1px solid var(--ptmd-border);
+        border-radius: var(--radius-lg);
+        padding: 0.9rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        cursor: move;
+        transition: border-color var(--duration-fast) var(--ease-out),
+                    opacity      var(--duration-fast) var(--ease-out);
+
+        &.dragging     { opacity: 0.55; border-color: var(--ptmd-teal); }
+        &.is-disabled  { opacity: 0.55; }
+    }
+
+    .module-drag-handle { cursor: grab; }
+
+}
+
+/* ----------------------------------------------------------------
    Utilities
    ---------------------------------------------------------------- */
 @layer utilities {
@@ -1944,6 +1971,32 @@
     .ptmd-text-gold    { color: var(--ptmd-gold); }
     .ptmd-text-purple  { color: #c084fc; }
     .ptmd-text-muted   { color: var(--ptmd-muted-strong); }
+    .ptmd-text-error   { color: var(--ptmd-error); }
+    .ptmd-text-warning { color: var(--ptmd-warning); }
+    .ptmd-text-success { color: var(--ptmd-success); }
+
+    /* Font-weight helpers */
+    .fw-500 { font-weight: 500; }
+    .fw-600 { font-weight: 600; }
+    .fw-700 { font-weight: 700; }
+    .fw-800 { font-weight: 800; }
+
+    /* Inline-icon fixed width so icon + text stay aligned */
+    .icon-w { width: 18px; display: inline-block; text-align: center; flex-shrink: 0; }
+    .icon-w-lg { width: 20px; display: inline-block; text-align: center; flex-shrink: 0; }
+
+    /* Text-size helpers matching the fluid scale */
+    .text-xs   { font-size: var(--text-xs); }
+    .text-sm   { font-size: var(--text-sm); }
+    .text-base { font-size: var(--text-base); }
+    .text-md   { font-size: var(--text-md); }
+
+    /* Overflow helpers */
+    .text-ellipsis {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
     .ptmd-gradient-text {
         background: linear-gradient(135deg, var(--ptmd-yellow), var(--ptmd-teal));

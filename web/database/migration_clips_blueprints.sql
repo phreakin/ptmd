@@ -1,3 +1,12 @@
+-- ============================================================
+-- Migration: clip_blueprints (upgrade-only)
+--
+-- Run this ONLY against installs created before clip_blueprints
+-- was added to schema.sql.  Safe to re-run (IF NOT EXISTS).
+--
+-- Fresh installs: schema.sql already includes this table.
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS clip_blueprints
 (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

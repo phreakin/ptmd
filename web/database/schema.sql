@@ -206,14 +206,14 @@ CREATE TABLE IF NOT EXISTS chat_rooms (
     slug                VARCHAR(120)       NOT NULL UNIQUE,
     name                VARCHAR(255)       NOT NULL,
     description         TEXT               NULL,
-    episode_id          INT UNSIGNED       NULL,
+    case_id             INT UNSIGNED       NULL,   -- optional link to a specific case
     is_live             TINYINT(1)         NOT NULL DEFAULT 0,
     slow_mode_seconds   SMALLINT UNSIGNED  NOT NULL DEFAULT 0,
     members_only        TINYINT(1)         NOT NULL DEFAULT 0,
     is_archived         TINYINT(1)         NOT NULL DEFAULT 0,
     created_at          DATETIME           NOT NULL,
     updated_at          DATETIME           NOT NULL,
-    CONSTRAINT fk_cr_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+    CONSTRAINT fk_cr_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -510,4 +510,113 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
     INDEX idx_aam_session_created (session_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Text & Media Assets  (reusable content blocks for automation)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS assets (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    asset_type        ENUM(
+                        'hook', 'one_liner', 'script', 'subtitle',
+                        'image', 'overlay', 'thumbnail', 'video_clip',
+                        'audio', 'template', 'other'
+                      ) NOT NULL,
+    title             VARCHAR(255)  NULL,
+    slug              VARCHAR(255)  NULL UNIQUE,
+    content_text      MEDIUMTEXT    NULL,   -- hooks, scripts, captions, etc.
+    content_json      JSON          NULL,   -- structured formats (LRC, SRT, configs)
+    source_notes      TEXT          NULL,
+    file_path         VARCHAR(255)  NULL,   -- for image / overlay / clip assets
+    tone              VARCHAR(100)  NULL,   -- dark, funny, investigative, sarcastic
+    category          VARCHAR(100)  NULL,   -- intro, hook, outro, transition, etc.
+    topic             VARCHAR(120)  NULL,
+    target_phase      ENUM('hook','setup','payoff','loop','caption','overlay','subtitle','full_script') NULL,
+    tags_json         JSON          NULL,
+    usage_count       INT UNSIGNED  NOT NULL DEFAULT 0,
+    last_used_at      DATETIME      NULL,
+    performance_score DECIMAL(5,2)  NULL,
+    engagement_score  DECIMAL(5,2)  NULL,
+    status            ENUM('draft','active','archived') NOT NULL DEFAULT 'active',
+    is_favorite       TINYINT(1)    NOT NULL DEFAULT 0,
+    approved          TINYINT(1)    NOT NULL DEFAULT 1,
+    created_by        INT UNSIGNED  NULL,
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    INDEX idx_asset_type (asset_type),
+    INDEX idx_asset_status (status),
+    INDEX idx_asset_tone (tone),
+    INDEX idx_asset_performance (performance_score),
+    FULLTEXT INDEX idx_asset_content (content_text),
+    CONSTRAINT fk_assets_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Asset Usage Logs  (per-post performance tracking)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS asset_usage_logs (
+    id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    asset_id              INT UNSIGNED  NOT NULL,
+    case_id               INT UNSIGNED  NULL,
+    clip_id               INT UNSIGNED  NULL,
+    platform              VARCHAR(80)   NULL,
+    topic                 VARCHAR(120)  NULL,
+    used_as               ENUM('hook','setup','payoff','loop','caption','overlay','subtitle','script') NOT NULL,
+    views                 INT UNSIGNED  NOT NULL DEFAULT 0,
+    likes                 INT UNSIGNED  NOT NULL DEFAULT 0,
+    comments_count        INT UNSIGNED  NOT NULL DEFAULT 0,
+    shares                INT UNSIGNED  NOT NULL DEFAULT 0,
+    watch_time_sec        DECIMAL(10,2) NULL,
+    avg_view_duration_sec DECIMAL(10,2) NULL,
+    completion_rate       DECIMAL(5,2)  NULL,
+    ctr                   DECIMAL(5,2)  NULL,
+    engagement_score      DECIMAL(8,2)  NULL,
+    performance_score     DECIMAL(8,2)  NULL,
+    created_at            DATETIME      NOT NULL,
+    updated_at            DATETIME      NOT NULL,
+    CONSTRAINT fk_aul_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    CONSTRAINT fk_aul_case  FOREIGN KEY (case_id)  REFERENCES cases(id)        ON DELETE SET NULL,
+    CONSTRAINT fk_aul_clip  FOREIGN KEY (clip_id)  REFERENCES video_clips(id)  ON DELETE SET NULL,
+    INDEX idx_aul_asset_topic    (asset_id, topic),
+    INDEX idx_aul_topic_usedas   (topic, used_as),
+    INDEX idx_aul_platform_usedas (platform, used_as),
+    INDEX idx_aul_perf           (performance_score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Clip Blueprints  (template spec for generating social clips)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clip_blueprints (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    case_id           INT UNSIGNED  NULL,
+    platform          VARCHAR(80)   NOT NULL,
+    topic             VARCHAR(120)  NULL,
+    title             VARCHAR(255)  NULL,
+    hook_asset_id     INT UNSIGNED  NULL,
+    setup_asset_id    INT UNSIGNED  NULL,
+    payoff_asset_id   INT UNSIGNED  NULL,
+    loop_asset_id     INT UNSIGNED  NULL,
+    overlay_asset_id  INT UNSIGNED  NULL,
+    subtitle_asset_id INT UNSIGNED  NULL,
+    caption_asset_id  INT UNSIGNED  NULL,
+    source_video_path VARCHAR(255)  NULL,
+    output_video_path VARCHAR(255)  NULL,
+    blueprint_json    JSON          NULL,
+    status            ENUM('draft','ready','rendering','rendered','failed') NOT NULL DEFAULT 'draft',
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    CONSTRAINT fk_cb_case     FOREIGN KEY (case_id)           REFERENCES cases(id)  ON DELETE SET NULL,
+    CONSTRAINT fk_cb_hook     FOREIGN KEY (hook_asset_id)     REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_setup    FOREIGN KEY (setup_asset_id)    REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_payoff   FOREIGN KEY (payoff_asset_id)   REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_loop     FOREIGN KEY (loop_asset_id)     REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_overlay  FOREIGN KEY (overlay_asset_id)  REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_subtitle FOREIGN KEY (subtitle_asset_id) REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_caption  FOREIGN KEY (caption_asset_id)  REFERENCES assets(id) ON DELETE SET NULL,
+    INDEX idx_cb_case_platform (case_id, platform),
+    INDEX idx_cb_status        (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- NOTE: After schema.sql, run seed.sql for default data.
+-- ============================================================
