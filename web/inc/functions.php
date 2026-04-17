@@ -42,10 +42,23 @@ function upload_url(string $path): string
 // SITE SETTINGS  (cached from DB on first call)
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns a reference to the shared settings cache array (or null when unloaded).
+ * Passing true resets the cache so the next call to site_setting() reloads from DB.
+ */
+function &_ptmd_settings_cache_ref(bool $reset = false): ?array
+{
+    static $cache = null;
+    if ($reset) {
+        $cache = null;
+    }
+    return $cache;
+}
+
 /** Read a site_setting value from the database (with in-request cache). */
 function site_setting(string $key, string $fallback = ''): string
 {
-    static $cache = null;
+    $cache = &_ptmd_settings_cache_ref();
 
     if ($cache === null) {
         $cache = [];
@@ -64,22 +77,7 @@ function site_setting(string $key, string $fallback = ''): string
 /** Force reload of the site_settings cache (call after saving). */
 function flush_settings_cache(): void
 {
-    // Trick: rebind static to null via closure
-    $fn = Closure::bind(static function () { $cache = null; }, null, null);
-    $fn();
-    // Simpler approach — just unset via a second static function
-    _settings_cache_bust();
-}
-
-function _settings_cache_bust(): void
-{
-    static $busted = false;
-    if (!$busted) {
-        $busted = true;
-        // On next call to site_setting() the null-check in static $cache will
-        // not help because it already has a value.  For simplicity we reload
-        // the page after saves (redirect), which clears the process cache.
-    }
+    _ptmd_settings_cache_ref(true);
 }
 
 // ---------------------------------------------------------------------------
