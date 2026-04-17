@@ -48,6 +48,7 @@ $groupLabels = [
     'social'   => ['label' => 'Social Links',      'icon' => 'fa-share-nodes'],
     'brand'    => ['label' => 'Brand Assets',      'icon' => 'fa-palette'],
     'ai'       => ['label' => 'AI Configuration',  'icon' => 'fa-wand-magic-sparkles'],
+    'chat'     => ['label' => 'Chat & Donations',  'icon' => 'fa-comments'],
     'system'   => ['label' => 'System',            'icon' => 'fa-gear'],
 ];
 ?>

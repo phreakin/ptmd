@@ -53,7 +53,8 @@ function get_chat_user_by_id(int $id): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT id, username, email, display_name, avatar_color, role, status, muted_until, badge_label
+        'SELECT id, username, email, display_name, avatar_color, role, status, muted_until, badge_label,
+                strike_count, trust_level, last_strike_at
          FROM chat_users WHERE id = :id LIMIT 1'
     );
     $stmt->execute(['id' => $id]);
@@ -103,6 +104,74 @@ function chat_user_has_role(string ...$roles): bool
 function is_chat_moderator(): bool
 {
     return chat_user_has_role('moderator');
+}
+
+/**
+ * Centralized permissions check.
+ *
+ * Actions: send, react, reply, highlight, pin, hide, unhide, delete, restore,
+ *          mute_user, ban_user, add_strike, manage_roles, manage_rooms,
+ *          view_audit, start_trivia, close_trivia
+ *
+ * Pass $target when the action is against another user (enforces rank guard).
+ */
+function chat_can(string $action, ?array $caller = null, ?array $target = null): bool
+{
+    if ($caller === null) {
+        $caller = current_chat_user();
+    }
+
+    if ($caller && $caller['status'] === 'banned') {
+        return false;
+    }
+
+    $callerRank = $caller ? chat_role_rank($caller['role']) : 0;
+    $targetRank = $target ? chat_role_rank($target['role'] ?? 'guest') : 0;
+
+    return match ($action) {
+        'send'         => true,
+        'react'        => $callerRank >= chat_role_rank('registered'),
+        'reply'        => $callerRank >= chat_role_rank('registered'),
+        'highlight'    => $callerRank >= chat_role_rank('registered'),
+        'pin'          => $callerRank >= chat_role_rank('moderator'),
+        'hide'         => $callerRank >= chat_role_rank('moderator') && $callerRank > $targetRank,
+        'unhide'       => $callerRank >= chat_role_rank('moderator'),
+        'delete'       => $callerRank >= chat_role_rank('moderator') && $callerRank > $targetRank,
+        'restore'      => $callerRank >= chat_role_rank('moderator'),
+        'mute_user'    => $callerRank >= chat_role_rank('moderator') && $callerRank > $targetRank,
+        'ban_user'     => $callerRank >= chat_role_rank('moderator') && $callerRank > $targetRank,
+        'add_strike'   => $callerRank >= chat_role_rank('moderator') && $callerRank > $targetRank,
+        'manage_roles' => $callerRank >= chat_role_rank('admin'),
+        'manage_rooms' => $callerRank >= chat_role_rank('admin'),
+        'view_audit'   => $callerRank >= chat_role_rank('moderator'),
+        'start_trivia' => $callerRank >= chat_role_rank('moderator'),
+        'close_trivia' => $callerRank >= chat_role_rank('moderator'),
+        default        => false,
+    };
+}
+
+/**
+ * Return the full permissions matrix for all roles.
+ * Used by /api/chat_roles.php.
+ */
+function chat_permissions_matrix(): array
+{
+    $roles = ['guest', 'registered', 'moderator', 'admin', 'super_admin'];
+    $actions = [
+        'send', 'react', 'reply', 'highlight',
+        'pin', 'hide', 'unhide', 'delete', 'restore',
+        'mute_user', 'ban_user', 'add_strike',
+        'manage_roles', 'manage_rooms', 'view_audit',
+        'start_trivia', 'close_trivia',
+    ];
+    $matrix = [];
+    foreach ($roles as $role) {
+        $fakeUser = ['role' => $role, 'status' => 'active'];
+        foreach ($actions as $action) {
+            $matrix[$role][$action] = chat_can($action, $fakeUser, ['role' => 'guest']);
+        }
+    }
+    return $matrix;
 }
 
 /**
