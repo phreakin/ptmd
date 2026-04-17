@@ -28,6 +28,7 @@ $navItems = [
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
     ['href' => '/admin/content-workflow.php','label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
     ['href' => '/admin/posting-sites.php',   'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
+    ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
     ['href' => '/admin/chat-rooms.php',      'label' => 'Chat Rooms',      'icon' => 'fa-door-open',       'id' => 'chat-rooms'],
     ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
