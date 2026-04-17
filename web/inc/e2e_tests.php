@@ -249,24 +249,91 @@ function run_ptmd_e2e_tests(): array
     }
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (valid csrf)', $chatValidOk, $chatValidMessageText, ['actual_status' => $chatPostValid['status'] ?? null, 'cleanup_error' => $chatCleanupError]);
 
+    $chatTooLong = ptmd_e2e_request(
+        $baseUrl,
+        '/api/chat_messages.php',
+        'POST',
+        ['csrf_token' => $chatValidCsrf, 'username' => 'E2EValidator', 'message' => str_repeat('a', 501)],
+        $authCookie
+    );
+    $chatTooLongOk = $chatTooLong['ok']
+        && (($chatTooLong['status'] ?? 0) === 200)
+        && is_array($chatTooLong['json'])
+        && (($chatTooLong['json']['ok'] ?? true) === false);
+    ptmd_e2e_record($api, 'POST /api/chat_messages.php (message too long)', $chatTooLongOk, $chatTooLongOk ? 'Validation rejects overlong chat messages' : 'Overlong chat validation failed', ['actual_status' => $chatTooLong['status'] ?? null]);
+
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
 
-    $aiAuth = ptmd_e2e_request($baseUrl, '/api/ai_generate.php', 'GET', [], $authCookie);
-    $aiAuthOk = $aiAuth['ok'] && (($aiAuth['status'] ?? 0) === 405);
-    ptmd_e2e_record($api, 'GET /api/ai_generate.php (admin session)', $aiAuthOk, $aiAuthOk ? 'Method guard works' : 'Admin method guard failed', ['actual_status' => $aiAuth['status'] ?? null]);
+    if ($sessionIsValid) {
+        $aiAuth = ptmd_e2e_request($baseUrl, '/api/ai_generate.php', 'GET', [], $authCookie);
+        $aiAuthOk = $aiAuth['ok'] && (($aiAuth['status'] ?? 0) === 405);
+        ptmd_e2e_record($api, 'GET /api/ai_generate.php (admin session)', $aiAuthOk, $aiAuthOk ? 'Method guard works' : 'Admin method guard failed', ['actual_status' => $aiAuth['status'] ?? null]);
+
+        $aiPostInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/ai_generate.php',
+            'POST',
+            ['csrf_token' => 'invalid', 'feature' => 'title', 'title_topic' => 'E2E'],
+            $authCookie
+        );
+        $aiPostInvalidCsrfOk = $aiPostInvalidCsrf['ok'] && (($aiPostInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/ai_generate.php (invalid csrf)', $aiPostInvalidCsrfOk, $aiPostInvalidCsrfOk ? 'CSRF protection enforced' : 'AI generate CSRF check failed', ['actual_status' => $aiPostInvalidCsrf['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated ai_generate checks', true, 'Skipped: active admin session is required');
+    }
+
+    $assistantAnon = ptmd_e2e_request($baseUrl, '/api/ai_assistant.php');
+    $assistantAnonOk = $assistantAnon['ok'] && (($assistantAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/ai_assistant.php (anonymous)', $assistantAnonOk, $assistantAnonOk ? 'Unauthorized as expected' : 'Anonymous assistant auth check failed', ['actual_status' => $assistantAnon['status'] ?? null]);
+
+    if ($sessionIsValid) {
+        $assistantAuth = ptmd_e2e_request($baseUrl, '/api/ai_assistant.php', 'GET', [], $authCookie);
+        $assistantAuthOk = $assistantAuth['ok']
+            && (($assistantAuth['status'] ?? 0) === 200)
+            && is_array($assistantAuth['json'])
+            && (($assistantAuth['json']['ok'] ?? false) === true)
+            && array_key_exists('sessions', $assistantAuth['json']);
+        ptmd_e2e_record($api, 'GET /api/ai_assistant.php (admin session)', $assistantAuthOk, $assistantAuthOk ? 'Assistant API returns sessions list' : 'Assistant API GET failed', ['actual_status' => $assistantAuth['status'] ?? null]);
+
+        $assistantPostInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/ai_assistant.php',
+            'POST',
+            ['csrf_token' => 'invalid', 'message' => 'E2E invalid CSRF check'],
+            $authCookie
+        );
+        $assistantPostInvalidCsrfOk = $assistantPostInvalidCsrf['ok'] && (($assistantPostInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/ai_assistant.php (invalid csrf)', $assistantPostInvalidCsrfOk, $assistantPostInvalidCsrfOk ? 'CSRF protection enforced' : 'Assistant CSRF check failed', ['actual_status' => $assistantPostInvalidCsrf['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated ai_assistant checks', true, 'Skipped: active admin session is required');
+    }
 
     $overlayAnon = ptmd_e2e_request($baseUrl, '/api/apply_overlays.php');
     $overlayAnonOk = $overlayAnon['ok'] && (($overlayAnon['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'GET /api/apply_overlays.php (anonymous)', $overlayAnonOk, $overlayAnonOk ? 'Unauthorized as expected' : 'Anonymous overlay auth check failed', ['actual_status' => $overlayAnon['status'] ?? null]);
 
-    $overlayAuth = ptmd_e2e_request($baseUrl, '/api/apply_overlays.php?job_id=0', 'GET', [], $authCookie);
-    $overlayAuthStatusOk = ($overlayAuth['status'] ?? 0) === 200;
-    $overlayAuthJsonOk = is_array($overlayAuth['json']);
-    $overlayAuthPayloadOk = $overlayAuthJsonOk && (($overlayAuth['json']['ok'] ?? true) === false);
-    $overlayAuthOk = $overlayAuth['ok'] && $overlayAuthStatusOk && $overlayAuthPayloadOk;
-    ptmd_e2e_record($api, 'GET /api/apply_overlays.php?job_id=0 (admin session)', $overlayAuthOk, $overlayAuthOk ? 'Overlay API reachable with admin session' : 'Overlay API admin check failed', ['actual_status' => $overlayAuth['status'] ?? null]);
+    if ($sessionIsValid) {
+        $overlayAuth = ptmd_e2e_request($baseUrl, '/api/apply_overlays.php?job_id=0', 'GET', [], $authCookie);
+        $overlayAuthStatusOk = ($overlayAuth['status'] ?? 0) === 200;
+        $overlayAuthJsonOk = is_array($overlayAuth['json']);
+        $overlayAuthPayloadOk = $overlayAuthJsonOk && (($overlayAuth['json']['ok'] ?? true) === false);
+        $overlayAuthOk = $overlayAuth['ok'] && $overlayAuthStatusOk && $overlayAuthPayloadOk;
+        ptmd_e2e_record($api, 'GET /api/apply_overlays.php?job_id=0 (admin session)', $overlayAuthOk, $overlayAuthOk ? 'Overlay API reachable with admin session' : 'Overlay API admin check failed', ['actual_status' => $overlayAuth['status'] ?? null]);
+
+        $overlayPostInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/apply_overlays.php',
+            'POST',
+            ['csrf_token' => 'invalid'],
+            $authCookie
+        );
+        $overlayPostInvalidCsrfOk = $overlayPostInvalidCsrf['ok'] && (($overlayPostInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/apply_overlays.php (invalid csrf)', $overlayPostInvalidCsrfOk, $overlayPostInvalidCsrfOk ? 'CSRF protection enforced' : 'Overlay CSRF check failed', ['actual_status' => $overlayPostInvalidCsrf['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated apply_overlays checks', true, 'Skipped: active admin session is required');
+    }
 
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];
 
