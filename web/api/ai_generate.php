@@ -430,20 +430,6 @@ switch ($feature) {
         }
 
         if ($sourceText === '') {
-            $fallbackMap = [
-                'title' => $contextTitle,
-                'slug' => '',
-                'excerpt' => $contextExcerpt,
-                'body' => $contextBody,
-                'keywords' => $contextKeywords,
-                'video_url' => $contextVideoUrl,
-                'duration' => $contextDuration,
-                'thumbnail_image' => $contextThumbnail,
-            ];
-            $sourceText = trim((string) ($fallbackMap[$field] ?? ''));
-        }
-
-        if ($sourceText === '') {
             echo json_encode(['ok' => false, 'error' => 'Add field text before optimizing.']);
             exit;
         }
