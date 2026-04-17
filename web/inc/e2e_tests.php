@@ -97,6 +97,186 @@ function ptmd_e2e_record(array &$group, string $name, bool $ok, string $message,
     ];
 }
 
+/**
+ * Run schema validation checks against information_schema.
+ *
+ * Returns an array of test records compatible with ptmd_e2e_record() entries.
+ * Checks: required tables exist, required columns exist, and flags any known
+ * legacy-drift columns that should no longer be present.
+ */
+function run_ptmd_schema_tests(PDO $pdo): array
+{
+    $tests = [];
+
+    $db = '';
+    try {
+        $db = (string) ($pdo->query('SELECT DATABASE()')->fetchColumn() ?: '');
+    } catch (Throwable $e) {
+        ptmd_e2e_record($tests, 'DB name resolution', false, 'Unable to resolve database name: ' . $e->getMessage());
+        return $tests;
+    }
+
+    if ($db === '') {
+        ptmd_e2e_record($tests, 'DB name resolution', false, 'DATABASE() returned empty — check PDO DSN');
+        return $tests;
+    }
+
+    ptmd_e2e_record($tests, 'DB name resolution', true, "Connected to database: {$db}");
+
+    // ── Expected schema: tables → required columns ────────────────────────────
+    // Only columns that are actually queried by application code are listed.
+    // Adding a column here is always safe (additive); existing columns are
+    // never flagged as errors.
+    $expected = [
+        'users' => [
+            'id', 'username', 'email', 'password_hash', 'role', 'created_at', 'updated_at',
+        ],
+        'episodes' => [
+            'id', 'title', 'slug', 'excerpt', 'body',
+            'thumbnail_image', 'featured_image', 'video_url', 'video_file_path',
+            'duration', 'status', 'published_at', 'created_at', 'updated_at',
+        ],
+        'episode_categories' => ['id', 'name', 'slug', 'created_at', 'updated_at'],
+        'episode_tags'       => ['id', 'name', 'slug', 'created_at', 'updated_at'],
+        'episode_tag_map'    => ['episode_id', 'tag_id'],
+        'site_settings' => [
+            'id', 'setting_key', 'setting_value', 'setting_type', 'label', 'group_name', 'updated_at',
+        ],
+        'media_library' => [
+            'id', 'filename', 'file_path', 'file_type', 'file_size', 'category',
+            'metadata_json', 'created_at', 'updated_at',
+        ],
+        'social_accounts' => [
+            'id', 'platform', 'handle', 'auth_config_json', 'is_active', 'created_at', 'updated_at',
+        ],
+        'social_post_schedules' => [
+            'id', 'platform', 'content_type', 'day_of_week', 'post_time',
+            'timezone', 'is_active', 'created_at', 'updated_at',
+        ],
+        'social_platform_preferences' => [
+            'id', 'platform', 'default_content_type', 'default_caption_prefix',
+            'default_hashtags', 'default_status', 'is_enabled', 'created_at', 'updated_at',
+        ],
+        'social_post_queue' => [
+            'id', 'episode_id', 'clip_id', 'platform', 'content_type', 'caption',
+            'asset_path', 'scheduled_for', 'status', 'external_post_id', 'last_error',
+            'created_at', 'updated_at',
+        ],
+        'social_post_logs' => [
+            'id', 'queue_id', 'platform', 'request_payload_json', 'response_payload_json',
+            'status', 'created_at',
+        ],
+        'chat_messages' => [
+            'id', 'username', 'message', 'status', 'emojis_json', 'ip_hash',
+            'created_at', 'updated_at',
+        ],
+        'chat_moderation_logs' => [
+            'id', 'chat_message_id', 'moderator_id', 'action', 'reason', 'created_at',
+        ],
+        'ai_generations' => [
+            'id', 'episode_id', 'feature', 'input_prompt', 'output_text', 'model',
+            'prompt_tokens', 'response_tokens', 'created_at',
+        ],
+        'ai_video_ideas' => [
+            'id', 'generation_id', 'created_by', 'scope', 'context_notes',
+            'idea_title', 'premise', 'suggested_angle', 'rank_order', 'created_at', 'updated_at',
+        ],
+        'overlay_batch_jobs' => [
+            'id', 'label', 'overlay_path', 'position', 'opacity', 'scale', 'status',
+            'total_items', 'done_items', 'error_message', 'created_by', 'created_at', 'updated_at',
+        ],
+        'overlay_batch_items' => [
+            'id', 'batch_job_id', 'source_path', 'output_path', 'status',
+            'error_message', 'ffmpeg_command', 'duration_sec', 'created_at', 'updated_at',
+        ],
+        'video_clips' => [
+            'id', 'episode_id', 'label', 'source_path', 'output_path',
+            'start_time', 'end_time', 'duration_sec', 'platform_target', 'status',
+            'created_at', 'updated_at',
+        ],
+        'ai_assistant_sessions' => ['id', 'user_id', 'title', 'created_at', 'updated_at'],
+        'ai_assistant_messages' => ['id', 'session_id', 'role', 'content', 'created_at'],
+    ];
+
+    try {
+        // Fetch all existing tables in one query
+        $tablesStmt = $pdo->prepare(
+            "SELECT TABLE_NAME
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = :db AND TABLE_TYPE = 'BASE TABLE'
+             ORDER BY TABLE_NAME"
+        );
+        $tablesStmt->execute(['db' => $db]);
+        $existingTables = array_flip(array_column($tablesStmt->fetchAll(PDO::FETCH_ASSOC), 'TABLE_NAME'));
+
+        // Fetch all existing columns in one query
+        $colsStmt = $pdo->prepare(
+            'SELECT TABLE_NAME, COLUMN_NAME
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = :db
+             ORDER BY TABLE_NAME, ORDINAL_POSITION'
+        );
+        $colsStmt->execute(['db' => $db]);
+        $existingCols = [];
+        foreach ($colsStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $existingCols[$row['TABLE_NAME']][$row['COLUMN_NAME']] = true;
+        }
+    } catch (Throwable $e) {
+        ptmd_e2e_record($tests, 'information_schema query', false, 'Failed: ' . $e->getMessage());
+        return $tests;
+    }
+
+    // ── Table + column checks ─────────────────────────────────────────────────
+    foreach ($expected as $table => $columns) {
+        $tableExists = isset($existingTables[$table]);
+        ptmd_e2e_record(
+            $tests,
+            "Table: {$table}",
+            $tableExists,
+            $tableExists ? 'Exists' : 'MISSING — run schema.sql to create it',
+            ['severity' => $tableExists ? 'ok' : 'blocking']
+        );
+
+        if (!$tableExists) {
+            continue;
+        }
+
+        $tableColMap = $existingCols[$table] ?? [];
+        $missingCols = [];
+        foreach ($columns as $col) {
+            if (!isset($tableColMap[$col])) {
+                $missingCols[] = $col;
+            }
+        }
+        $colsOk = $missingCols === [];
+        ptmd_e2e_record(
+            $tests,
+            "Columns: {$table}",
+            $colsOk,
+            $colsOk
+                ? count($columns) . ' required column(s) present'
+                : 'Missing: ' . implode(', ', $missingCols),
+            ['severity' => $colsOk ? 'ok' : 'blocking', 'missing_columns' => $missingCols]
+        );
+    }
+
+    // ── Drift checks: columns that must NOT exist ─────────────────────────────
+    // episodes.keywords was referenced in old code but was never in schema.sql.
+    // Keywords are stored in episode_tags / episode_tag_map.
+    $hasLegacyKeywords = isset($existingCols['episodes']['keywords']);
+    ptmd_e2e_record(
+        $tests,
+        'Drift: no legacy episodes.keywords column',
+        !$hasLegacyKeywords,
+        $hasLegacyKeywords
+            ? 'Legacy column found — keywords belong in episode_tags; consider: ALTER TABLE episodes DROP COLUMN keywords'
+            : 'Clean — episodes.keywords absent (correct)',
+        ['severity' => $hasLegacyKeywords ? 'non-blocking' : 'ok']
+    );
+
+    return $tests;
+}
+
 function run_ptmd_e2e_tests(): array
 {
     $started = microtime(true);
@@ -269,6 +449,15 @@ function run_ptmd_e2e_tests(): array
     ptmd_e2e_record($api, 'GET /api/apply_overlays.php?job_id=0 (admin session)', $overlayAuthOk, $overlayAuthOk ? 'Overlay API reachable with admin session' : 'Overlay API admin check failed', ['actual_status' => $overlayAuth['status'] ?? null]);
 
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];
+
+    // Database schema validation
+    $schema = [];
+    if ($pdo) {
+        $schema = run_ptmd_schema_tests($pdo);
+    } else {
+        ptmd_e2e_record($schema, 'Database connection', false, 'No DB connection — schema checks skipped');
+    }
+    $groups[] = ['name' => 'Database Schema', 'tests' => $schema];
 
     $passed = 0;
     $failed = 0;

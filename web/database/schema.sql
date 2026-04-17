@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS users (
 -- ------------------------------------------------------------
 -- Episodes
 -- ------------------------------------------------------------
+-- NOTE: Episode keywords/tags are stored in the normalised
+-- episode_tags + episode_tag_map tables (see below), NOT as
+-- a column on this table.  Application code that needs a flat
+-- comma-separated keyword string must use a GROUP_CONCAT join
+-- against episode_tags/episode_tag_map.
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS episodes (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     title           VARCHAR(255)  NOT NULL,
