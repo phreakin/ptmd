@@ -338,13 +338,14 @@ switch ($feature) {
         if ($epId > 0) {
             $pdo = get_db();
             if ($pdo) {
-                $ep = $pdo->prepare('SELECT title, excerpt, body, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep = $pdo->prepare('SELECT title, excerpt, body, keywords, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
                 $ep->execute(['id' => $epId]);
                 $epRow = $ep->fetch();
                 if ($epRow) {
                     $contextTitle = $contextTitle !== '' ? $contextTitle : (string) ($epRow['title'] ?? '');
                     $contextExcerpt = $contextExcerpt !== '' ? $contextExcerpt : (string) ($epRow['excerpt'] ?? '');
                     $contextBody = $contextBody !== '' ? $contextBody : (string) ($epRow['body'] ?? '');
+                    $contextKeywords = $contextKeywords !== '' ? $contextKeywords : (string) ($epRow['keywords'] ?? '');
                     $contextVideoUrl = $contextVideoUrl !== '' ? $contextVideoUrl : (string) ($epRow['video_url'] ?? '');
                     $contextDuration = $contextDuration !== '' ? $contextDuration : (string) ($epRow['duration'] ?? '');
                     $contextThumbnail = $contextThumbnail !== '' ? $contextThumbnail : (string) ($epRow['thumbnail_image'] ?? '');

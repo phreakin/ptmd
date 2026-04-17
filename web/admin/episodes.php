@@ -539,7 +539,7 @@ async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPa
             }
             await runFieldAiAction(
                 optimizeBtn,
-                'Optimizing field',
+                'Optimizing Field',
                 'Optimize Field',
                 'episode_field_optimize',
                 { optimize_source: sourceText }
