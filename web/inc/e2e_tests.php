@@ -31,8 +31,8 @@ function ptmd_e2e_request(string $baseUrl, string $path, string $method = 'GET',
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HEADER => true,
         CURLOPT_FOLLOWLOCATION => false,
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 5,
         CURLOPT_HTTPHEADER => $headers,
     ]);
 
@@ -162,7 +162,7 @@ function run_ptmd_e2e_tests(): array
     // Exclude partials and auth endpoints that are not standard in-session page views.
     $adminFiles = array_filter($adminFiles, static function (string $file): bool {
         $name = basename($file);
-        return $name[0] !== '_' && !in_array($name, ['login.php', 'logout.php'], true);
+        return $name[0] !== '_' && !in_array($name, ['login.php', 'logout.php', 'site-tests.php'], true);
     });
     sort($adminFiles);
 
@@ -205,7 +205,10 @@ function run_ptmd_e2e_tests(): array
     ptmd_e2e_record($api, 'GET /api/apply_overlays.php (anonymous)', $overlayAnonOk, $overlayAnonOk ? 'Unauthorized as expected' : 'Anonymous overlay auth check failed', ['actual_status' => $overlayAnon['status'] ?? null]);
 
     $overlayAuth = ptmd_e2e_request($baseUrl, '/api/apply_overlays.php?job_id=0', 'GET', [], $authCookie);
-    $overlayAuthOk = $overlayAuth['ok'] && (($overlayAuth['status'] ?? 0) === 200) && is_array($overlayAuth['json']) && (($overlayAuth['json']['ok'] ?? true) === false);
+    $overlayAuthStatusOk = ($overlayAuth['status'] ?? 0) === 200;
+    $overlayAuthJsonOk = is_array($overlayAuth['json']);
+    $overlayAuthPayloadOk = $overlayAuthJsonOk && (($overlayAuth['json']['ok'] ?? true) === false);
+    $overlayAuthOk = $overlayAuth['ok'] && $overlayAuthStatusOk && $overlayAuthPayloadOk;
     ptmd_e2e_record($api, 'GET /api/apply_overlays.php?job_id=0 (admin session)', $overlayAuthOk, $overlayAuthOk ? 'Overlay API reachable with admin session' : 'Overlay API admin check failed', ['actual_status' => $overlayAuth['status'] ?? null]);
 
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];
