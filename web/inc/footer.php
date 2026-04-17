@@ -35,15 +35,15 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 <h6 class="ptmd-footer-heading">Site</h6>
                 <ul class="list-unstyled ptmd-footer-links">
                     <li><a href="/index.php">Home</a></li>
-                    <li><a href="/index.php?page=cases">Open Cases</a></li>
-                    <li><a href="/index.php?page=about">About</a></li>
+                    <li><a href="/index.php?page=cases">Cases</a></li>
                     <li><a href="/index.php?page=series">Series</a></li>
-                    <li><a href="/index.php?page=cases">Closed Cases</a></li>
-                    <li><a href="/index.php?page=cases">Cold Cases</a></li>
-                    <li><a href="/index.php?page=cases">Most Wanted</a></li>
                     <li><a href="/index.php?page=case-chat">Case Chat</a></li>
-                    <li><a href="/index.php?page=cases">Schedule</a></li>
-                    <li><a href="/index.php?page=case-chat">Live</a></li>
+                    <li>
+                        <a href="/index.php?page=case-chat" class="ptmd-footer-live d-inline-flex align-items-center gap-2">
+                            Live
+                            <span class="ptmd-live-dot" aria-hidden="true"></span>
+                        </a>
+                    </li>
                 </ul>
             </div>
 
@@ -87,7 +87,7 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                     Have a lead? A receipt? A document that proves something?
                     The timeline never lies — show us yours.
                 </p>
-                <a href="/index.php?page=contact" class="btn btn-ptmd-secondary btn-sm">
+                <a href="mailto:<?php ee(site_setting('site_email', 'papertrailmd@gmail.com')); ?>" class="btn btn-ptmd-secondary btn-sm">
                     <i class="fa-solid fa-paper-plane me-1"></i>Drop a Tip
                 </a>
             </div>
