@@ -50,6 +50,7 @@ $flash = pull_flash();
                     <li class="nav-item">
                         <a class="nav-link" href="/index.php?page=case-chat">
                             <i class="fa-solid fa-comments fa-sm me-1"></i>Case Chat
+                            <span class="ptmd-live-dot ms-1" title="Live"></span>
                         </a>
                     </li>
                     <li class="nav-item">
