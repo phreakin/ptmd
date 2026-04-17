@@ -572,6 +572,114 @@ GUIDELINES:
 PROMPT;
 }
 
+// ---------------------------------------------------------------------------
+// VIEWER AUTH  (public viewer accounts — separate from admin $_SESSION['admin_user_id'])
+// ---------------------------------------------------------------------------
+
+/** Is a public viewer currently logged in? */
+function is_viewer_logged_in(): bool
+{
+    return !empty($_SESSION['viewer_id']);
+}
+
+/** Return the current viewer row from viewer_users (cached per-request). */
+function current_viewer(): ?array
+{
+    static $viewer = null;
+    static $loaded = false;
+
+    if ($loaded) {
+        return $viewer;
+    }
+
+    $loaded = true;
+
+    if (!is_viewer_logged_in()) {
+        return null;
+    }
+
+    $pdo = get_db();
+    if (!$pdo) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT id, username, email, display_name, avatar_url, status
+         FROM viewer_users WHERE id = :id AND status = :status LIMIT 1'
+    );
+    $stmt->execute(['id' => (int) $_SESSION['viewer_id'], 'status' => 'active']);
+    $viewer = $stmt->fetch() ?: null;
+
+    return $viewer;
+}
+
+/** Log a viewer in: set session key and regenerate session ID. */
+function viewer_login(int $viewerId): void
+{
+    session_regenerate_id(true);
+    $_SESSION['viewer_id'] = $viewerId;
+}
+
+/** Log the current viewer out. */
+function viewer_logout(): void
+{
+    unset($_SESSION['viewer_id']);
+    session_regenerate_id(true);
+}
+
+/**
+ * Return an array of episode_id integers the viewer has favorited.
+ *
+ * @return int[]
+ */
+function get_viewer_favorites(int $viewerId): array
+{
+    $pdo = get_db();
+    if (!$pdo) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT episode_id FROM episode_favorites WHERE viewer_id = :viewer_id'
+    );
+    $stmt->execute(['viewer_id' => $viewerId]);
+
+    return array_map('intval', array_column($stmt->fetchAll(), 'episode_id'));
+}
+
+/**
+ * Toggle a viewer favorite: inserts if absent, deletes if present.
+ * Returns true if the episode is now favorited, false if un-favorited.
+ */
+function toggle_viewer_favorite(int $viewerId, int $episodeId): bool
+{
+    $pdo = get_db();
+    if (!$pdo) {
+        return false;
+    }
+
+    // Check if already favorited
+    $check = $pdo->prepare(
+        'SELECT id FROM episode_favorites WHERE viewer_id = :v AND episode_id = :e LIMIT 1'
+    );
+    $check->execute(['v' => $viewerId, 'e' => $episodeId]);
+    $existing = $check->fetchColumn();
+
+    if ($existing) {
+        $pdo->prepare('DELETE FROM episode_favorites WHERE viewer_id = :v AND episode_id = :e')
+            ->execute(['v' => $viewerId, 'e' => $episodeId]);
+        return false;
+    }
+
+    $pdo->prepare(
+        'INSERT INTO episode_favorites (viewer_id, episode_id, created_at) VALUES (:v, :e, NOW())'
+    )->execute(['v' => $viewerId, 'e' => $episodeId]);
+
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+
 /**
  * Build the standard PTMD system prompt for all AI features.
  * Incorporates brand context so results are on-brand.
