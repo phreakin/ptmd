@@ -469,15 +469,15 @@ const optimizeBtn = document.getElementById('ai_optimize_btn');
 const csrfInput = document.querySelector('input[name="csrf_token"]');
 const episodeIdInput = document.getElementById('ep_id');
 
-async function runFieldAiAction(button, runningLabel, idleLabel, feature, extraPayload = {}) {
+async function runFieldAiAction(button, actionLabel, idleLabel, feature, extraPayload = {}) {
     if (!button || !fieldSelect || !resultWrap || !resultInput || !csrfInput) {
         return;
     }
     const selectedField = fieldSelect.value;
     button.disabled = true;
-    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>${runningLabel}`;
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>${actionLabel}`;
     resultWrap.style.display = 'block';
-    resultInput.value = `${runningLabel}...`;
+    resultInput.value = `${actionLabel}...`;
 
     try {
         const fd = new FormData();
