@@ -349,6 +349,64 @@ function run_ptmd_e2e_tests(): array
         ptmd_e2e_record($api, 'Authenticated apply_overlays checks', true, 'Skipped: active admin session is required');
     }
 
+    // edit_jobs API
+    $editJobsAnon = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php');
+    $editJobsAnonOk = $editJobsAnon['ok'] && (($editJobsAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/edit_jobs.php (anonymous)', $editJobsAnonOk, $editJobsAnonOk ? 'Unauthorized as expected' : 'Anonymous edit_jobs auth check failed', ['actual_status' => $editJobsAnon['status'] ?? null]);
+
+    if ($sessionIsValid) {
+        $editJobsAuth = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php', 'GET', [], $authCookie);
+        $editJobsAuthOk = $editJobsAuth['ok']
+            && (($editJobsAuth['status'] ?? 0) === 200)
+            && is_array($editJobsAuth['json'])
+            && (($editJobsAuth['json']['ok'] ?? false) === true)
+            && array_key_exists('jobs', $editJobsAuth['json']);
+        ptmd_e2e_record($api, 'GET /api/edit_jobs.php (admin session)', $editJobsAuthOk, $editJobsAuthOk ? 'Edit jobs API returns jobs list' : 'Edit jobs API GET failed', ['actual_status' => $editJobsAuth['status'] ?? null]);
+
+        $editJobsInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => 'invalid', '_action' => 'create'],
+            $authCookie
+        );
+        $editJobsCsrfOk = $editJobsInvalidCsrf['ok'] && (($editJobsInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (invalid csrf)', $editJobsCsrfOk, $editJobsCsrfOk ? 'CSRF protection enforced' : 'Edit jobs CSRF check failed', ['actual_status' => $editJobsInvalidCsrf['status'] ?? null]);
+
+        $editJobsNoPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => ''],
+            $authCookie
+        );
+        $editJobsNoPathOk = $editJobsNoPath['ok']
+            && (($editJobsNoPath['status'] ?? 0) === 200)
+            && is_array($editJobsNoPath['json'])
+            && (($editJobsNoPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (missing source_path)', $editJobsNoPathOk, $editJobsNoPathOk ? 'Validation rejects empty source_path' : 'Edit jobs source_path validation failed', ['actual_status' => $editJobsNoPath['status'] ?? null]);
+
+        $editJobsBadPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => '../../../../etc/passwd'],
+            $authCookie
+        );
+        $editJobsBadPathOk = $editJobsBadPath['ok']
+            && (($editJobsBadPath['status'] ?? 0) === 200)
+            && is_array($editJobsBadPath['json'])
+            && (($editJobsBadPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (path traversal)', $editJobsBadPathOk, $editJobsBadPathOk ? 'Path traversal rejected' : 'Edit jobs path traversal check failed', ['actual_status' => $editJobsBadPath['status'] ?? null]);
+
+        // process_edit_jobs worker auth
+        $workerAnon = ptmd_e2e_request($baseUrl, '/api/process_edit_jobs.php');
+        $workerAnonOk = $workerAnon['ok'] && (($workerAnon['status'] ?? 0) === 401);
+        ptmd_e2e_record($api, 'GET /api/process_edit_jobs.php (anonymous)', $workerAnonOk, $workerAnonOk ? 'Unauthorized as expected' : 'Worker anonymous auth check failed', ['actual_status' => $workerAnon['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated edit_jobs checks', true, 'Skipped: active admin session is required');
+    }
+
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];
 
     $passed = 0;
