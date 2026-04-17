@@ -436,6 +436,143 @@ function save_ai_generation(
 }
 
 /**
+ * Call OpenAI Chat Completions with a full multi-turn message history.
+ * $messages is an array of ['role' => 'user'|'assistant', 'content' => '...'].
+ */
+function openai_chat_multiturn(string $systemPrompt, array $messages, int $maxTokens = 1200): array
+{
+    $apiKey = site_setting('openai_api_key', '');
+    $model  = site_setting('openai_model', 'gpt-4o-mini');
+
+    if ($apiKey === '') {
+        return ['ok' => false, 'error' => 'OpenAI API key not configured. Set it in Admin → Settings.'];
+    }
+
+    $payload = [
+        'model'      => $model,
+        'max_tokens' => $maxTokens,
+        'messages'   => array_merge(
+            [['role' => 'system', 'content' => $systemPrompt]],
+            $messages
+        ),
+    ];
+
+    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiKey,
+        ],
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_TIMEOUT        => 30,
+    ]);
+
+    $raw    = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err    = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        return ['ok' => false, 'error' => 'cURL error: ' . $err];
+    }
+
+    $data = json_decode($raw, true);
+
+    if ($status !== 200 || !is_array($data)) {
+        $msg = is_array($data) ? ($data['error']['message'] ?? $raw) : $raw;
+        return ['ok' => false, 'error' => 'OpenAI error: ' . $msg];
+    }
+
+    $text = $data['choices'][0]['message']['content'] ?? '';
+
+    return [
+        'ok'              => true,
+        'text'            => trim($text),
+        'model'           => $data['model'] ?? $model,
+        'prompt_tokens'   => $data['usage']['prompt_tokens'] ?? 0,
+        'response_tokens' => $data['usage']['completion_tokens'] ?? 0,
+    ];
+}
+
+/**
+ * Gather a live read-only snapshot of site data for the Copilot context.
+ */
+function ptmd_copilot_context(): string
+{
+    $pdo   = get_db();
+    $parts = [];
+
+    if ($pdo) {
+        $epTotal  = (int) $pdo->query('SELECT COUNT(*) FROM episodes')->fetchColumn();
+        $epPub    = (int) $pdo->query('SELECT COUNT(*) FROM episodes WHERE status = "published"')->fetchColumn();
+        $parts[]  = "Episodes: {$epTotal} total, {$epPub} published.";
+
+        $latestEps = $pdo->query(
+            'SELECT title, status FROM episodes ORDER BY created_at DESC LIMIT 5'
+        )->fetchAll();
+        if ($latestEps) {
+            $epList  = array_map(fn($e) => '  - "' . $e['title'] . '" (' . $e['status'] . ')', $latestEps);
+            $parts[] = "Recent episodes:\n" . implode("\n", $epList);
+        }
+
+        $queuePending = (int) $pdo->query(
+            'SELECT COUNT(*) FROM social_post_queue WHERE status IN ("queued","scheduled")'
+        )->fetchColumn();
+        $parts[] = "Social queue: {$queuePending} post(s) pending.";
+
+        $mediaTotal = (int) $pdo->query('SELECT COUNT(*) FROM media_library')->fetchColumn();
+        $parts[]    = "Media library: {$mediaTotal} file(s).";
+
+        $aiTotal = (int) $pdo->query('SELECT COUNT(*) FROM ai_generations')->fetchColumn();
+        $parts[] = "AI generations logged: {$aiTotal}.";
+    }
+
+    $parts[] = 'Current date/time: ' . date('D, d M Y H:i T');
+
+    return implode("\n", $parts);
+}
+
+/**
+ * Build the Admin Copilot system prompt with live site context.
+ */
+function ptmd_copilot_system_prompt(): string
+{
+    $siteName = site_setting('site_name', 'Paper Trail MD');
+    $context  = ptmd_copilot_context();
+
+    return <<<PROMPT
+You are the Admin Copilot for {$siteName}, a documentary-first media brand focused on investigative mini-docs with a sharp, funny tone.
+
+Your job is to help the site admin with EVERY aspect of managing the site — content, publishing, social media, media assets, moderation, and technical configuration.
+
+CURRENT SITE SNAPSHOT:
+{$context}
+
+ADMIN MODULES YOU CAN HELP WITH:
+- Episodes (create, edit, publish, archive) → /admin/episodes.php
+- Video Processor (trim clips, extract short-form content) → /admin/video-processor.php
+- Overlay Tool (apply branded overlays to clips) → /admin/overlay-tool.php
+- Media Library (thumbnails, intros, watermarks, overlays, clips) → /admin/media.php
+- AI Content Studio (titles, keywords, descriptions, captions, thumbnail concepts) → /admin/ai-tools.php
+- Social Queue (manage scheduled posts) → /admin/posts.php
+- Post Schedule (configure posting cadence per platform) → /admin/social-schedule.php
+- Case Chat moderation (approve, flag, block viewer messages) → /admin/chat.php
+- Settings (site config, OpenAI API key, brand assets) → /admin/settings.php
+
+GUIDELINES:
+- Be concise, direct, and helpful. Match the PTMD tone: investigative, sharp, occasionally funny.
+- For content generation (titles, descriptions, keywords, captions, ideas), produce the content right away as a draft — clearly label it as a draft.
+- For how-to questions, explain clearly and include the relevant page link.
+- For site questions, use the snapshot above to give accurate, current answers.
+- Use markdown formatting (bold, bullet lists, code blocks) to keep responses readable.
+- Never reveal API keys, password hashes, or internal secrets.
+- Never claim you can directly execute code, run commands, or access files on the server.
+PROMPT;
+}
+
+/**
  * Build the standard PTMD system prompt for all AI features.
  * Incorporates brand context so results are on-brand.
  */

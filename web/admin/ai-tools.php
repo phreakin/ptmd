@@ -36,6 +36,24 @@ if ($pdo) {
     )->fetchAll();
 }
 
+// Stored structured video ideas (latest first)
+$storedIdeas = [];
+if ($pdo) {
+    try {
+        $storedIdeas = $pdo->query(
+            'SELECT i.*, u.username AS created_by_username
+             FROM ai_video_ideas i
+             LEFT JOIN users u ON u.id = i.created_by
+             ORDER BY i.created_at DESC
+             LIMIT 50'
+        )->fetchAll();
+    } catch (Throwable $e) {
+        $storedIdeas = [];
+    }
+}
+$topIdeas = array_slice($storedIdeas, 0, 5);
+$moreIdeas = array_slice($storedIdeas, 5);
+
 // Episode list for the "context" dropdown
 $episodes = [];
 if ($pdo) {
@@ -68,6 +86,19 @@ if ($pdo) {
                 <input class="form-control" id="ideas_theme" placeholder="e.g. housing policy, social media manipulation…">
             </div>
             <div class="mb-3">
+                <label class="form-label" for="ideas_scope">Social context scope</label>
+                <select class="form-select" id="ideas_scope">
+                    <option value="both" selected>U.S. + World</option>
+                    <option value="us">U.S. only</option>
+                    <option value="world">World only</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="ideas_context">Current issue context (optional)</label>
+                <textarea class="form-control" id="ideas_context" rows="2"
+                    placeholder="e.g. rising housing costs, election misinformation, labor strikes…"></textarea>
+            </div>
+            <div class="mb-3">
                 <label class="form-label" for="ideas_count">How many ideas?</label>
                 <select class="form-select" id="ideas_count">
                     <option value="5" selected>5 ideas</option>
@@ -78,7 +109,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="video_ideas"
-                data-inputs='["ideas_theme","ideas_count"]'
+                data-inputs='["ideas_theme","ideas_scope","ideas_context","ideas_count"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Ideas
@@ -258,6 +289,67 @@ if ($pdo) {
 
 </div>
 
+<!-- Stored AI video ideas -->
+<div class="ptmd-panel p-lg mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h6 mb-0">
+            <i class="fa-solid fa-lightbulb me-2 ptmd-text-yellow"></i>Stored Video Ideas
+        </h2>
+        <span class="ptmd-muted small"><?php echo count($storedIdeas); ?> stored</span>
+    </div>
+
+    <?php if ($topIdeas): ?>
+        <div class="d-flex flex-column gap-3">
+            <?php foreach ($topIdeas as $idea): ?>
+                <div class="p-3 rounded" style="border:1px solid var(--ptmd-border);background:rgba(255,255,255,0.015)">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div class="fw-600"><?php ee($idea['idea_title']); ?></div>
+                        <span class="ptmd-badge-muted"><?php ee(strtoupper($idea['scope'])); ?></span>
+                    </div>
+                    <p class="ptmd-muted small mb-2 mt-2"><?php ee($idea['premise']); ?></p>
+                    <div class="small"><strong>Angle:</strong> <?php ee($idea['suggested_angle']); ?></div>
+                    <div class="ptmd-muted" style="font-size:var(--text-xs)">
+                        <?php echo e(date('M j, Y g:ia', strtotime($idea['created_at']))); ?>
+                        <?php if (!empty($idea['created_by_username'])): ?>
+                            · by <?php ee($idea['created_by_username']); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php if ($moreIdeas): ?>
+            <div class="mt-3">
+                <button class="btn btn-ptmd-ghost btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#moreStoredIdeas" aria-expanded="false" aria-controls="moreStoredIdeas">
+                    <i class="fa-solid fa-chevron-down me-1"></i>Show More Ideas
+                </button>
+            </div>
+            <div class="collapse mt-3" id="moreStoredIdeas">
+                <div class="d-flex flex-column gap-3">
+                    <?php foreach ($moreIdeas as $idea): ?>
+                        <div class="p-3 rounded" style="border:1px solid var(--ptmd-border);background:rgba(255,255,255,0.015)">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div class="fw-600"><?php ee($idea['idea_title']); ?></div>
+                                <span class="ptmd-badge-muted"><?php ee(strtoupper($idea['scope'])); ?></span>
+                            </div>
+                            <p class="ptmd-muted small mb-2 mt-2"><?php ee($idea['premise']); ?></p>
+                            <div class="small"><strong>Angle:</strong> <?php ee($idea['suggested_angle']); ?></div>
+                            <div class="ptmd-muted" style="font-size:var(--text-xs)">
+                                <?php echo e(date('M j, Y g:ia', strtotime($idea['created_at']))); ?>
+                                <?php if (!empty($idea['created_by_username'])): ?>
+                                    · by <?php ee($idea['created_by_username']); ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    <?php else: ?>
+        <p class="ptmd-muted small mb-0">No stored video ideas yet. Generate ideas above to save and display them here.</p>
+    <?php endif; ?>
+</div>
+
 <!-- Generation History -->
 <div class="ptmd-panel p-lg">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -320,6 +412,15 @@ if ($pdo) {
 <script>
 'use strict';
 
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // ── AI tool buttons ────────────────────────────────────────────────────────────
 document.querySelectorAll('[data-ai-feature]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -363,7 +464,16 @@ document.querySelectorAll('[data-ai-feature]').forEach(btn => {
             resultBox.classList.remove('loading');
 
             if (data.ok) {
-                resultBox.textContent = data.text ?? '';
+                if (feature === 'video_ideas' && Array.isArray(data.ideas) && data.ideas.length) {
+                    resultBox.innerHTML = '<ol class="mb-0">' + data.ideas.map(item => {
+                        return '<li class="mb-2"><strong>' + escapeHtml(item.title) + '</strong><br>'
+                            + '<span class="ptmd-muted">' + escapeHtml(item.premise) + '</span><br>'
+                            + '<em>Angle:</em> ' + escapeHtml(item.angle) + '</li>';
+                    }).join('') + '</ol>'
+                        + '<div class="ptmd-muted mt-2" style="font-size:var(--text-xs)">Saved to database. Refresh to update the stored list.</div>';
+                } else {
+                    resultBox.textContent = data.text ?? '';
+                }
                 window.PTMDToast?.success('Generated successfully.');
             } else {
                 resultBox.textContent = '⚠ ' + (data.error ?? 'Generation failed.');

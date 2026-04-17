@@ -127,11 +127,27 @@ CREATE TABLE IF NOT EXISTS social_post_schedules (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Social Platform Preferences
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS social_platform_preferences (
+    id                     INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    platform               VARCHAR(80)   NOT NULL UNIQUE,
+    default_content_type   VARCHAR(80)   NULL,
+    default_caption_prefix TEXT          NULL,
+    default_hashtags       VARCHAR(255)  NULL,
+    default_status         ENUM('draft','queued','scheduled') NOT NULL DEFAULT 'queued',
+    is_enabled             TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at             DATETIME      NOT NULL,
+    updated_at             DATETIME      NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Social Post Queue
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_post_queue (
     id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
     episode_id       INT UNSIGNED   NULL,
+    clip_id          INT UNSIGNED   NULL,
     platform         VARCHAR(80)    NOT NULL,
     content_type     VARCHAR(80)    NOT NULL,
     caption          TEXT           NULL,
@@ -143,6 +159,7 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     created_at       DATETIME       NOT NULL,
     updated_at       DATETIME       NOT NULL,
     CONSTRAINT fk_spq_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    INDEX idx_clip_platform (clip_id, platform),
     INDEX idx_status_scheduled (status, scheduled_for)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -196,7 +213,7 @@ CREATE TABLE IF NOT EXISTS chat_moderation_logs (
 CREATE TABLE IF NOT EXISTS ai_generations (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     episode_id      INT UNSIGNED  NULL,
-    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept
+    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | episode_field_suggestion
     input_prompt    TEXT          NOT NULL,
     output_text     MEDIUMTEXT    NOT NULL,
     model           VARCHAR(80)   NOT NULL,
@@ -206,6 +223,27 @@ CREATE TABLE IF NOT EXISTS ai_generations (
     CONSTRAINT fk_ag_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
     INDEX idx_feature (feature),
     INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- AI Video Ideas  (structured ideas generated for U.S./world context)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_video_ideas (
+    id                 INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    generation_id      INT UNSIGNED  NULL,
+    created_by         INT UNSIGNED  NULL,
+    scope              ENUM('us','world','both') NOT NULL DEFAULT 'both',
+    context_notes      TEXT          NULL,
+    idea_title         VARCHAR(255)  NOT NULL,
+    premise            TEXT          NOT NULL,
+    suggested_angle    TEXT          NOT NULL,
+    rank_order         SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    created_at         DATETIME      NOT NULL,
+    updated_at         DATETIME      NOT NULL,
+    CONSTRAINT fk_avi_generation FOREIGN KEY (generation_id) REFERENCES ai_generations(id) ON DELETE SET NULL,
+    CONSTRAINT fk_avi_user       FOREIGN KEY (created_by)    REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_avi_created (created_at),
+    INDEX idx_avi_scope_created (scope, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -263,6 +301,31 @@ CREATE TABLE IF NOT EXISTS video_clips (
     created_at      DATETIME      NOT NULL,
     updated_at      DATETIME      NOT NULL,
     CONSTRAINT fk_vc_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Admin Copilot — Conversation sessions
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_assistant_sessions (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED  NULL,
+    title       VARCHAR(255)  NOT NULL DEFAULT 'New Conversation',
+    created_at  DATETIME      NOT NULL,
+    updated_at  DATETIME      NOT NULL,
+    CONSTRAINT fk_aas_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Admin Copilot — Per-turn messages
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_assistant_messages (
+    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT UNSIGNED  NOT NULL,
+    role        ENUM('user','assistant') NOT NULL,
+    content     MEDIUMTEXT    NOT NULL,
+    created_at  DATETIME      NOT NULL,
+    CONSTRAINT fk_aam_session FOREIGN KEY (session_id) REFERENCES ai_assistant_sessions(id) ON DELETE CASCADE,
+    INDEX idx_aam_session_created (session_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

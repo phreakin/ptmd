@@ -22,6 +22,7 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('hero_headline',        'Truth with Teeth.',                                       'string', 'Hero Headline',        'homepage', NOW()),
 ('hero_subheadline',     'Investigative mini-docs with cinematic style and satirical precision.', 'string', 'Hero Sub-headline', 'homepage', NOW()),
 ('hero_cta_text',        'Watch Latest Episode',                                    'string', 'Hero CTA Text',        'homepage', NOW()),
+('home_module_layout',   '["hero","featured","latest","social"]',                   'json',   'Homepage Module Layout','homepage', NOW()),
 ('social_youtube',       'https://youtube.com/@papertrailmd',                       'string', 'YouTube URL',          'social',   NOW()),
 ('social_x',             'https://x.com/papertrailmd',                              'string', 'X / Twitter URL',      'social',   NOW()),
 ('social_instagram',     'https://instagram.com/papertrailmd',                      'string', 'Instagram URL',        'social',   NOW()),
@@ -121,6 +122,24 @@ INSERT INTO social_post_schedules (platform, content_type, day_of_week, post_tim
 ('TikTok',           'clip',                'Tuesday',   '15:00:00', 'America/Phoenix', 1, NOW(), NOW()),
 ('Facebook Reels',   'clip',                'Wednesday', '13:00:00', 'America/Phoenix', 1, NOW(), NOW()),
 ('X',                'follow-up clip',      'Thursday',  '12:30:00', 'America/Phoenix', 1, NOW(), NOW());
+
+-- Default platform-level posting preferences
+INSERT INTO social_platform_preferences
+    (platform, default_content_type, default_caption_prefix, default_hashtags, default_status, is_enabled, created_at, updated_at)
+VALUES
+    ('YouTube',         'full documentary', 'New episode from Paper Trail MD.', '#investigation #documentary', 'queued', 1, NOW(), NOW()),
+    ('YouTube Shorts',  'teaser',           'Short cut from Paper Trail MD.',    '#shorts #investigation',      'queued', 1, NOW(), NOW()),
+    ('TikTok',          'teaser',           'Fresh PTMD clip just dropped.',      '#tiktok #investigation',      'queued', 1, NOW(), NOW()),
+    ('Instagram Reels', 'teaser',           'New reel from Paper Trail MD.',      '#reels #investigation',       'queued', 1, NOW(), NOW()),
+    ('Facebook Reels',  'clip',             'Watch this Paper Trail MD clip.',    '#reels #news',                'queued', 1, NOW(), NOW()),
+    ('X',               'launch post',      'New post from Paper Trail MD.',      '#news #journalism',           'queued', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    default_content_type   = VALUES(default_content_type),
+    default_caption_prefix = VALUES(default_caption_prefix),
+    default_hashtags       = VALUES(default_hashtags),
+    default_status         = VALUES(default_status),
+    is_enabled             = VALUES(is_enabled),
+    updated_at             = NOW();
 
 -- Sample queue entry
 INSERT INTO social_post_queue (episode_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
