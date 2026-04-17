@@ -44,7 +44,22 @@ $flash = pull_flash();
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/index.php?page=cases">
-                            <i class="fa-solid fa-film fa-sm me-1"></i>cases
+                            <i class="fa-solid fa-folder-open fa-sm me-1"></i>Open Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-folder fa-sm me-1"></i>Closed Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-snowflake fa-sm me-1"></i>Cold Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-bullseye fa-sm me-1"></i>Most Wanted
                         </a>
                     </li>
                     <li class="nav-item">
@@ -53,13 +68,13 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=about">
-                            <i class="fa-solid fa-circle-info fa-sm me-1"></i>About
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-calendar-days fa-sm me-1"></i>Schedule
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=contact">
-                            <i class="fa-solid fa-envelope fa-sm me-1"></i>Contact
+                        <a class="nav-link" href="/index.php?page=case-chat">
+                            <i class="fa-solid fa-tower-broadcast fa-sm me-1"></i>Live
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
