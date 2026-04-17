@@ -27,6 +27,7 @@ $navItems = [
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
     ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
+    ['href' => '/admin/site-tests.php',      'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
 ];
 ?>
 <!DOCTYPE html>
@@ -165,15 +166,17 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <a
-                href="<?php ee($navItems[10]['href']); ?>"
-                class="ptmd-nav-item <?php echo $activePage === 'settings' ? 'active' : ''; ?>"
-            >
-                <span class="nav-icon">
-                    <i class="fa-solid <?php ee($navItems[10]['icon']); ?>"></i>
-                </span>
-                <?php ee($navItems[10]['label']); ?>
-            </a>
+            <?php foreach (array_slice($navItems, 9) as $item): ?>
+                <a
+                    href="<?php ee($item['href']); ?>"
+                    class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
+                >
+                    <span class="nav-icon">
+                        <i class="fa-solid <?php ee($item['icon']); ?>"></i>
+                    </span>
+                    <?php ee($item['label']); ?>
+                </a>
+            <?php endforeach; ?>
             <a href="/admin/logout.php" class="ptmd-nav-item">
                 <span class="nav-icon"><i class="fa-solid fa-right-from-bracket" style="color:var(--ptmd-error)"></i></span>
                 <span style="color:var(--ptmd-error)">Logout</span>
