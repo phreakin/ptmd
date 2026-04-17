@@ -1,8 +1,37 @@
-### Example user template template
-### Example user template
-
 # IntelliJ project files
 .idea
 *.iml
-out
-gen
+*.ipr
+*.iws
+# Gradle files
+.gradle
+build
+# Log files
+*.log
+# OS generated files
+.DS_Store
+Thumbs.db
+# Temporary files
+*.tmp
+*.temp
+# Environment variable files
+.env
+# Node modules
+node_modules
+# Python virtual environment
+venv
+# VS Code settings
+.vscode
+# Vendor directories
+vendor
+# Compiled files
+*.class
+*.jar
+# Backup files
+*.bak
+*.backup
+# Dotfiles
+.*.swp
+.scripts
+# Bash Scripts
+*.sh
