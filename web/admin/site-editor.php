@@ -56,10 +56,10 @@ if (is_post()) {
         redirect('/admin/site-editor.php', 'Database unavailable.', 'danger');
     }
 
-    $enabledModules = array_values(array_filter(
+    $enabledModules = array_filter(
         array_map('strval', (array) ($_POST['enabled_modules'] ?? [])),
         static fn ($id) => isset($moduleCatalog[$id])
-    ));
+    );
     $enabledModules = array_values(array_unique($enabledModules));
 
     $orderRaw = trim((string) ($_POST['module_order'] ?? ''));

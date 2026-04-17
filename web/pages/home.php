@@ -32,7 +32,7 @@ if ($savedLayout !== '') {
         if ($ordered) {
             $modules = $ordered;
         }
-    } elseif (json_last_error() !== JSON_ERROR_NONE) {
+    } elseif ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
         error_log('Invalid home_module_layout JSON; falling back to default layout.');
     }
 }
