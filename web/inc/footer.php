@@ -34,11 +34,14 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
             <div class="col-6 col-lg-2">
                 <h6 class="ptmd-footer-heading">Site</h6>
                 <ul class="list-unstyled ptmd-footer-links">
-                    <li><a href="/index.php"><i class="fa-solid fa-house me-1"></i>Home</a></li>
-                    <li><a href="/index.php?page=series"><i class="fa-solid fa-book me-1"></i>Series</a></li>
-                    <li><a href="/index.php?page=cases"><i class="fa-solid fa-gavel me-1"></i>Cases</a></li>
-                    <li><a href="/index.php?page=case-chat"><i class="fa-solid fa-comments me-1"></i>Case Chat</a></li>
-                    <li><a href="/index.php?page=contact"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
+                    <li><a href="/index.php">Home</a></li>
+                    <li><a href="/index.php?page=cases">Open Cases</a></li>
+                    <li><a href="/index.php?page=cases">Closed Cases</a></li>
+                    <li><a href="/index.php?page=cases">Cold Cases</a></li>
+                    <li><a href="/index.php?page=cases">Most Wanted</a></li>
+                    <li><a href="/index.php?page=case-chat">Case Chat</a></li>
+                    <li><a href="/index.php?page=cases">Schedule</a></li>
+                    <li><a href="/index.php?page=case-chat">Live</a></li>
                 </ul>
             </div>
 
