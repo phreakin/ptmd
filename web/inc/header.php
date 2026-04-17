@@ -53,8 +53,11 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=case-chat">
-                            <i class="fa-solid fa-comments fa-sm me-1"></i>Case Chat
+                        <a class="nav-link d-flex align-items-center gap-2" href="/index.php?page=case-chat">
+                            <i class="fa-solid fa-comments fa-sm"></i>Case Chat
+                            <span class="ptmd-live-badge" style="padding:2px 8px;font-size:9px">
+                                <span class="live-dot" style="width:5px;height:5px"></span>LIVE
+                            </span>
                         </a>
                     </li>
                     <li class="nav-item">
