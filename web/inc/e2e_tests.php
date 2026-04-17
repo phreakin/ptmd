@@ -335,6 +335,32 @@ function run_ptmd_e2e_tests(): array
         ptmd_e2e_record($api, 'Authenticated apply_overlays checks', true, 'Skipped: active admin session is required');
     }
 
+    // script_video API
+    $svAnon = ptmd_e2e_request($baseUrl, '/api/script_video.php');
+    $svAnonOk = $svAnon['ok'] && (($svAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/script_video.php (anonymous)', $svAnonOk, $svAnonOk ? 'Unauthorized as expected' : 'Anonymous script_video auth check failed', ['actual_status' => $svAnon['status'] ?? null]);
+
+    if ($sessionIsValid) {
+        $svAuth = ptmd_e2e_request($baseUrl, '/api/script_video.php?job_id=0', 'GET', [], $authCookie);
+        $svAuthOk = $svAuth['ok']
+            && (($svAuth['status'] ?? 0) === 200)
+            && is_array($svAuth['json'])
+            && (($svAuth['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'GET /api/script_video.php?job_id=0 (admin session)', $svAuthOk, $svAuthOk ? 'Script video API reachable with admin session' : 'Script video API admin check failed', ['actual_status' => $svAuth['status'] ?? null]);
+
+        $svPostInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/script_video.php',
+            'POST',
+            ['csrf_token' => 'invalid', '_action' => 'create'],
+            $authCookie
+        );
+        $svPostInvalidCsrfOk = $svPostInvalidCsrf['ok'] && (($svPostInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/script_video.php (invalid csrf)', $svPostInvalidCsrfOk, $svPostInvalidCsrfOk ? 'CSRF protection enforced' : 'Script video CSRF check failed', ['actual_status' => $svPostInvalidCsrf['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated script_video checks', true, 'Skipped: active admin session is required');
+    }
+
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];
 
     $passed = 0;

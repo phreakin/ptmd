@@ -21,6 +21,7 @@ $navItems = [
     ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
     ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
     ['href' => '/admin/media.php',           'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
+    ['href' => '/admin/script-video.php',    'label' => 'Script Video',    'icon' => 'fa-clapperboard',   'id' => 'script-video'],
     ['href' => '/admin/ai-tools.php',        'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
     ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
     ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
@@ -134,7 +135,7 @@ $navItems = [
         <!-- Site & Content -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Content</div>
-            <?php foreach (array_slice($navItems, 0, 6) as $item): ?>
+            <?php foreach (array_slice($navItems, 0, 7) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -150,7 +151,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 6, 4) as $item): ?>
+            <?php foreach (array_slice($navItems, 7, 4) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -166,7 +167,7 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <?php foreach (array_slice($navItems, 9) as $item): ?>
+            <?php foreach (array_slice($navItems, 11) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"

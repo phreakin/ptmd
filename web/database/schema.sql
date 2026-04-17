@@ -304,6 +304,52 @@ CREATE TABLE IF NOT EXISTS video_clips (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Script-Video Jobs  (one row per "Create From Script" job)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS script_video_jobs (
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    input_mode       ENUM('ai','manual') NOT NULL DEFAULT 'manual',
+    title            VARCHAR(255)  NOT NULL DEFAULT 'Untitled Script Video',
+    script_source    MEDIUMTEXT    NULL,          -- full script text (manual mode)
+    ai_prompt        TEXT          NULL,          -- topic / brief for AI mode
+    episode_id       INT UNSIGNED  NULL,          -- optional link to an episode
+    output_path      VARCHAR(255)  NULL,          -- final rendered video relative to /uploads
+    output_duration  DECIMAL(8,2)  NULL,
+    status           ENUM('pending','processing','completed','failed','canceled') NOT NULL DEFAULT 'pending',
+    progress         TINYINT UNSIGNED NOT NULL DEFAULT 0,   -- 0-100 percent
+    phase            VARCHAR(80)   NULL,          -- human-readable current phase label
+    error_message    TEXT          NULL,
+    created_by       INT UNSIGNED  NULL,
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    CONSTRAINT fk_svj_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_svj_user    FOREIGN KEY (created_by)  REFERENCES users(id)   ON DELETE SET NULL,
+    INDEX idx_svj_status  (status),
+    INDEX idx_svj_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Script-Video Scenes  (per-scene rows for a script-video job)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS script_video_scenes (
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    job_id           INT UNSIGNED  NOT NULL,
+    scene_order      SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    narration_text   TEXT          NOT NULL,
+    visual_prompt    TEXT          NULL,          -- AI visual direction or manual description
+    asset_path       VARCHAR(255)  NULL,          -- optional media asset relative to /uploads
+    duration_sec     DECIMAL(6,2)  NOT NULL DEFAULT 5.00,
+    overlay_text     VARCHAR(500)  NULL,          -- optional text overlay for the scene
+    status           ENUM('pending','processing','done','failed') NOT NULL DEFAULT 'pending',
+    output_path      VARCHAR(255)  NULL,          -- rendered scene clip relative to /uploads
+    error_message    TEXT          NULL,
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    CONSTRAINT fk_svs_job FOREIGN KEY (job_id) REFERENCES script_video_jobs(id) ON DELETE CASCADE,
+    INDEX idx_svs_job_order (job_id, scene_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Admin Copilot — Conversation sessions
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_assistant_sessions (
