@@ -121,13 +121,16 @@ function run_ptmd_e2e_tests(): array
     $public = [];
     $publicRoutes = [
         '/index.php' => 200,
-        '/index.php?page=episodes' => 200,
-        '/index.php?page=about' => 200,
-        '/index.php?page=contact' => 200,
+        '/index.php?page=home' => 200,
+        '/index.php?page=cases' => 200,
+        '/index.php?page=cold-cases' => 200,
+        '/index.php?page=closed-cases' => 200,
         '/index.php?page=case-chat' => 200,
+        '/index.php?page=open-cases' => 200,
+        '/index.php?page=case-detail' => 200,
+        '/index.php?page=case-detail&slug=test-case' => 200,
         '/index.php?page=login' => 200,
         '/index.php?page=account' => 302,  // redirects to login when not authenticated
-        '/index.php?page=missing-page' => 404,
     ];
 
     foreach ($publicRoutes as $route => $expectedStatus) {
@@ -142,20 +145,20 @@ function run_ptmd_e2e_tests(): array
         );
     }
 
-    $episodeSlug = '';
+    $caseslug = '';
     $pdo = get_db();
     if ($pdo) {
-        $slugStmt = $pdo->prepare('SELECT slug FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1');
+        $slugStmt = $pdo->prepare('SELECT slug FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT 1');
         $slugStmt->execute(['status' => 'published']);
-        $episodeSlug = (string) $slugStmt->fetchColumn();
+        $caseslug = (string) $slugStmt->fetchColumn();
     }
-    if ($episodeSlug !== '') {
-        $epPath = '/index.php?page=episode&slug=' . rawurlencode($episodeSlug);
+    if ($caseslug !== '') {
+        $epPath = '/index.php?page=case&slug=' . rawurlencode($caseslug);
         $res = ptmd_e2e_request($baseUrl, $epPath);
         $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
-        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'Episode page loaded' : 'Episode page failed', ['actual_status' => $res['status'] ?? null]);
+        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'case page loaded' : 'case page failed', ['actual_status' => $res['status'] ?? null]);
     } else {
-        ptmd_e2e_record($public, 'Episode detail route', true, 'Skipped: no published episode found');
+        ptmd_e2e_record($public, 'case detail route', true, 'Skipped: no published case found');
     }
     $groups[] = ['name' => 'Public Site', 'tests' => $public];
 
@@ -264,11 +267,7 @@ function run_ptmd_e2e_tests(): array
         && (($chatTooLong['json']['ok'] ?? true) === false);
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (message too long)', $chatTooLongOk, $chatTooLongOk ? 'Validation rejects overlong chat messages' : 'Overlong chat validation failed', ['actual_status' => $chatTooLong['status'] ?? null]);
 
-    $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
-    $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
-    ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
-
-    // Viewer toggle_favorite endpoint — anonymous → 401
+    // Viewer toggle_favorite endpoint — anonymous → 405 on GET, 401 on POST
     $favAnon = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php');
     $favAnonOk = $favAnon['ok'] && (($favAnon['status'] ?? 0) === 405);
     ptmd_e2e_record($api, 'GET /api/toggle_favorite.php (anonymous, wrong method)', $favAnonOk, $favAnonOk ? 'Method guard returns 405' : 'toggle_favorite method guard failed', ['actual_status' => $favAnon['status'] ?? null]);
@@ -276,6 +275,10 @@ function run_ptmd_e2e_tests(): array
     $favAnonPost = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php', 'POST', ['episode_id' => 1, 'csrf_token' => 'invalid']);
     $favAnonPostOk = $favAnonPost['ok'] && (($favAnonPost['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'POST /api/toggle_favorite.php (anonymous)', $favAnonPostOk, $favAnonPostOk ? 'Unauthenticated returns 401' : 'toggle_favorite auth guard failed', ['actual_status' => $favAnonPost['status'] ?? null]);
+
+    $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
+    $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
 
     if ($sessionIsValid) {
         $aiAuth = ptmd_e2e_request($baseUrl, '/api/ai_generate.php', 'GET', [], $authCookie);

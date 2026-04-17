@@ -1,0 +1,88 @@
+{
+  "video_time_limits": {
+    "youtube_shorts": {
+      "max_length_seconds": 60,
+      "min_length_seconds": 1,
+      "notes": "Vertical only"
+    },
+
+    "youtube_standard": {
+      "max_length_seconds": 43200,
+      "min_length_seconds": 1,
+      "notes": "Up to 12 hours"
+    },
+
+    "tiktok": {
+      "max_length_seconds": 600,
+      "min_length_seconds": 1,
+      "notes": "Supports 15s, 60s, 3m, 10m"
+    },
+
+    "instagram_reels": {
+      "max_length_seconds": 90,
+      "min_length_seconds": 1,
+      "notes": "Vertical only"
+    },
+
+    "instagram_stories": {
+      "max_length_seconds": 60,
+      "min_length_seconds": 1,
+      "notes": "Each story slice is 15s"
+    },
+
+    "facebook_reels": {
+      "max_length_seconds": 90,
+      "min_length_seconds": 1,
+      "notes": "Vertical recommended"
+    },
+
+    "facebook_feed_video": {
+      "max_length_seconds": 14400,
+      "min_length_seconds": 1,
+      "notes": "Up to 4 hours"
+    },
+
+    "twitter_x": {
+      "max_length_seconds": 140,
+      "min_length_seconds": 1,
+      "notes": "Verified accounts can upload longer"
+    },
+
+    "linkedin": {
+      "max_length_seconds": 180,
+      "min_length_seconds": 3,
+      "notes": "Max 3 minutes"
+    },
+
+    "pinterest": {
+      "max_length_seconds": 60,
+      "min_length_seconds": 4,
+      "notes": "Idea Pin videos"
+    },
+
+    "snapchat_spotlight": {
+      "max_length_seconds": 60,
+      "min_length_seconds": 1,
+      "notes": "Vertical only"
+    },
+
+    "twitch_clips": {
+      "max_length_seconds": 60,
+      "min_length_seconds": 5,
+      "notes": "Clips auto‑generated from streams"
+    },
+
+    "reddit": {
+      "max_length_seconds": 180,
+      "min_length_seconds": 1,
+      "notes": "Subreddit rules may vary"
+    },
+
+    "discord": {
+      "max_length_seconds": 600,
+      "min_length_seconds": 1,
+      "notes": "File size limits apply"
+    }
+  }
+}
+  
