@@ -48,6 +48,16 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=about">
+                            <i class="fa-solid fa-circle-info fa-sm me-1"></i>About
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/index.php?page=series">
+                            <i class="fa-solid fa-layer-group fa-sm me-1"></i>Series
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/index.php?page=cases">
                             <i class="fa-solid fa-folder fa-sm me-1"></i>Closed Cases
                         </a>

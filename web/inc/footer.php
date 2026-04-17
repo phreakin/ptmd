@@ -36,6 +36,8 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
                 <ul class="list-unstyled ptmd-footer-links">
                     <li><a href="/index.php">Home</a></li>
                     <li><a href="/index.php?page=cases">Open Cases</a></li>
+                    <li><a href="/index.php?page=about">About</a></li>
+                    <li><a href="/index.php?page=series">Series</a></li>
                     <li><a href="/index.php?page=cases">Closed Cases</a></li>
                     <li><a href="/index.php?page=cases">Cold Cases</a></li>
                     <li><a href="/index.php?page=cases">Most Wanted</a></li>
