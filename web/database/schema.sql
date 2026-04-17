@@ -206,14 +206,14 @@ CREATE TABLE IF NOT EXISTS chat_rooms (
     slug                VARCHAR(120)       NOT NULL UNIQUE,
     name                VARCHAR(255)       NOT NULL,
     description         TEXT               NULL,
-    episode_id          INT UNSIGNED       NULL,
+    case_id             INT UNSIGNED       NULL,   -- optional link to a specific case
     is_live             TINYINT(1)         NOT NULL DEFAULT 0,
     slow_mode_seconds   SMALLINT UNSIGNED  NOT NULL DEFAULT 0,
     members_only        TINYINT(1)         NOT NULL DEFAULT 0,
     is_archived         TINYINT(1)         NOT NULL DEFAULT 0,
     created_at          DATETIME           NOT NULL,
     updated_at          DATETIME           NOT NULL,
-    CONSTRAINT fk_cr_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+    CONSTRAINT fk_cr_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -420,6 +420,72 @@ CREATE TABLE IF NOT EXISTS site_posting_options (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Content Workflow Runs (topic -> asset -> posting lifecycle)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflows (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    topic             VARCHAR(255)  NOT NULL,
+    case_id           INT UNSIGNED  NULL,
+    source_clip_id    INT UNSIGNED  NULL,
+    source_asset_path VARCHAR(255)  NULL,
+    status            ENUM('draft','planned','queued','posting','completed','failed') NOT NULL DEFAULT 'planned',
+    notes             TEXT          NULL,
+    created_by        INT UNSIGNED  NULL,
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    CONSTRAINT fk_cw_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cw_clip FOREIGN KEY (source_clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cw_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_cw_status_created (status, created_at),
+    INDEX idx_cw_case (case_id),
+    INDEX idx_cw_clip (source_clip_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Workflow Asset Assignments
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflow_assets (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    workflow_id   INT UNSIGNED  NOT NULL,
+    asset_role    ENUM('primary_video','clip_video','thumbnail','overlay','other') NOT NULL DEFAULT 'other',
+    asset_path    VARCHAR(255)  NOT NULL,
+    clip_id       INT UNSIGNED  NULL,
+    site_id       INT UNSIGNED  NULL,
+    assigned_at   DATETIME      NOT NULL,
+    created_at    DATETIME      NOT NULL,
+    updated_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_cwa_workflow FOREIGN KEY (workflow_id) REFERENCES content_workflows(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwa_clip FOREIGN KEY (clip_id) REFERENCES video_clips(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cwa_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE SET NULL,
+    INDEX idx_cwa_workflow_role (workflow_id, asset_role),
+    INDEX idx_cwa_site_role (site_id, asset_role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Workflow Posting Tasks
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_workflow_posts (
+    id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    workflow_id           INT UNSIGNED  NOT NULL,
+    site_id               INT UNSIGNED  NOT NULL,
+    queue_id              INT UNSIGNED  NULL,
+    platform_display_name VARCHAR(80)   NOT NULL,
+    content_type          VARCHAR(80)   NOT NULL,
+    caption               TEXT          NULL,
+    scheduled_for         DATETIME      NOT NULL,
+    status                ENUM('planned','queued','posted','failed','canceled') NOT NULL DEFAULT 'planned',
+    last_error            TEXT          NULL,
+    created_at            DATETIME      NOT NULL,
+    updated_at            DATETIME      NOT NULL,
+    CONSTRAINT fk_cwp_workflow FOREIGN KEY (workflow_id) REFERENCES content_workflows(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwp_site FOREIGN KEY (site_id) REFERENCES posting_sites(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cwp_queue FOREIGN KEY (queue_id) REFERENCES social_post_queue(id) ON DELETE SET NULL,
+    UNIQUE KEY uniq_cwp_workflow_site (workflow_id, site_id),
+    INDEX idx_cwp_status_schedule (status, scheduled_for),
+    INDEX idx_cwp_queue (queue_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Admin Copilot — Conversation sessions
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_assistant_sessions (
@@ -442,6 +508,114 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
     created_at  DATETIME      NOT NULL,
     CONSTRAINT fk_aam_session FOREIGN KEY (session_id) REFERENCES ai_assistant_sessions(id) ON DELETE CASCADE,
     INDEX idx_aam_session_created (session_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Text & Media Assets  (reusable content blocks for automation)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS assets (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    asset_type        ENUM(
+                        'hook', 'one_liner', 'script', 'subtitle',
+                        'image', 'overlay', 'thumbnail', 'video_clip',
+                        'audio', 'template', 'other'
+                      ) NOT NULL,
+    title             VARCHAR(255)  NULL,
+    slug              VARCHAR(255)  NULL UNIQUE,
+    content_text      MEDIUMTEXT    NULL,   -- hooks, scripts, captions, etc.
+    content_json      JSON          NULL,   -- structured formats (LRC, SRT, configs)
+    source_notes      TEXT          NULL,
+    file_path         VARCHAR(255)  NULL,   -- for image / overlay / clip assets
+    tone              VARCHAR(100)  NULL,   -- dark, funny, investigative, sarcastic
+    category          VARCHAR(100)  NULL,   -- intro, hook, outro, transition, etc.
+    topic             VARCHAR(120)  NULL,
+    target_phase      ENUM('hook','setup','payoff','loop','caption','overlay','subtitle','full_script') NULL,
+    tags_json         JSON          NULL,
+    usage_count       INT UNSIGNED  NOT NULL DEFAULT 0,
+    last_used_at      DATETIME      NULL,
+    performance_score DECIMAL(5,2)  NULL,
+    engagement_score  DECIMAL(5,2)  NULL,
+    status            ENUM('draft','active','archived') NOT NULL DEFAULT 'active',
+    is_favorite       TINYINT(1)    NOT NULL DEFAULT 0,
+    approved          TINYINT(1)    NOT NULL DEFAULT 1,
+    created_by        INT UNSIGNED  NULL,
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    INDEX idx_asset_type (asset_type),
+    INDEX idx_asset_status (status),
+    INDEX idx_asset_tone (tone),
+    INDEX idx_asset_performance (performance_score),
+    FULLTEXT INDEX idx_asset_content (content_text),
+    CONSTRAINT fk_assets_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Asset Usage Logs  (per-post performance tracking)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS asset_usage_logs (
+    id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    asset_id              INT UNSIGNED  NOT NULL,
+    case_id               INT UNSIGNED  NULL,
+    clip_id               INT UNSIGNED  NULL,
+    platform              VARCHAR(80)   NULL,
+    topic                 VARCHAR(120)  NULL,
+    used_as               ENUM('hook','setup','payoff','loop','caption','overlay','subtitle','script') NOT NULL,
+    views                 INT UNSIGNED  NOT NULL DEFAULT 0,
+    likes                 INT UNSIGNED  NOT NULL DEFAULT 0,
+    comments_count        INT UNSIGNED  NOT NULL DEFAULT 0,
+    shares                INT UNSIGNED  NOT NULL DEFAULT 0,
+    watch_time_sec        DECIMAL(10,2) NULL,
+    avg_view_duration_sec DECIMAL(10,2) NULL,
+    completion_rate       DECIMAL(5,2)  NULL,
+    ctr                   DECIMAL(5,2)  NULL,
+    engagement_score      DECIMAL(8,2)  NULL,
+    performance_score     DECIMAL(8,2)  NULL,
+    created_at            DATETIME      NOT NULL,
+    updated_at            DATETIME      NOT NULL,
+    CONSTRAINT fk_aul_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    CONSTRAINT fk_aul_case  FOREIGN KEY (case_id)  REFERENCES cases(id)        ON DELETE SET NULL,
+    CONSTRAINT fk_aul_clip  FOREIGN KEY (clip_id)  REFERENCES video_clips(id)  ON DELETE SET NULL,
+    INDEX idx_aul_asset_topic    (asset_id, topic),
+    INDEX idx_aul_topic_usedas   (topic, used_as),
+    INDEX idx_aul_platform_usedas (platform, used_as),
+    INDEX idx_aul_perf           (performance_score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Clip Blueprints  (asset-assembly production spec for social clips)
+-- ------------------------------------------------------------
+-- Links specific asset rows (hook/setup/payoff/etc.) to produce a clip.
+-- For reusable clip format templates see clip_format_templates below.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clip_blueprints (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    case_id           INT UNSIGNED  NULL,
+    platform          VARCHAR(80)   NOT NULL,
+    topic             VARCHAR(120)  NULL,
+    title             VARCHAR(255)  NULL,
+    hook_asset_id     INT UNSIGNED  NULL,
+    setup_asset_id    INT UNSIGNED  NULL,
+    payoff_asset_id   INT UNSIGNED  NULL,
+    loop_asset_id     INT UNSIGNED  NULL,
+    overlay_asset_id  INT UNSIGNED  NULL,
+    subtitle_asset_id INT UNSIGNED  NULL,
+    caption_asset_id  INT UNSIGNED  NULL,
+    source_video_path VARCHAR(255)  NULL,
+    output_video_path VARCHAR(255)  NULL,
+    blueprint_json    JSON          NULL,
+    status            ENUM('draft','ready','rendering','rendered','failed') NOT NULL DEFAULT 'draft',
+    created_at        DATETIME      NOT NULL,
+    updated_at        DATETIME      NOT NULL,
+    CONSTRAINT fk_cb_case     FOREIGN KEY (case_id)           REFERENCES cases(id)  ON DELETE SET NULL,
+    CONSTRAINT fk_cb_hook     FOREIGN KEY (hook_asset_id)     REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_setup    FOREIGN KEY (setup_asset_id)    REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_payoff   FOREIGN KEY (payoff_asset_id)   REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_loop     FOREIGN KEY (loop_asset_id)     REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_overlay  FOREIGN KEY (overlay_asset_id)  REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_subtitle FOREIGN KEY (subtitle_asset_id) REFERENCES assets(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_caption  FOREIGN KEY (caption_asset_id)  REFERENCES assets(id) ON DELETE SET NULL,
+    INDEX idx_cb_case_platform (case_id, platform),
+    INDEX idx_cb_status        (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -474,13 +648,14 @@ CREATE TABLE IF NOT EXISTS video_blueprints (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Clip Blueprints  (templates for short-form / social clips)
+-- Clip Format Templates  (reusable format templates for short-form clips)
 -- ------------------------------------------------------------
--- Each blueprint defines a clip format: hook structure, target duration,
+-- Each template defines a clip format: hook structure, target duration,
 -- aspect ratio, and which platforms it is intended for.
 -- Generate a clip_instance from one of these when cutting clips from a case.
+-- (Named clip_format_templates to avoid conflict with clip_blueprints above.)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS clip_blueprints (
+CREATE TABLE IF NOT EXISTS clip_format_templates (
     id                  INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
     title               VARCHAR(255)    NOT NULL,
     slug                VARCHAR(255)    NOT NULL UNIQUE,
@@ -494,9 +669,9 @@ CREATE TABLE IF NOT EXISTS clip_blueprints (
     created_by          INT UNSIGNED    NULL,
     created_at          DATETIME        NOT NULL,
     updated_at          DATETIME        NOT NULL,
-    CONSTRAINT fk_cb_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_cb_status      (status),
-    INDEX idx_cb_type_status (clip_type, status)
+    CONSTRAINT fk_cft_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_cft_status      (status),
+    INDEX idx_cft_type_status (clip_type, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -585,30 +760,30 @@ CREATE TABLE IF NOT EXISTS video_instances (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Clip Instances  (a specific short clip generated from a blueprint)
+-- Clip Instances  (a specific short clip generated from a format template)
 -- ------------------------------------------------------------
--- Created when an admin selects a clip_blueprint for a case or video_instance.
+-- Created when an admin selects a clip_format_template for a case or video_instance.
 -- May reference an existing video_clips row once the clip is cut.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clip_instances (
-    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    clip_blueprint_id   INT UNSIGNED  NOT NULL,
-    video_instance_id   INT UNSIGNED  NULL,       -- parent video, if applicable
-    case_id             INT UNSIGNED  NULL,
-    video_clip_id       INT UNSIGNED  NULL,       -- existing video_clips row (once processed)
-    title               VARCHAR(255)  NOT NULL,
-    status              ENUM('draft','approved','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
-    blueprint_version   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-    notes               TEXT          NULL,
-    created_by          INT UNSIGNED  NULL,
-    created_at          DATETIME      NOT NULL,
-    updated_at          DATETIME      NOT NULL,
-    CONSTRAINT fk_ci_blueprint      FOREIGN KEY (clip_blueprint_id)  REFERENCES clip_blueprints(id)   ON DELETE RESTRICT,
-    CONSTRAINT fk_ci_video_instance FOREIGN KEY (video_instance_id)  REFERENCES video_instances(id)   ON DELETE SET NULL,
-    CONSTRAINT fk_ci_case           FOREIGN KEY (case_id)            REFERENCES cases(id)             ON DELETE SET NULL,
-    CONSTRAINT fk_ci_video_clip     FOREIGN KEY (video_clip_id)      REFERENCES video_clips(id)       ON DELETE SET NULL,
-    CONSTRAINT fk_ci_user           FOREIGN KEY (created_by)         REFERENCES users(id)             ON DELETE SET NULL,
-    INDEX idx_ci_blueprint      (clip_blueprint_id),
+    id                       INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    clip_format_template_id  INT UNSIGNED  NOT NULL,
+    video_instance_id        INT UNSIGNED  NULL,       -- parent video, if applicable
+    case_id                  INT UNSIGNED  NULL,
+    video_clip_id            INT UNSIGNED  NULL,       -- existing video_clips row (once processed)
+    title                    VARCHAR(255)  NOT NULL,
+    status                   ENUM('draft','approved','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
+    blueprint_version        SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    notes                    TEXT          NULL,
+    created_by               INT UNSIGNED  NULL,
+    created_at               DATETIME      NOT NULL,
+    updated_at               DATETIME      NOT NULL,
+    CONSTRAINT fk_ci_template       FOREIGN KEY (clip_format_template_id) REFERENCES clip_format_templates(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ci_video_instance FOREIGN KEY (video_instance_id)       REFERENCES video_instances(id)       ON DELETE SET NULL,
+    CONSTRAINT fk_ci_case           FOREIGN KEY (case_id)                 REFERENCES cases(id)                 ON DELETE SET NULL,
+    CONSTRAINT fk_ci_video_clip     FOREIGN KEY (video_clip_id)           REFERENCES video_clips(id)           ON DELETE SET NULL,
+    CONSTRAINT fk_ci_user           FOREIGN KEY (created_by)              REFERENCES users(id)                 ON DELETE SET NULL,
+    INDEX idx_ci_template       (clip_format_template_id),
     INDEX idx_ci_video_instance (video_instance_id),
     INDEX idx_ci_status         (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -664,3 +839,7 @@ CREATE TABLE IF NOT EXISTS content_status_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- NOTE: After schema.sql, run seed.sql for default data.
+-- ============================================================

@@ -121,11 +121,14 @@ function run_ptmd_e2e_tests(): array
     $public = [];
     $publicRoutes = [
         '/index.php' => 200,
+        '/index.php?page=home' => 200,
         '/index.php?page=cases' => 200,
-        '/index.php?page=about' => 200,
-        '/index.php?page=contact' => 200,
+        '/index.php?page=cold-cases' => 200,
+        '/index.php?page=closed-cases' => 200,
         '/index.php?page=case-chat' => 200,
-        '/index.php?page=missing-page' => 404,
+        '/index.php?page=open-cases' => 200,
+        '/index.php?page=case-detail' => 200,
+        '/index.php?page=case-detail&slug=test-case' => 200,
     ];
 
     foreach ($publicRoutes as $route => $expectedStatus) {

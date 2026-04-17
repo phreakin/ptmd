@@ -25,6 +25,7 @@ $navItems = [
     ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
     ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
+    ['href' => '/admin/content-workflow.php','label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
     ['href' => '/admin/posting-sites.php',   'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
     ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
@@ -44,47 +45,6 @@ $navItems = [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@latest/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <style>
-        /* Admin-specific layout tweaks */
-        body { overflow-x: hidden; }
-
-        .ptmd-admin-shell {
-            display: grid;
-            grid-template-columns: 240px 1fr;
-            grid-template-rows: 60px 1fr;
-            min-height: 100dvh;
-        }
-
-        @media (max-width: 1024px) {
-            .ptmd-admin-shell { grid-template-columns: 1fr; }
-            .ptmd-admin-sidebar { display: none; }
-        }
-
-        .ptmd-admin-topbar {
-            grid-column: 1 / -1;
-            grid-row: 1;
-        }
-
-        .ptmd-admin-sidebar {
-            grid-column: 1;
-            grid-row: 2;
-            height: calc(100dvh - 60px);
-            position: sticky;
-            top: 60px;
-            overflow-y: auto;
-        }
-
-        .ptmd-admin-content {
-            grid-column: 2;
-            grid-row: 2;
-            padding: 2rem;
-            overflow-x: hidden;
-        }
-
-        @media (max-width: 1024px) {
-            .ptmd-admin-content { grid-column: 1; padding: 1.25rem; }
-        }
-    </style>
 </head>
 <body>
 <div class="ptmd-admin-shell">

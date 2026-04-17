@@ -119,7 +119,7 @@ if ($pdo && is_post()) {
 
         if ($id > 0) {
             $pdo->prepare(
-                'UPDATE clip_blueprints
+                'UPDATE clip_format_templates
                  SET title = :title, slug = :slug, clip_type = :type, status = :status,
                      target_duration_sec = :dur, aspect_ratio = :ar, brand_notes = :brand,
                      platform_targets = :pt, updated_at = NOW()
@@ -132,7 +132,7 @@ if ($pdo && is_post()) {
             redirect('/admin/blueprints.php?tab=clip', 'Clip blueprint updated.', 'success');
         } else {
             $pdo->prepare(
-                'INSERT INTO clip_blueprints
+                'INSERT INTO clip_format_templates
                  (title, slug, clip_type, status, target_duration_sec, aspect_ratio, brand_notes,
                   platform_targets, created_by, created_at, updated_at)
                  VALUES (:title, :slug, :type, :status, :dur, :ar, :brand, :pt, :by, NOW(), NOW())'
@@ -148,7 +148,7 @@ if ($pdo && is_post()) {
     if ($postAction === 'archive_clip') {
         $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
-            $pdo->prepare('UPDATE clip_blueprints SET status = "archived", updated_at = NOW() WHERE id = :id')
+            $pdo->prepare('UPDATE clip_format_templates SET status = "archived", updated_at = NOW() WHERE id = :id')
                 ->execute(['id' => $id]);
             redirect('/admin/blueprints.php?tab=clip', 'Clip blueprint archived.', 'success');
         }
@@ -267,7 +267,7 @@ $videoBlueprints = $pdo ? $pdo->query(
 
 $clipBlueprints = $pdo ? $pdo->query(
     'SELECT cb.*, u.username AS created_by_name
-     FROM clip_blueprints cb
+     FROM clip_format_templates cb
      LEFT JOIN users u ON u.id = cb.created_by
      WHERE cb.status != "archived"
      ORDER BY cb.status = "active" DESC, cb.title'
@@ -306,7 +306,7 @@ if ($editId > 0 && $pdo) {
         $s->execute(['id' => $editId]);
         $editVideoBlueprint = $s->fetch() ?: null;
     } elseif ($activeTab === 'clip') {
-        $s = $pdo->prepare('SELECT * FROM clip_blueprints WHERE id = :id LIMIT 1');
+        $s = $pdo->prepare('SELECT * FROM clip_format_templates WHERE id = :id LIMIT 1');
         $s->execute(['id' => $editId]);
         $editClipBlueprint = $s->fetch() ?: null;
     } elseif ($activeTab === 'posting') {

@@ -35,7 +35,8 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('intro_asset_path',     '/assets/brand/intros/ptmd_intro.mp4',                    'string', 'Intro Asset Path',     'brand',    NOW()),
 ('default_overlay_path', '/assets/brand/overlays/ptmd_overlay_lower_third.png',   'string', 'Default Overlay',      'brand',    NOW()),
 ('ffmpeg_path',          'ffmpeg',                                                  'string', 'FFmpeg Binary',        'system',   NOW()),
-('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW())
+('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW()),
+('automation_worker_token', 'change-me-worker-token',                               'secret', 'Automation Worker Token','system',  NOW())
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW();
 
 -- Sample cases
@@ -364,3 +365,28 @@ INSERT INTO chat_messages (username, message, status, emojis_json, created_at, u
 UPDATE chat_messages
 SET    room_id = (SELECT id FROM chat_rooms WHERE slug = 'case-chat' LIMIT 1)
 WHERE  room_id IS NULL;
+
+-- Starter assets (hooks, overlays — idempotent via slug UNIQUE key)
+INSERT INTO assets (asset_type, slug, content_text, tone, category, status, approved, created_at, updated_at)
+VALUES
+    ('hook',     'hook-not-illegal-but-should',
+     'This doesn't look illegal… but it should.',
+     'dark, investigative', 'intro', 'active', 1, NOW(), NOW()),
+    ('one_liner','one-liner-technically-legal',
+     'Technically legal. Morally… that's a different department.',
+     'dark, sarcastic', 'punchline', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+INSERT INTO assets (asset_type, slug, content_json, category, status, approved, created_at, updated_at)
+VALUES
+    ('subtitle', 'subtitle-not-illegal-srt',
+     JSON_OBJECT('format','srt','content','1\n00:00:00,000 --> 00:00:02,000\nThis doesn't look illegal...\n'),
+     'subtitle', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+INSERT INTO assets (asset_type, slug, file_path, category, status, approved, created_at, updated_at)
+VALUES
+    ('overlay', 'overlay-lower-third-default',
+     '/assets/brand/overlays/ptmd_overlay_lower_third.png',
+     'branding', 'active', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
