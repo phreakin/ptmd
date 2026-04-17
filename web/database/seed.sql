@@ -7,7 +7,7 @@ INSERT INTO users (username, email, password_hash, role, created_at, updated_at)
 VALUES (
     'admin',
     'admin@papertrailmd.local',
-    '$2y$12$aFWY5J6qm0UWN6bXuGvJIOYAqPO6cjWIekYDkQoNHk4w3RnGHYkha',
+    '$2y$12$S8Y9BBdMNqNiGHN/r6Y8H.04icmFFUDqIZKYu.mEwIDoD7nAXHMU2',
     'admin',
     NOW(), NOW()
 ) ON DUPLICATE KEY UPDATE updated_at = NOW();
@@ -22,6 +22,7 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('hero_headline',        'Truth with Teeth.',                                       'string', 'Hero Headline',        'homepage', NOW()),
 ('hero_subheadline',     'Investigative mini-docs with cinematic style and satirical precision.', 'string', 'Hero Sub-headline', 'homepage', NOW()),
 ('hero_cta_text',        'Watch Latest Episode',                                    'string', 'Hero CTA Text',        'homepage', NOW()),
+('home_module_layout',   '["hero","featured","latest","social"]',                   'json',   'Homepage Module Layout','homepage', NOW()),
 ('social_youtube',       'https://youtube.com/@papertrailmd',                       'string', 'YouTube URL',          'social',   NOW()),
 ('social_x',             'https://x.com/papertrailmd',                              'string', 'X / Twitter URL',      'social',   NOW()),
 ('social_instagram',     'https://instagram.com/papertrailmd',                      'string', 'Instagram URL',        'social',   NOW()),
