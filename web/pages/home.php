@@ -7,7 +7,13 @@
 $featuredEpisode = get_featured_episode();
 $latestEpisodes  = get_latest_episodes(6);
 
-$defaultModules = ['hero', 'featured', 'latest', 'social'];
+$moduleFiles = [
+    'hero'     => __DIR__ . '/home-modules/hero.php',
+    'featured' => __DIR__ . '/home-modules/featured.php',
+    'latest'   => __DIR__ . '/home-modules/latest.php',
+    'social'   => __DIR__ . '/home-modules/social.php',
+];
+$defaultModules = array_keys($moduleFiles);
 $modules = $defaultModules;
 
 $savedLayout = site_setting('home_module_layout', '');
@@ -30,6 +36,9 @@ if ($savedLayout !== '') {
 }
 
 foreach ($modules as $moduleId) {
-    include __DIR__ . '/home-modules/' . $moduleId . '.php';
+    if (!isset($moduleFiles[$moduleId])) {
+        continue;
+    }
+    include $moduleFiles[$moduleId];
 }
 ?>
