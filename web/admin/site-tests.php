@@ -37,6 +37,11 @@ if (is_post()) {
     </div>
 </div>
 
+<div class="alert ptmd-alert alert-warning mb-4" role="alert">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+    Run this suite during low-traffic periods. It makes real HTTP/API requests and briefly adds then removes one chat message for positive-path verification.
+</div>
+
 <?php if ($results): ?>
     <div class="ptmd-panel p-xl mb-4">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">

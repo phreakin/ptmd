@@ -17,6 +17,13 @@ function ptmd_e2e_base_url(): string
 
 function ptmd_e2e_request(string $baseUrl, string $path, string $method = 'GET', array $data = [], string $cookie = ''): array
 {
+    $minConnectTimeout = 1;
+    $maxConnectTimeout = 30;
+    $defaultConnectTimeout = 5;
+    $minRequestTimeout = 2;
+    $maxRequestTimeout = 60;
+    $defaultRequestTimeout = 10;
+
     $ch = curl_init($baseUrl . $path);
     if (!$ch) {
         return ['ok' => false, 'error' => 'Unable to initialize cURL'];
@@ -27,8 +34,8 @@ function ptmd_e2e_request(string $baseUrl, string $path, string $method = 'GET',
         $headers[] = 'Cookie: ' . $cookie;
     }
 
-    $connectTimeout = max(1, min(30, (int) (getenv('PTMD_E2E_CONNECT_TIMEOUT') ?: 5)));
-    $requestTimeout = max(2, min(60, (int) (getenv('PTMD_E2E_REQUEST_TIMEOUT') ?: 10)));
+    $connectTimeout = max($minConnectTimeout, min($maxConnectTimeout, (int) (getenv('PTMD_E2E_CONNECT_TIMEOUT') ?: $defaultConnectTimeout)));
+    $requestTimeout = max($minRequestTimeout, min($maxRequestTimeout, (int) (getenv('PTMD_E2E_REQUEST_TIMEOUT') ?: $defaultRequestTimeout)));
 
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -224,7 +231,7 @@ function run_ptmd_e2e_tests(): array
     $chatValidMessageText = $chatValidOk ? 'Chat API accepts valid submissions' : 'Valid chat submission failed';
     $chatCleanupOk = true;
     if ($chatValidOk && $pdo) {
-        $cleanupStmt = $pdo->prepare('DELETE FROM chat_messages WHERE id = :id LIMIT 1');
+        $cleanupStmt = $pdo->prepare('DELETE FROM chat_messages WHERE id = :id');
         $chatCleanupOk = $cleanupStmt->execute(['id' => (int) $chatPostValid['json']['id']]);
     }
     if ($chatValidOk && !$chatCleanupOk) {
