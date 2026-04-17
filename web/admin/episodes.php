@@ -267,7 +267,7 @@ else:
 ?>
     <form method="post" action="/admin/episodes.php" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
-        <input type="hidden" name="id" value="<?php ee((string) ($ep['id'] ?? 0)); ?>">
+        <input type="hidden" id="ep_id" name="id" value="<?php ee((string) ($ep['id'] ?? 0)); ?>">
         <input type="hidden" name="_action" value="save">
 
         <div class="row g-4">
@@ -463,6 +463,7 @@ const resultWrap = document.getElementById('ai_suggest_result_wrap');
 const resultInput = document.getElementById('ai_suggest_result');
 const applyBtn = document.getElementById('ai_apply_suggestion_btn');
 const csrfInput = document.querySelector('input[name="csrf_token"]');
+const episodeIdInput = document.getElementById('ep_id');
 
 if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfInput) {
     suggestBtn.addEventListener('click', async () => {
@@ -479,7 +480,7 @@ if (suggestBtn && fieldSelect && resultWrap && resultInput && applyBtn && csrfIn
             fd.set('feature', 'episode_field_suggestion');
             fd.set('suggest_field', selectedField);
             fd.set('suggest_guidance', guidanceInput?.value ?? '');
-            fd.set('suggest_episode', document.querySelector('input[name="id"]')?.value ?? '');
+            fd.set('suggest_episode', episodeIdInput?.value ?? '');
             fd.set('context_title', document.getElementById('ep_title')?.value ?? '');
             fd.set('context_excerpt', document.getElementById('ep_excerpt')?.value ?? '');
             fd.set('context_body', document.getElementById('ep_body')?.value ?? '');

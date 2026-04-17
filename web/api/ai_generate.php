@@ -434,7 +434,7 @@ if ($feature === 'video_ideas') {
 
     if ($ideas) {
         $admin = current_admin();
-        save_video_ideas($ideas, $generationId > 0 ? $generationId : null, isset($admin['id']) ? (int) $admin['id'] : null, $scope, $contextNotes);
+        save_video_ideas($ideas, $generationId ?: null, isset($admin['id']) ? (int) $admin['id'] : null, $scope, $contextNotes);
     }
 }
 
