@@ -143,3 +143,15 @@ INSERT INTO chat_messages (username, message, status, emojis_json, created_at, u
 ('SkepticMode',          'Love the dry humor but also genuinely horrified. Appreciate the sourcing. 😅',             'approved', JSON_ARRAY('😅'),      NOW() - INTERVAL 90 MINUTE, NOW() - INTERVAL 90 MINUTE),
 ('CivicNerd99',          'The school board episode connects dots I had never considered. Shared everywhere.',         'approved', JSON_ARRAY(),          NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 45 MINUTE),
 ('PermitSurvivor',       'Episode 3 is my whole life as a small business owner. How is this legal?? 😤',            'approved', JSON_ARRAY('😤'),      NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 20 MINUTE);
+
+-- Default export profiles (PTMD standard platform presets)
+INSERT INTO export_profiles (label, platform_target, width, height, fps, video_bitrate, audio_bitrate, use_intro, use_outro, use_watermark, use_triggers, is_default, created_at, updated_at) VALUES
+('YouTube — Full Documentary',  'youtube',           1920, 1080, 30, '8000k',  '192k', 1, 1, 1, 1, 1, NOW(), NOW()),
+('YouTube Shorts',              'youtube_shorts',     1080, 1920, 30, '5000k',  '192k', 0, 0, 1, 1, 0, NOW(), NOW()),
+('TikTok',                      'tiktok',             1080, 1920, 30, '5000k',  '192k', 0, 0, 1, 1, 0, NOW(), NOW()),
+('Instagram Reels',             'instagram_reels',    1080, 1920, 30, '5000k',  '192k', 0, 0, 1, 1, 0, NOW(), NOW()),
+('Facebook Reels',              'facebook_reels',     1080, 1920, 30, '5000k',  '192k', 0, 0, 1, 1, 0, NOW(), NOW()),
+('X / Twitter Clip',            'x',                  1280,  720, 30, '4000k',  '128k', 0, 0, 1, 1, 0, NOW(), NOW()),
+('OBS Source Preview',          'obs_source',         1920, 1080, 30, '10000k', '192k', 1, 1, 1, 0, 0, NOW(), NOW())
+ON DUPLICATE KEY UPDATE updated_at = NOW();
+
