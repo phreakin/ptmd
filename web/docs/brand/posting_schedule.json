@@ -1,0 +1,125 @@
+{
+  "posting_schedule": {
+    "times_per_day": 3,
+    "default_times": [
+      "09:00",
+      "15:00",
+      "21:00"
+    ]
+  },
+
+  "platforms": {
+    "youtube_shorts": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": true,
+      "auto_hashtags": ["#shorts"]
+    },
+
+    "tiktok": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": false,
+      "auto_hashtags": ["#fyp", "#foryou"]
+    },
+
+    "instagram_reels": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 90,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": false,
+      "auto_hashtags": ["#reels"]
+    },
+
+    "facebook_reels": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 90,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": false,
+      "description_required": false
+    },
+
+    "twitter_x": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 140,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": false
+    },
+
+    "linkedin": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 180,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": false,
+      "description_required": true
+    },
+
+    "pinterest": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": false
+    },
+
+    "snapchat_spotlight": {
+      "enabled": true,
+      "video_format": "1080x1920",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": false,
+      "description_required": false
+    },
+
+    "twitch_clips": {
+      "enabled": false,
+      "video_format": "1280x720",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": false,
+      "description_required": false
+    },
+
+    "reddit": {
+      "enabled": true,
+      "video_format": "1200x675",
+      "max_length_seconds": 180,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": true,
+      "description_required": false
+    },
+
+    "discord": {
+      "enabled": false,
+      "video_format": "1080x1920",
+      "max_length_seconds": 60,
+      "daily_posts": 3,
+      "post_times": ["09:00", "15:00", "21:00"],
+      "tags_allowed": false,
+      "description_required": false
+    }
+  }
+}
