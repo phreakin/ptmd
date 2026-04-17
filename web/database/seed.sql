@@ -201,10 +201,20 @@ SELECT
     NOW()
 FROM cases e WHERE e.slug = 'city-hall-after-dark' LIMIT 1;
 
--- Sample chat messages
+-- Default chat room
+INSERT INTO chat_rooms (slug, name, description, is_live, slow_mode_seconds, members_only, is_archived, created_at, updated_at)
+VALUES ('case-chat', 'Case Chat', 'The main audience dispatch feed. Drop your case notes, questions, and reactions.', 0, 0, 0, 0, NOW(), NOW())
+ON DUPLICATE KEY UPDATE name = VALUES(name), updated_at = NOW();
+
+-- Sample chat messages  (room_id resolved below via UPDATE)
 INSERT INTO chat_messages (username, message, status, emojis_json, created_at, updated_at) VALUES
-('FactCheckFan',         'That procurement timeline is WILD. 🔥 Keep the receipts coming.',                           'approved', JSON_ARRAY('🔥'),      NOW() - INTERVAL 3 HOUR,  NOW() - INTERVAL 3 HOUR),
-('DocsOrItDidntHappen',  'Can we get the FOIA request list? Would love to dig deeper into case 1.',               'approved', JSON_ARRAY('📄'),      NOW() - INTERVAL 2 HOUR,  NOW() - INTERVAL 2 HOUR),
-('SkepticMode',          'Love the dry humor but also genuinely horrified. Appreciate the sourcing. 😅',             'approved', JSON_ARRAY('😅'),      NOW() - INTERVAL 90 MINUTE, NOW() - INTERVAL 90 MINUTE),
-('CivicNerd99',          'The school board case connects dots I had never considered. Shared everywhere.',         'approved', JSON_ARRAY(),          NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 45 MINUTE),
-('PermitSurvivor',       'case 3 is my whole life as a small business owner. How is this legal?? 😤',            'approved', JSON_ARRAY('😤'),      NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 20 MINUTE);
+('FactCheckFan',        'That procurement timeline is WILD. 🔥 Keep the receipts coming.',                        'approved', JSON_ARRAY('🔥'), NOW() - INTERVAL 3 HOUR,      NOW() - INTERVAL 3 HOUR),
+('DocsOrItDidntHappen', 'Can we get the FOIA request list? Would love to dig deeper into case 1.',                'approved', JSON_ARRAY('📄'), NOW() - INTERVAL 2 HOUR,      NOW() - INTERVAL 2 HOUR),
+('SkepticMode',         'Love the dry humor but also genuinely horrified. Appreciate the sourcing. 😅',           'approved', JSON_ARRAY('😅'), NOW() - INTERVAL 90 MINUTE,   NOW() - INTERVAL 90 MINUTE),
+('CivicNerd99',         'The school board case connects dots I had never considered. Shared everywhere.',          'approved', JSON_ARRAY(),     NOW() - INTERVAL 45 MINUTE,   NOW() - INTERVAL 45 MINUTE),
+('PermitSurvivor',      'Case 3 is my whole life as a small business owner. How is this legal?? 😤',             'approved', JSON_ARRAY('😤'), NOW() - INTERVAL 20 MINUTE,   NOW() - INTERVAL 20 MINUTE);
+
+-- Assign legacy messages (room_id IS NULL) to the default case-chat room
+UPDATE chat_messages
+SET    room_id = (SELECT id FROM chat_rooms WHERE slug = 'case-chat' LIMIT 1)
+WHERE  room_id IS NULL;

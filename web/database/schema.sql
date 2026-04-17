@@ -178,19 +178,73 @@ CREATE TABLE IF NOT EXISTS social_post_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- Chat Users  (public-facing accounts, separate from admin users)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_users (
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username         VARCHAR(50)   NOT NULL UNIQUE,
+    email            VARCHAR(150)  NULL UNIQUE,
+    password_hash    VARCHAR(255)  NULL,
+    display_name     VARCHAR(80)   NOT NULL,
+    avatar_color     VARCHAR(7)    NOT NULL DEFAULT '#2EC4B6',
+    role             ENUM('guest','registered','moderator','admin','super_admin') NOT NULL DEFAULT 'registered',
+    status           ENUM('active','muted','banned') NOT NULL DEFAULT 'active',
+    muted_until      DATETIME      NULL,
+    badge_label      VARCHAR(50)   NULL,
+    remember_token   VARCHAR(64)   NULL,
+    last_message_at  DATETIME      NULL,
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    INDEX idx_cu_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat Rooms
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_rooms (
+    id                  INT UNSIGNED       AUTO_INCREMENT PRIMARY KEY,
+    slug                VARCHAR(120)       NOT NULL UNIQUE,
+    name                VARCHAR(255)       NOT NULL,
+    description         TEXT               NULL,
+    episode_id          INT UNSIGNED       NULL,
+    is_live             TINYINT(1)         NOT NULL DEFAULT 0,
+    slow_mode_seconds   SMALLINT UNSIGNED  NOT NULL DEFAULT 0,
+    members_only        TINYINT(1)         NOT NULL DEFAULT 0,
+    is_archived         TINYINT(1)         NOT NULL DEFAULT 0,
+    created_at          DATETIME           NOT NULL,
+    updated_at          DATETIME           NOT NULL,
+    CONSTRAINT fk_cr_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Chat Messages
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS chat_messages (
-    id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    username    VARCHAR(50)   NOT NULL,
-    message     TEXT          NOT NULL,
-    status      ENUM('approved','flagged','blocked') NOT NULL DEFAULT 'approved',
-    emojis_json JSON          NULL,
-    ip_hash     VARCHAR(64)   NULL,   -- hashed IP for moderation (not raw)
-    created_at  DATETIME      NOT NULL,
-    updated_at  DATETIME      NOT NULL,
+    id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    username         VARCHAR(50)   NOT NULL,
+    message          TEXT          NOT NULL,
+    status           ENUM('approved','flagged','blocked') NOT NULL DEFAULT 'approved',
+    emojis_json      JSON          NULL,
+    ip_hash          VARCHAR(64)   NULL,   -- hashed IP for moderation (not raw)
+    chat_user_id     INT UNSIGNED  NULL,   -- linked registered chat user (NULL = anonymous)
+    room_id          INT UNSIGNED  NULL,   -- room this message belongs to
+    parent_id        INT UNSIGNED  NULL,   -- reply threading
+    is_pinned        TINYINT(1)    NOT NULL DEFAULT 0,
+    is_highlighted   TINYINT(1)    NOT NULL DEFAULT 0,  -- Super Chat equivalent
+    highlight_color  VARCHAR(7)    NULL,
+    highlight_amount DECIMAL(8,2)  NULL,
+    deleted_at       DATETIME      NULL,   -- soft delete
+    deleted_by       INT UNSIGNED  NULL,   -- chat_user_id who deleted
+    created_at       DATETIME      NOT NULL,
+    updated_at       DATETIME      NOT NULL,
+    CONSTRAINT fk_cm_user       FOREIGN KEY (chat_user_id) REFERENCES chat_users(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_cm_room       FOREIGN KEY (room_id)      REFERENCES chat_rooms(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_cm_parent     FOREIGN KEY (parent_id)    REFERENCES chat_messages(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cm_deleted_by FOREIGN KEY (deleted_by)   REFERENCES chat_users(id)    ON DELETE SET NULL,
     INDEX idx_status (status),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_room_created (room_id, created_at),
+    INDEX idx_pinned (is_pinned)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -198,13 +252,46 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS chat_moderation_logs (
     id               INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    chat_message_id  INT UNSIGNED  NOT NULL,
-    moderator_id     INT UNSIGNED  NULL,
-    action           VARCHAR(50)   NOT NULL,   -- approved | flagged | blocked
+    chat_message_id  INT UNSIGNED  NULL,   -- NULL for user-level actions (mute/ban)
+    moderator_id     INT UNSIGNED  NULL,   -- admin users.id (NULL for chat-role moderators)
+    target_user_id   INT UNSIGNED  NULL,   -- chat_users.id who was acted on
+    action           VARCHAR(50)   NOT NULL,   -- approved | flagged | blocked | deleted | pinned | muted_user | banned_user | unbanned_user
     reason           VARCHAR(255)  NULL,
     created_at       DATETIME      NOT NULL,
-    CONSTRAINT fk_cml_message FOREIGN KEY (chat_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cml_user    FOREIGN KEY (moderator_id)    REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_cml_message     FOREIGN KEY (chat_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cml_user        FOREIGN KEY (moderator_id)    REFERENCES users(id)          ON DELETE SET NULL,
+    CONSTRAINT fk_cml_target_user FOREIGN KEY (target_user_id)  REFERENCES chat_users(id)     ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat Reactions  (per-user emoji reactions on messages)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_reactions (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    message_id    INT UNSIGNED  NOT NULL,
+    chat_user_id  INT UNSIGNED  NOT NULL,
+    reaction      VARCHAR(10)   NOT NULL,
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_creact_message FOREIGN KEY (message_id)   REFERENCES chat_messages(id) ON DELETE CASCADE,
+    CONSTRAINT fk_creact_user    FOREIGN KEY (chat_user_id) REFERENCES chat_users(id)    ON DELETE CASCADE,
+    UNIQUE KEY uq_reaction (message_id, chat_user_id, reaction)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Chat User Bans  (room-scoped or global bans)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_user_bans (
+    id            INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    chat_user_id  INT UNSIGNED  NOT NULL,
+    room_id       INT UNSIGNED  NULL,    -- NULL = global ban
+    banned_by     INT UNSIGNED  NOT NULL,
+    reason        TEXT          NULL,
+    expires_at    DATETIME      NULL,    -- NULL = permanent
+    created_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_cub_user      FOREIGN KEY (chat_user_id) REFERENCES chat_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cub_room      FOREIGN KEY (room_id)      REFERENCES chat_rooms(id) ON DELETE SET NULL,
+    CONSTRAINT fk_cub_banned_by FOREIGN KEY (banned_by)    REFERENCES chat_users(id) ON DELETE CASCADE,
+    INDEX idx_cub_user_room (chat_user_id, room_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

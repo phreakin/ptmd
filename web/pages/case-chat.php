@@ -2,218 +2,219 @@
 /**
  * PTMD — Case Chat page (public)
  *
- * Live investigation feed backed by the chat_messages table.
- * Messages are fetched via /api/chat_messages.php and submitted via the same endpoint.
+ * Live audience feed backed by chat_messages, chat_rooms, and chat_users.
+ * Messages are fetched/submitted via /api/chat_messages.php.
  */
+require_once __DIR__ . '/../inc/chat_auth.php';
+
+$chatUser = current_chat_user();
+$isMod    = $chatUser && is_chat_moderator();
+$roomSlug = 'case-chat';
 ?>
 
-<div class="container py-4">
+<section class="container py-5">
 
-    <!-- ── Investigation header ─────────────────────────────────── -->
-    <div class="ptmd-case-header" data-animate>
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <span class="ptmd-live-badge">
-                <span class="live-dot"></span>LIVE
-            </span>
-            <span class="ptmd-badge-case-chat">Case Chat</span>
-            <h1 class="case-title mb-0">Audience Dispatch</h1>
-        </div>
-        <div class="d-flex align-items-center gap-3 case-meta">
-            <span class="ptmd-viewer-count">
-                <i class="fa-solid fa-eye" style="color:var(--text-dim)"></i>
-                <span class="viewer-num" id="viewerCount">—</span> watching
-            </span>
-        </div>
+    <div class="mb-4" data-animate>
+        <span class="ptmd-badge-teal mb-3 d-inline-block">
+            <i class="fa-solid fa-comments me-1"></i> Live Dispatch
+        </span>
+        <h1 class="mb-2">Case Chat</h1>
+        <p class="ptmd-hero-sub">
+            The audience dispatch feed. Drop your case notes, questions, and reactions.
+        </p>
     </div>
 
-    <!-- ── Stat row ──────────────────────────────────────────────── -->
-    <div class="ptmd-stat-row mb-4" data-animate data-animate-delay="60">
-        <div class="ptmd-stat-block ptmd-stat-block--approved">
-            <div class="stat-block-label">Approved</div>
-            <div class="stat-block-value" id="statApproved">—</div>
-        </div>
-        <div class="ptmd-stat-block ptmd-stat-block--flagged">
-            <div class="stat-block-label">Flagged</div>
-            <div class="stat-block-value" id="statFlagged">—</div>
-        </div>
-        <div class="ptmd-stat-block ptmd-stat-block--blocked">
-            <div class="stat-block-label">Blocked</div>
-            <div class="stat-block-value" id="statBlocked">—</div>
-        </div>
-    </div>
-
-    <!-- ── 2-column investigation layout ────────────────────────── -->
-    <div class="ptmd-investigation-layout" data-animate data-animate-delay="100">
-
-        <!-- LEFT: Live feed ────────────────────────────────────── -->
-        <div class="ptmd-feed-shell">
-
-            <!-- Feed header -->
-            <div class="ptmd-feed-header">
+    <!-- Auth bar -->
+    <div class="ptmd-chat-auth-bar mb-4" data-animate>
+        <?php if ($chatUser): ?>
+            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-bolt" style="color:var(--accent-yellow);font-size:13px"></i>
-                    <span class="ptmd-label" style="color:var(--text-secondary)">Live Feed</span>
+                    <div class="ptmd-chat-avatar" style="--avatar-color:<?php ee($chatUser['avatar_color']); ?>">
+                        <?php echo e(strtoupper(substr($chatUser['display_name'], 0, 1))); ?>
+                    </div>
+                    <div>
+                        <span class="fw-600 small"><?php ee($chatUser['display_name']); ?></span>
+                        <?php if ($chatUser['role'] !== 'registered'): ?>
+                            <span class="ptmd-chat-role-badge ptmd-chat-role-badge--<?php ee(str_replace('_', '-', $chatUser['role'])); ?> ms-2">
+                                <?php ee(ucfirst(str_replace('_', ' ', $chatUser['role']))); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <span class="ptmd-label" style="color:var(--text-dim);font-size:10px" id="msgCount">Loading…</span>
+                <a href="/api/chat_logout.php" class="btn btn-ptmd-ghost btn-sm">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i>Sign Out
+                </a>
             </div>
-
-            <!-- Messages -->
-            <div
-                class="ptmd-feed-messages"
-                id="caseChatMessages"
-                data-endpoint="/api/chat_messages.php"
-                role="log"
-                aria-live="polite"
-                aria-label="Case chat messages"
-            >
-                <div class="ptmd-muted small text-center py-5">
-                    <i class="fa-solid fa-spinner fa-spin me-2"></i>Loading messages…
+        <?php else: ?>
+            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                <p class="ptmd-muted small mb-0">
+                    <i class="fa-solid fa-circle-info me-1"></i>
+                    <a href="/index.php?page=chat-login" class="ptmd-text-teal">Sign in</a> or
+                    <a href="/index.php?page=register"   class="ptmd-text-teal">register</a>
+                    for reactions, replies, and highlights.
+                </p>
+                <div class="d-flex gap-2">
+                    <a href="/index.php?page=chat-login" class="btn btn-ptmd-outline btn-sm">Sign In</a>
+                    <a href="/index.php?page=register"   class="btn btn-ptmd-teal btn-sm">Register</a>
                 </div>
             </div>
+        <?php endif; ?>
+    </div>
 
-            <!-- Input bar -->
-            <div class="ptmd-feed-input-bar">
-                <form id="caseChatForm" autocomplete="off">
-                    <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-sm-3">
-                            <input
-                                class="form-control"
-                                name="username"
-                                maxlength="50"
-                                placeholder="Your alias"
-                                required
-                            >
-                        </div>
-                        <div class="col-sm-7">
-                            <input
-                                class="form-control"
-                                name="message"
-                                maxlength="500"
-                                placeholder="Drop your case notes… 🔍🔥📄"
-                                required
-                            >
-                        </div>
-                        <div class="col-sm-2 d-grid">
-                            <button class="btn btn-ptmd-red" type="submit" aria-label="Send message">
-                                <i class="fa-solid fa-paper-plane"></i>
+    <div class="row g-5">
+        <div class="col-lg-8" data-animate>
+
+            <!-- Chat shell -->
+            <div class="ptmd-chat-shell"
+                 id="caseChatShell"
+                 data-room="<?php ee($roomSlug); ?>"
+                 data-endpoint="/api/chat_messages.php"
+                 data-react-endpoint="/api/chat_react.php"
+                 data-moderate-endpoint="/api/chat_moderate.php"
+                 data-is-mod="<?php echo $isMod ? '1' : '0'; ?>"
+                 data-user-id="<?php echo $chatUser ? (int) $chatUser['id'] : '0'; ?>"
+                 data-user-role="<?php ee($chatUser['role'] ?? 'guest'); ?>">
+
+                <!-- Pinned message bar (JS-populated) -->
+                <div class="ptmd-chat-pinned d-none" id="caseChatPinned" aria-label="Pinned messages"></div>
+
+                <!-- Message feed -->
+                <div class="ptmd-chat-messages"
+                     id="caseChatMessages"
+                     role="log"
+                     aria-live="polite"
+                     aria-label="Case chat messages">
+                    <div class="ptmd-muted small text-center py-4">
+                        <i class="fa-solid fa-spinner fa-spin me-2"></i>Loading messages…
+                    </div>
+                </div>
+
+                <!-- Input area -->
+                <div class="ptmd-chat-input-bar" id="caseChatInputBar">
+
+                    <?php if ($chatUser): ?>
+                        <!-- Reply context (hidden until "Reply" clicked) -->
+                        <div id="caseChatReplyCtx" class="ptmd-chat-reply-ctx d-none">
+                            <i class="fa-solid fa-reply me-1 ptmd-text-teal"></i>
+                            <span id="caseChatReplyLabel" class="flex-grow-1"></span>
+                            <button type="button" id="caseChatReplyClear"
+                                    class="btn btn-ptmd-ghost btn-sm py-0 px-1" aria-label="Cancel reply">
+                                <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
-                    </div>
-                    <p class="small mt-2 mb-0" style="color:var(--text-dim)">
-                        <i class="fa-solid fa-shield-halved me-1"></i>
-                        Messages are moderated. Be factual. Be decent.
-                    </p>
-                </form>
-            </div>
 
-        </div>
+                        <form id="caseChatForm" autocomplete="off">
+                            <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
+                            <input type="hidden" name="room"      value="<?php ee($roomSlug); ?>">
+                            <input type="hidden" name="parent_id" id="caseChatParentId" value="">
 
-        <!-- RIGHT: Controls panel ──────────────────────────────── -->
-        <div class="ptmd-control-panel">
+                            <!-- Highlight / slow-mode row -->
+                            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                <button type="button" id="caseChatHighlightToggle"
+                                        class="btn btn-ptmd-ghost btn-sm"
+                                        data-tippy-content="Highlight your message (Super Chat)">
+                                    <i class="fa-solid fa-star me-1"></i>Highlight
+                                </button>
+                                <div id="caseChatHighlightOpts" class="d-none d-flex gap-2 align-items-center">
+                                    <label class="ptmd-muted small mb-0">Color:</label>
+                                    <input type="color" name="highlight_color" id="caseChatHighlightColor"
+                                           value="#FFD60A"
+                                           style="width:36px;height:28px;padding:2px;border-radius:4px;border:1px solid var(--ptmd-border)">
+                                </div>
+                                <div id="caseChatSlowMode" class="ptmd-chat-slow-mode d-none ms-auto" aria-live="polite">
+                                    <i class="fa-solid fa-clock me-1"></i>Wait <span id="caseChatSlowCount">0</span>s
+                                </div>
+                            </div>
 
-            <!-- Guidelines -->
-            <div class="ptmd-control-card">
-                <div class="ptmd-control-card-title">
-                    <i class="fa-solid fa-file-lines" style="color:var(--accent-cyan)"></i>
-                    Case Rules
-                </div>
-                <ul class="list-unstyled d-flex flex-column gap-2 mb-0" style="font-size:13px">
-                    <li class="d-flex gap-2" style="color:var(--text-secondary)">
-                        <i class="fa-solid fa-check mt-1" style="color:var(--status-approved);flex-shrink:0"></i>
-                        Stay on topic — this is a case board
-                    </li>
-                    <li class="d-flex gap-2" style="color:var(--text-secondary)">
-                        <i class="fa-solid fa-check mt-1" style="color:var(--status-approved);flex-shrink:0"></i>
-                        Sources and questions welcome
-                    </li>
-                    <li class="d-flex gap-2" style="color:var(--text-secondary)">
-                        <i class="fa-solid fa-check mt-1" style="color:var(--status-approved);flex-shrink:0"></i>
-                        Satire is fine; harassment is not
-                    </li>
-                    <li class="d-flex gap-2" style="color:var(--text-muted)">
-                        <i class="fa-solid fa-xmark mt-1" style="color:var(--status-blocked);flex-shrink:0"></i>
-                        No personal attacks or doxxing
-                    </li>
-                    <li class="d-flex gap-2" style="color:var(--text-muted)">
-                        <i class="fa-solid fa-xmark mt-1" style="color:var(--status-blocked);flex-shrink:0"></i>
-                        Spam = immediate block
-                    </li>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input class="form-control flex-grow-1"
+                                       name="message" id="caseChatMessageInput"
+                                       maxlength="500"
+                                       placeholder="Drop your case notes… emoji welcome 🔍🔥📄"
+                                       required>
+                                <button type="button" id="caseChatEmojiBtn"
+                                        class="btn btn-ptmd-ghost btn-sm flex-shrink-0"
+                                        aria-label="Open emoji picker"
+                                        data-tippy-content="Emoji picker">😊</button>
+                                <button class="btn btn-ptmd-primary btn-sm flex-shrink-0"
+                                        type="submit" id="caseChatSendBtn" aria-label="Send message">
+                                    <i class="fa-solid fa-paper-plane me-1"></i>Send
+                                </button>
+                            </div>
+
+                            <p class="ptmd-muted small mt-2 mb-0">
+                                <i class="fa-solid fa-shield-halved me-1"></i>
+                                Posting as <strong><?php ee($chatUser['display_name']); ?></strong>.
+                                Messages are moderated.
+                            </p>
+                        </form>
+
+                        <!-- Emoji picker panel -->
+                        <div id="caseChatEmojiPicker" class="ptmd-emoji-picker d-none" role="dialog" aria-label="Emoji picker">
+                            <?php foreach (['😀','😂','🔥','❤️','👀','💀','🤔','😤','👏','💯','🎉','😱','🙏','✅','⚠️','📄','🔍','🤦','😭','👋','🕵️','⚖️','🔒','📰','💡'] as $em): ?>
+                                <button type="button" class="ptmd-emoji-btn" aria-label="<?php ee($em); ?>"><?php echo $em; ?></button>
+                            <?php endforeach; ?>
+                        </div>
+
+                    <?php else: ?>
+                        <!-- Anonymous/guest input -->
+                        <form id="caseChatForm" autocomplete="off">
+                            <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
+                            <input type="hidden" name="room"       value="<?php ee($roomSlug); ?>">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-sm-3">
+                                    <input class="form-control" name="username" maxlength="50"
+                                           placeholder="Your alias" required>
+                                </div>
+                                <div class="col-sm-7">
+                                    <input class="form-control" name="message" maxlength="500"
+                                           placeholder="Drop your case notes… emoji welcome 🔍🔥📄" required>
+                                </div>
+                                <div class="col-sm-2 d-grid">
+                                    <button class="btn btn-ptmd-primary" type="submit" aria-label="Send message">
+                                        <i class="fa-solid fa-paper-plane me-1"></i>Send
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="ptmd-muted small mt-2 mb-0">
+                                <i class="fa-solid fa-shield-halved me-1"></i>
+                                Messages are moderated. Be factual, be funny, be decent.
+                                <a href="/index.php?page=chat-login" class="ptmd-text-teal">Sign in</a>
+                                for reactions &amp; replies.
+                            </p>
+                        </form>
+                    <?php endif; ?>
+
+                </div><!-- /.ptmd-chat-input-bar -->
+            </div><!-- /.ptmd-chat-shell -->
+
+        </div><!-- /.col-lg-8 -->
+
+        <!-- Sidebar -->
+        <div class="col-lg-4" data-animate data-animate-delay="120">
+            <div class="ptmd-panel p-lg mb-4">
+                <h2 class="h6 mb-3 ptmd-text-teal">
+                    <i class="fa-solid fa-circle-info me-2"></i>Chat Guidelines
+                </h2>
+                <ul class="list-unstyled d-flex flex-column gap-2 ptmd-text-muted small mb-0">
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Stay on topic — this is a case board</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Sources and questions welcome</li>
+                    <li><i class="fa-solid fa-check ptmd-text-teal me-2"></i>Satire is fine; harassment is not</li>
+                    <li><i class="fa-solid fa-times" style="color:var(--ptmd-error)" ></i><span class="me-2"></span>No personal attacks or doxxing</li>
+                    <li><i class="fa-solid fa-times" style="color:var(--ptmd-error)"></i><span class="me-2"></span>Spam = immediate block</li>
                 </ul>
             </div>
-
-            <!-- Feed settings -->
-            <div class="ptmd-control-card">
-                <div class="ptmd-control-card-title">
-                    <i class="fa-solid fa-sliders" style="color:var(--accent-yellow)"></i>
-                    Feed Settings
-                </div>
-
-                <div class="ptmd-toggle-row">
-                    <span class="toggle-label">Auto-scroll</span>
-                    <label class="ptmd-toggle">
-                        <input type="checkbox" id="toggleAutoScroll" checked>
-                        <span class="ptmd-toggle-track"></span>
-                        <span class="ptmd-toggle-thumb"></span>
-                    </label>
-                </div>
-
-                <div class="ptmd-toggle-row">
-                    <span class="toggle-label">Show timestamps</span>
-                    <label class="ptmd-toggle">
-                        <input type="checkbox" id="toggleTimestamps" checked>
-                        <span class="ptmd-toggle-track"></span>
-                        <span class="ptmd-toggle-thumb"></span>
-                    </label>
-                </div>
-
-                <div class="ptmd-toggle-row">
-                    <span class="toggle-label">Compact view</span>
-                    <label class="ptmd-toggle">
-                        <input type="checkbox" id="toggleCompact">
-                        <span class="ptmd-toggle-track"></span>
-                        <span class="ptmd-toggle-thumb"></span>
-                    </label>
-                </div>
+            <div class="ptmd-panel p-lg">
+                <h2 class="h6 mb-3 ptmd-text-yellow">
+                    <i class="fa-solid fa-bolt me-2"></i>Auto-refreshes
+                </h2>
+                <p class="ptmd-muted small mb-0">
+                    New messages appear automatically every 15 seconds.
+                    No page reload needed.
+                </p>
             </div>
-
-            <!-- Status key -->
-            <div class="ptmd-control-card">
-                <div class="ptmd-control-card-title">
-                    <i class="fa-solid fa-circle-half-stroke" style="color:var(--text-muted)"></i>
-                    Status Key
-                </div>
-                <div class="d-flex flex-column gap-2">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="ptmd-msg-card ptmd-msg-card--approved px-3 py-1 d-inline-block" style="font-size:11px;font-weight:700;letter-spacing:0.1em">APPROVED</span>
-                        <span style="font-size:12px;color:var(--text-muted)">Visible to all</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="ptmd-msg-card ptmd-msg-card--flagged px-3 py-1 d-inline-block" style="font-size:11px;font-weight:700;letter-spacing:0.1em">FLAGGED</span>
-                        <span style="font-size:12px;color:var(--text-muted)">Under review</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="ptmd-msg-card ptmd-msg-card--blocked px-3 py-1 d-inline-block" style="font-size:11px;font-weight:700;letter-spacing:0.1em">BLOCKED</span>
-                        <span style="font-size:12px;color:var(--text-muted)">Removed</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Auto-refresh notice -->
-            <div class="ptmd-control-card" style="background:rgba(46,196,182,0.04);border-color:rgba(46,196,182,0.2)">
-                <div class="d-flex align-items-start gap-3">
-                    <i class="fa-solid fa-rotate" style="color:var(--accent-cyan);margin-top:2px;flex-shrink:0"></i>
-                    <div>
-                        <div class="ptmd-label mb-1" style="color:var(--accent-cyan)">Auto-Refreshes</div>
-                        <p class="mb-0" style="font-size:12px;color:var(--text-muted)">
-                            New messages appear automatically every 15 seconds. No page reload needed.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
-    </div>
+    </div><!-- /.row -->
+</section>
 
-</div>
