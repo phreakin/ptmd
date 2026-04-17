@@ -1206,3 +1206,29 @@
     }
     html { scroll-behavior: auto; }
 }
+
+.ptmd-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.ptmd-overlay img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    mix-blend-mode: screen;
+    opacity: 0.9;
+}
+
+.ptmd-glow {
+    filter: drop-shadow(0 0 12px rgba(255, 50, 50, 0.6))
+            drop-shadow(0 0 25px rgba(46,196,182,0.4));
+}
+
+.ptmd-grain {
+    background: url('/assets/brand/overlays/ui-elements/glitch-texture.png');
+    opacity: 0.15;
+    mix-blend-mode: overlay;
+}   
