@@ -26,7 +26,7 @@ if (is_post()) {
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
             <h2 class="h5 mb-1">Run PTMD E2E Suite</h2>
-            <p class="ptmd-muted small mb-0">This runs HTTP checks against this live environment using your current admin session.</p>
+            <p class="ptmd-muted small mb-0">This runs HTTP checks against this live environment using your current admin session. Use during low-traffic periods because it executes real requests.</p>
         </div>
         <form method="post" action="/admin/site-tests.php">
             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">

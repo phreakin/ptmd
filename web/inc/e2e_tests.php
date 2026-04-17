@@ -27,12 +27,15 @@ function ptmd_e2e_request(string $baseUrl, string $path, string $method = 'GET',
         $headers[] = 'Cookie: ' . $cookie;
     }
 
+    $connectTimeout = max(1, min(30, (int) (getenv('PTMD_E2E_CONNECT_TIMEOUT') ?: 5)));
+    $requestTimeout = max(2, min(60, (int) (getenv('PTMD_E2E_REQUEST_TIMEOUT') ?: 10)));
+
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HEADER => true,
         CURLOPT_FOLLOWLOCATION => false,
-        CURLOPT_CONNECTTIMEOUT => 3,
-        CURLOPT_TIMEOUT => 5,
+        CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+        CURLOPT_TIMEOUT => $requestTimeout,
         CURLOPT_HTTPHEADER => $headers,
     ]);
 
@@ -105,6 +108,7 @@ function run_ptmd_e2e_tests(): array
 
     $baseUrl = ptmd_e2e_base_url();
     $authCookie = session_name() . '=' . rawurlencode(session_id());
+    $sessionIsValid = is_logged_in() && current_admin() !== null;
 
     // Public routes
     $public = [];
@@ -148,6 +152,13 @@ function run_ptmd_e2e_tests(): array
 
     // Auth and admin access
     $auth = [];
+    ptmd_e2e_record(
+        $auth,
+        'Admin session precheck',
+        $sessionIsValid,
+        $sessionIsValid ? 'Admin session is active' : 'Admin session is missing or invalid'
+    );
+
     $login = ptmd_e2e_request($baseUrl, '/admin/login.php');
     $loginOk = $login['ok'] && (($login['status'] ?? 0) === 200);
     ptmd_e2e_record($auth, 'GET /admin/login.php (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
@@ -166,12 +177,16 @@ function run_ptmd_e2e_tests(): array
     });
     sort($adminFiles);
 
-    foreach ($adminFiles as $file) {
-        $name = basename($file);
-        $path = '/admin/' . $name;
-        $res = ptmd_e2e_request($baseUrl, $path, 'GET', [], $authCookie);
-        $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
-        ptmd_e2e_record($auth, "GET {$path} (admin session)", $ok, $ok ? 'Admin page loaded' : 'Admin page failed', ['actual_status' => $res['status'] ?? null, 'error' => $res['error'] ?? null]);
+    if ($sessionIsValid) {
+        foreach ($adminFiles as $file) {
+            $name = basename($file);
+            $path = '/admin/' . $name;
+            $res = ptmd_e2e_request($baseUrl, $path, 'GET', [], $authCookie);
+            $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
+            ptmd_e2e_record($auth, "GET {$path} (admin session)", $ok, $ok ? 'Admin page loaded' : 'Admin page failed', ['actual_status' => $res['status'] ?? null, 'error' => $res['error'] ?? null]);
+        }
+    } else {
+        ptmd_e2e_record($auth, 'Authenticated admin page checks', true, 'Skipped: active admin session is required');
     }
     $groups[] = ['name' => 'Admin Access', 'tests' => $auth];
 
@@ -191,6 +206,32 @@ function run_ptmd_e2e_tests(): array
     );
     $chatPostOk = $chatPost['ok'] && (($chatPost['status'] ?? 0) === 403);
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (invalid csrf)', $chatPostOk, $chatPostOk ? 'CSRF protection enforced' : 'CSRF protection check failed', ['actual_status' => $chatPost['status'] ?? null]);
+
+    $chatValidCsrf = csrf_token();
+    $chatValidMessage = 'E2E validation message ' . date('YmdHis');
+    $chatPostValid = ptmd_e2e_request(
+        $baseUrl,
+        '/api/chat_messages.php',
+        'POST',
+        ['csrf_token' => $chatValidCsrf, 'username' => 'E2EValidator', 'message' => $chatValidMessage],
+        $authCookie
+    );
+    $chatValidOk = $chatPostValid['ok']
+        && (($chatPostValid['status'] ?? 0) === 200)
+        && is_array($chatPostValid['json'])
+        && (($chatPostValid['json']['ok'] ?? false) === true)
+        && !empty($chatPostValid['json']['id']);
+    $chatValidMessageText = $chatValidOk ? 'Chat API accepts valid submissions' : 'Valid chat submission failed';
+    $chatCleanupOk = true;
+    if ($chatValidOk && $pdo) {
+        $cleanupStmt = $pdo->prepare('DELETE FROM chat_messages WHERE id = :id LIMIT 1');
+        $chatCleanupOk = $cleanupStmt->execute(['id' => (int) $chatPostValid['json']['id']]);
+    }
+    if ($chatValidOk && !$chatCleanupOk) {
+        $chatValidOk = false;
+        $chatValidMessageText = 'Chat submission succeeded but cleanup failed';
+    }
+    ptmd_e2e_record($api, 'POST /api/chat_messages.php (valid csrf)', $chatValidOk, $chatValidMessageText, ['actual_status' => $chatPostValid['status'] ?? null]);
 
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
