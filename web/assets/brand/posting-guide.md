@@ -8,7 +8,7 @@ Friday 5:00 PM
 Saturday 6:00 PM
 - Platform: TikTok / Instagram Reels
 - Content: Teaser clip
-- Goal: Build anticipation and pull viewers toward the main episode
+- Goal: Build anticipation and pull viewers toward the main case
 
 Sunday 10:00 AM
 - Platform: YouTube
@@ -28,7 +28,7 @@ Sunday 7:00 PM
 Monday 2:00 PM
 - Platform: Instagram Reels
 - Content: Key moment clip
-- Goal: Extend episode reach
+- Goal: Extend case reach
 
 Tuesday 3:00 PM
 - Platform: TikTok

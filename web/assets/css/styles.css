@@ -1458,7 +1458,7 @@
         }
     }
 
-    /* ── Episode thumbnail ───────────────────────────────────── */
+    /* ── case thumbnail ───────────────────────────────────── */
     .ptmd-ep-thumb {
         position: relative;
         aspect-ratio: 16/9;

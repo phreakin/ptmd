@@ -61,9 +61,9 @@ if (is_dir($clipDir)) {
 $dbClips = [];
 if ($pdo) {
     $dbClips = $pdo->query(
-        'SELECT vc.id, vc.label, vc.source_path, vc.output_path, vc.status, e.title AS episode_title
+        'SELECT vc.id, vc.label, vc.source_path, vc.output_path, vc.status, e.title AS case_title
          FROM video_clips vc
-         LEFT JOIN episodes e ON e.id = vc.episode_id
+         LEFT JOIN cases e ON e.id = vc.case_id
          WHERE vc.status IN ("raw","ready")
          ORDER BY vc.created_at DESC LIMIT 50'
     )->fetchAll();
@@ -302,7 +302,7 @@ if ($pdo) {
                     class="form-control"
                     id="batchLabel"
                     name="label"
-                    placeholder="e.g. Episode 1 — Teaser Clips"
+                    placeholder="e.g. case 1 — Teaser Clips"
                 >
             </div>
         </div>

@@ -208,10 +208,10 @@ function slugify(string $text): string
 }
 
 // ---------------------------------------------------------------------------
-// EPISODES
+// cases
 // ---------------------------------------------------------------------------
 
-function get_featured_episode(): ?array
+function get_featured_case(): ?array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -219,14 +219,14 @@ function get_featured_episode(): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1'
+        'SELECT * FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT 1'
     );
     $stmt->execute(['status' => 'published']);
 
     return $stmt->fetch() ?: null;
 }
 
-function get_latest_episodes(int $limit = 6): array
+function get_latest_cases(int $limit = 6): array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -234,7 +234,7 @@ function get_latest_episodes(int $limit = 6): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT :limit'
+        'SELECT * FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT :limit'
     );
     $stmt->bindValue(':status', 'published');
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -243,7 +243,7 @@ function get_latest_episodes(int $limit = 6): array
     return $stmt->fetchAll();
 }
 
-function find_episode_by_slug(string $slug): ?array
+function find_case_by_slug(string $slug): ?array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -251,14 +251,14 @@ function find_episode_by_slug(string $slug): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT * FROM episodes WHERE slug = :slug AND status = :status LIMIT 1'
+        'SELECT * FROM cases WHERE slug = :slug AND status = :status LIMIT 1'
     );
     $stmt->execute(['slug' => $slug, 'status' => 'published']);
 
     return $stmt->fetch() ?: null;
 }
 
-function get_episode_tags(int $episodeId): array
+function get_case_tags(int $caseId): array
 {
     $pdo = get_db();
     if (!$pdo) {
@@ -266,11 +266,11 @@ function get_episode_tags(int $episodeId): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT t.name FROM episode_tags t
-         INNER JOIN episode_tag_map m ON m.tag_id = t.id
-         WHERE m.episode_id = :id ORDER BY t.name'
+        'SELECT t.name FROM case_tags t
+         INNER JOIN case_tag_map m ON m.tag_id = t.id
+         WHERE m.case_id = :id ORDER BY t.name'
     );
-    $stmt->execute(['id' => $episodeId]);
+    $stmt->execute(['id' => $caseId]);
 
     return array_column($stmt->fetchAll(), 'name');
 }
@@ -279,15 +279,15 @@ function get_episode_tags(int $episodeId): array
 // PAGE TITLE
 // ---------------------------------------------------------------------------
 
-function page_title(string $page, ?array $episode = null): string
+function page_title(string $page, ?array $case = null): string
 {
-    if ($page === 'episode' && $episode) {
-        return e($episode['title']) . ' | ' . e(site_setting('site_name', 'Paper Trail MD'));
+    if ($page === 'case' && $case) {
+        return e($case['title']) . ' | ' . e(site_setting('site_name', 'Paper Trail MD'));
     }
 
     $map = [
         'home'      => site_setting('site_name', 'Paper Trail MD'),
-        'episodes'  => 'Episodes | ' . site_setting('site_name', 'Paper Trail MD'),
+        'cases'  => 'cases | ' . site_setting('site_name', 'Paper Trail MD'),
         'about'     => 'About | '    . site_setting('site_name', 'Paper Trail MD'),
         'contact'   => 'Contact | '  . site_setting('site_name', 'Paper Trail MD'),
         'case-chat' => 'Case Chat | '. site_setting('site_name', 'Paper Trail MD'),
@@ -407,7 +407,7 @@ function save_ai_generation(
     string $model,
     int $promptTokens,
     int $responseTokens,
-    ?int $episodeId = null
+    ?int $caseId = null
 ): int {
     $pdo = get_db();
     if (!$pdo) {
@@ -416,12 +416,12 @@ function save_ai_generation(
 
     $stmt = $pdo->prepare(
         'INSERT INTO ai_generations
-         (episode_id, feature, input_prompt, output_text, model, prompt_tokens, response_tokens, created_at)
-         VALUES (:episode_id, :feature, :input_prompt, :output_text, :model, :prompt_tokens, :response_tokens, NOW())'
+         (case_id, feature, input_prompt, output_text, model, prompt_tokens, response_tokens, created_at)
+         VALUES (:case_id, :feature, :input_prompt, :output_text, :model, :prompt_tokens, :response_tokens, NOW())'
     );
 
     $stmt->execute([
-        'episode_id'      => $episodeId,
+        'case_id'      => $caseId,
         'feature'         => $feature,
         'input_prompt'    => $inputPrompt,
         'output_text'     => $outputText,
@@ -503,16 +503,16 @@ function ptmd_copilot_context(): string
     $parts = [];
 
     if ($pdo) {
-        $epTotal  = (int) $pdo->query('SELECT COUNT(*) FROM episodes')->fetchColumn();
-        $epPub    = (int) $pdo->query('SELECT COUNT(*) FROM episodes WHERE status = "published"')->fetchColumn();
-        $parts[]  = "Episodes: {$epTotal} total, {$epPub} published.";
+        $epTotal  = (int) $pdo->query('SELECT COUNT(*) FROM cases')->fetchColumn();
+        $epPub    = (int) $pdo->query('SELECT COUNT(*) FROM cases WHERE status = "published"')->fetchColumn();
+        $parts[]  = "cases: {$epTotal} total, {$epPub} published.";
 
         $latestEps = $pdo->query(
-            'SELECT title, status FROM episodes ORDER BY created_at DESC LIMIT 5'
+            'SELECT title, status FROM cases ORDER BY created_at DESC LIMIT 5'
         )->fetchAll();
         if ($latestEps) {
             $epList  = array_map(fn($e) => '  - "' . $e['title'] . '" (' . $e['status'] . ')', $latestEps);
-            $parts[] = "Recent episodes:\n" . implode("\n", $epList);
+            $parts[] = "Recent cases:\n" . implode("\n", $epList);
         }
 
         $queuePending = (int) $pdo->query(
@@ -549,7 +549,7 @@ CURRENT SITE SNAPSHOT:
 {$context}
 
 ADMIN MODULES YOU CAN HELP WITH:
-- Episodes (create, edit, publish, archive) → /admin/episodes.php
+- cases (create, edit, publish, archive) → /admin/cases.php
 - Video Processor (trim clips, extract short-form content) → /admin/video-processor.php
 - Overlay Tool (apply branded overlays to clips) → /admin/overlay-tool.php
 - Media Library (thumbnails, intros, watermarks, overlays, clips) → /admin/media.php

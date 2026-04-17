@@ -29,9 +29,9 @@ $apiKeySet = site_setting('openai_api_key', '') !== '';
 $history = [];
 if ($pdo) {
     $history = $pdo->query(
-        'SELECT g.*, e.title AS episode_title
+        'SELECT g.*, e.title AS case_title
          FROM ai_generations g
-         LEFT JOIN episodes e ON e.id = g.episode_id
+         LEFT JOIN cases e ON e.id = g.case_id
          ORDER BY g.created_at DESC LIMIT 30'
     )->fetchAll();
 }
@@ -54,11 +54,11 @@ if ($pdo) {
 $topIdeas = array_slice($storedIdeas, 0, 5);
 $moreIdeas = array_slice($storedIdeas, 5);
 
-// Episode list for the "context" dropdown
-$episodes = [];
+// case list for the "context" dropdown
+$cases = [];
 if ($pdo) {
-    $episodes = $pdo->query(
-        'SELECT id, title FROM episodes ORDER BY published_at DESC, id DESC'
+    $cases = $pdo->query(
+        'SELECT id, title FROM cases ORDER BY published_at DESC, id DESC'
     )->fetchAll();
 }
 ?>
@@ -123,17 +123,17 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-heading"></i></div>
             <h2 class="h5 mb-2">Title Generator</h2>
-            <p class="ptmd-muted small mb-4">Get compelling, click-worthy episode titles matched to the PTMD style.</p>
+            <p class="ptmd-muted small mb-4">Get compelling, click-worthy case titles matched to the PTMD style.</p>
             <div class="mb-3">
-                <label class="form-label" for="title_topic">What's the episode about?</label>
+                <label class="form-label" for="title_topic">What's the case about?</label>
                 <textarea class="form-control" id="title_topic" rows="3"
-                    placeholder="Describe the episode premise briefly…"></textarea>
+                    placeholder="Describe the case premise briefly…"></textarea>
             </div>
             <div class="mb-3">
-                <label class="form-label" for="title_episode">Or link to an episode</label>
-                <select class="form-select" id="title_episode">
+                <label class="form-label" for="title_case">Or link to an case</label>
+                <select class="form-select" id="title_case">
                     <option value="">— None —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -141,7 +141,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="title"
-                data-inputs='["title_topic","title_episode"]'
+                data-inputs='["title_topic","title_case"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Titles
@@ -157,7 +157,7 @@ if ($pdo) {
             <h2 class="h5 mb-2">Keyword &amp; Tag Generator</h2>
             <p class="ptmd-muted small mb-4">SEO keywords, hashtags, and YouTube tags to maximise discoverability.</p>
             <div class="mb-3">
-                <label class="form-label" for="kw_topic">Episode topic or title</label>
+                <label class="form-label" for="kw_topic">case topic or title</label>
                 <input class="form-control" id="kw_topic" placeholder="Topic, title, or short description…">
             </div>
             <div class="mb-3">
@@ -188,10 +188,10 @@ if ($pdo) {
             <h2 class="h5 mb-2">Description Generator</h2>
             <p class="ptmd-muted small mb-4">Full YouTube / video platform description with hooks, links, and hashtags.</p>
             <div class="mb-3">
-                <label class="form-label" for="desc_episode">Episode</label>
-                <select class="form-select" id="desc_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="desc_case">case</label>
+                <select class="form-select" id="desc_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -204,7 +204,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="description"
-                data-inputs='["desc_episode","desc_notes"]'
+                data-inputs='["desc_case","desc_notes"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Description
@@ -220,10 +220,10 @@ if ($pdo) {
             <h2 class="h5 mb-2">Social Caption Generator</h2>
             <p class="ptmd-muted small mb-4">Platform-specific captions for YouTube Shorts, TikTok, Instagram, X, and Facebook.</p>
             <div class="mb-3">
-                <label class="form-label" for="cap_episode">Episode</label>
-                <select class="form-select" id="cap_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="cap_case">case</label>
+                <select class="form-select" id="cap_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -242,7 +242,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="caption"
-                data-inputs='["cap_episode","cap_platform"]'
+                data-inputs='["cap_case","cap_platform"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Captions
@@ -256,12 +256,12 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-image"></i></div>
             <h2 class="h5 mb-2">Thumbnail Concept</h2>
-            <p class="ptmd-muted small mb-4">Detailed visual direction and text overlay suggestions for episode thumbnails.</p>
+            <p class="ptmd-muted small mb-4">Detailed visual direction and text overlay suggestions for case thumbnails.</p>
             <div class="mb-3">
-                <label class="form-label" for="thumb_episode">Episode</label>
-                <select class="form-select" id="thumb_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="thumb_case">case</label>
+                <select class="form-select" id="thumb_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -278,7 +278,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="thumbnail_concept"
-                data-inputs='["thumb_episode","thumb_style"]'
+                data-inputs='["thumb_case","thumb_style"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Concept
@@ -365,7 +365,7 @@ if ($pdo) {
                 <thead>
                     <tr>
                         <th>Feature</th>
-                        <th>Episode</th>
+                        <th>case</th>
                         <th>Model</th>
                         <th>Tokens</th>
                         <th>Date</th>
@@ -381,7 +381,7 @@ if ($pdo) {
                                 </span>
                             </td>
                             <td class="ptmd-muted small">
-                                <?php ee($gen['episode_title'] ?? '—'); ?>
+                                <?php ee($gen['case_title'] ?? '—'); ?>
                             </td>
                             <td class="ptmd-muted" style="font-size:var(--text-xs)">
                                 <?php ee($gen['model']); ?>

@@ -1,35 +1,35 @@
 <?php
 /**
- * PTMD — Episodes listing page
+ * PTMD — cases listing page
  */
 
-$episodes = get_latest_episodes(24);
+$cases = get_latest_cases(24);
 ?>
 
 <section class="container py-5">
 
     <div class="mb-5" data-animate>
         <span class="ptmd-badge-teal mb-3 d-inline-block">
-            <i class="fa-solid fa-film me-1"></i> All Episodes
+            <i class="fa-solid fa-film me-1"></i> All cases
         </span>
-        <h1 class="mb-2">Episodes</h1>
+        <h1 class="mb-2">cases</h1>
         <p class="ptmd-text-muted" style="max-width:55ch">
             Database-driven documentary drops and investigations.
-            Every episode has receipts.
+            Every case has receipts.
         </p>
     </div>
 
     <div class="row g-4">
-        <?php if (!$episodes): ?>
+        <?php if (!$cases): ?>
             <div class="col-12">
                 <div class="ptmd-panel p-lg ptmd-text-muted">
                     <i class="fa-solid fa-circle-info me-2"></i>
-                    No published episodes yet. Run <code>database/seed.sql</code> to load samples.
+                    No published cases yet. Run <code>database/seed.sql</code> to load samples.
                 </div>
             </div>
         <?php endif; ?>
 
-        <?php foreach ($episodes as $i => $ep): ?>
+        <?php foreach ($cases as $i => $ep): ?>
             <div class="col-md-6 col-lg-4" data-animate data-animate-delay="<?php echo $i * 60; ?>">
                 <article class="ptmd-card h-100 d-flex flex-column overflow-hidden">
 
@@ -59,7 +59,7 @@ $episodes = get_latest_episodes(24);
                         </p>
                         <a
                             class="btn btn-ptmd-outline btn-sm align-self-start"
-                            href="/index.php?page=episode&amp;slug=<?php ee($ep['slug']); ?>"
+                            href="/index.php?page=case&amp;slug=<?php ee($ep['slug']); ?>"
                         >
                             Watch + Read <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>

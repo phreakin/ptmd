@@ -133,7 +133,7 @@ Then hook
 🎞️ 5. Plug-and-Play Overlay HTML (For Your Site)
 <div class="video-container">
   <video controls>
-    <source src="episode.mp4" type="video/mp4">
+    <source src="case.mp4" type="video/mp4">
   </video>
 
 <img src="/assets/brand/watermarks/ptmd-watermark-white.png"

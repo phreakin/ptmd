@@ -15,8 +15,8 @@ $pdo = get_db();
 
 $moduleCatalog = [
     'hero'     => ['label' => 'Hero',             'icon' => 'fa-star',        'description' => 'Top section with headline and CTA'],
-    'featured' => ['label' => 'Featured Episode', 'icon' => 'fa-film',        'description' => 'Highlighted latest episode'],
-    'latest'   => ['label' => 'Latest Episodes',  'icon' => 'fa-table-cells', 'description' => 'Episode cards grid'],
+    'featured' => ['label' => 'Featured case', 'icon' => 'fa-film',        'description' => 'Highlighted latest case'],
+    'latest'   => ['label' => 'Latest cases',  'icon' => 'fa-table-cells', 'description' => 'case cards grid'],
     'social'   => ['label' => 'Social CTA',       'icon' => 'fa-share-nodes', 'description' => 'Follow links and call-to-action'],
 ];
 

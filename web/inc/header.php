@@ -43,8 +43,8 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=episodes">
-                            <i class="fa-solid fa-film fa-sm me-1"></i>Episodes
+                        <a class="nav-link" href="/index.php?page=cases">
+                            <i class="fa-solid fa-film fa-sm me-1"></i>cases
                         </a>
                     </li>
                     <li class="nav-item">

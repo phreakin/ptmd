@@ -21,7 +21,7 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('site_description',     'Hard-hitting but funny mini-documentaries on social, cultural, and political stories.', 'string', 'Meta Description', 'general', NOW()),
 ('hero_headline',        'Truth with Teeth.',                                       'string', 'Hero Headline',        'homepage', NOW()),
 ('hero_subheadline',     'Investigative mini-docs with cinematic style and satirical precision.', 'string', 'Hero Sub-headline', 'homepage', NOW()),
-('hero_cta_text',        'Watch Latest Episode',                                    'string', 'Hero CTA Text',        'homepage', NOW()),
+('hero_cta_text',        'Watch Latest case',                                    'string', 'Hero CTA Text',        'homepage', NOW()),
 ('home_module_layout',   '["hero","featured","latest","social"]',                   'json',   'Homepage Module Layout','homepage', NOW()),
 ('social_youtube',       'https://youtube.com/@papertrailmd',                       'string', 'YouTube URL',          'social',   NOW()),
 ('social_x',             'https://x.com/papertrailmd',                              'string', 'X / Twitter URL',      'social',   NOW()),
@@ -38,13 +38,13 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW())
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW();
 
--- Sample episodes
-INSERT INTO episodes (title, slug, excerpt, body, thumbnail_image, featured_image, video_url, duration, status, published_at, created_at, updated_at) VALUES
+-- Sample cases
+INSERT INTO cases (title, slug, excerpt, body, thumbnail_image, featured_image, video_url, duration, status, published_at, created_at, updated_at) VALUES
 (
     'City Hall After Dark',
     'city-hall-after-dark',
     'An evidence-first dive into procurement games, public money, and the people who never seem to lose a contract.',
-    'Full investigative breakdown of municipal procurement patterns. Sources: city council minutes (2019–2023), FOIA-released emails, contractor registration filings, and interviews with three anonymous city department heads.\n\nThe numbers don''t lie. The contracts do.\n\nOver an 18-month period, a single contractor received 74% of discretionary IT spend without competitive bidding — citing an emergency exemption clause that was renewed 11 consecutive quarters.\n\nThis episode traces the chain: who signed off, who benefited, and why the whistleblower got reassigned instead of thanked.',
+    'Full investigative breakdown of municipal procurement patterns. Sources: city council minutes (2019–2023), FOIA-released emails, contractor registration filings, and interviews with three anonymous city department heads.\n\nThe numbers don''t lie. The contracts do.\n\nOver an 18-month period, a single contractor received 74% of discretionary IT spend without competitive bidding — citing an emergency exemption clause that was renewed 11 consecutive quarters.\n\nThis case traces the chain: who signed off, who benefited, and why the whistleblower got reassigned instead of thanked.',
     '/assets/brand/thumbnails/ptmd_ep1_cityhall.png',
     '/assets/brand/thumbnails/ptmd_ep1_cityhall.png',
     'https://www.youtube.com/embed/dQw4w9WgXcQ',
@@ -58,7 +58,7 @@ INSERT INTO episodes (title, slug, excerpt, body, thumbnail_image, featured_imag
     'School Board Heat Check',
     'school-board-heat-check',
     'How political theater became curriculum policy warfare — and what the parents caught in the middle actually want.',
-    'Six months covering school board meetings in three different districts. What we found: the loudest voices are almost never local parents.\n\nThis episode maps the network of outside advocacy groups coordinating public comment campaigns, the national funding sources behind local candidates, and the exhausted teachers stuck in the crossfire.\n\nFunny? Occasionally. Disturbing? Often. Well-sourced? Always.',
+    'Six months covering school board meetings in three different districts. What we found: the loudest voices are almost never local parents.\n\nThis case maps the network of outside advocacy groups coordinating public comment campaigns, the national funding sources behind local candidates, and the exhausted teachers stuck in the crossfire.\n\nFunny? Occasionally. Disturbing? Often. Well-sourced? Always.',
     '/assets/brand/thumbnails/ptmd_ep2_schoolboard.png',
     '/assets/brand/thumbnails/ptmd_ep2_schoolboard.png',
     'https://www.youtube.com/embed/dQw4w9WgXcQ',
@@ -84,8 +84,8 @@ INSERT INTO episodes (title, slug, excerpt, body, thumbnail_image, featured_imag
 )
 ON DUPLICATE KEY UPDATE updated_at = NOW();
 
--- Episode tags
-INSERT IGNORE INTO episode_tags (name, slug, created_at, updated_at) VALUES
+-- case tags
+INSERT IGNORE INTO case_tags (name, slug, created_at, updated_at) VALUES
 ('accountability',    'accountability',    NOW(), NOW()),
 ('politics',          'politics',          NOW(), NOW()),
 ('culture',           'culture',           NOW(), NOW()),
@@ -94,20 +94,20 @@ INSERT IGNORE INTO episode_tags (name, slug, created_at, updated_at) VALUES
 ('local government',  'local-government',  NOW(), NOW()),
 ('follow the money',  'follow-the-money',  NOW(), NOW());
 
--- Tag-episode mappings
-INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
-SELECT e.id, t.id FROM episodes e
-JOIN episode_tags t ON t.slug IN ('accountability','corruption','local-government','follow-the-money')
+-- Tag-case mappings
+INSERT IGNORE INTO case_tag_map (case_id, tag_id)
+SELECT e.id, t.id FROM cases e
+JOIN case_tags t ON t.slug IN ('accountability','corruption','local-government','follow-the-money')
 WHERE e.slug = 'city-hall-after-dark';
 
-INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
-SELECT e.id, t.id FROM episodes e
-JOIN episode_tags t ON t.slug IN ('education','politics','culture')
+INSERT IGNORE INTO case_tag_map (case_id, tag_id)
+SELECT e.id, t.id FROM cases e
+JOIN case_tags t ON t.slug IN ('education','politics','culture')
 WHERE e.slug = 'school-board-heat-check';
 
-INSERT IGNORE INTO episode_tag_map (episode_id, tag_id)
-SELECT e.id, t.id FROM episodes e
-JOIN episode_tags t ON t.slug IN ('local-government','corruption','follow-the-money')
+INSERT IGNORE INTO case_tag_map (case_id, tag_id)
+SELECT e.id, t.id FROM cases e
+JOIN case_tags t ON t.slug IN ('local-government','corruption','follow-the-money')
 WHERE e.slug = 'the-permit-maze';
 
 -- Default social posting cadence (PTMD recommended schedule — Phoenix time)
@@ -127,7 +127,7 @@ INSERT INTO social_post_schedules (platform, content_type, day_of_week, post_tim
 INSERT INTO social_platform_preferences
     (platform, default_content_type, default_caption_prefix, default_hashtags, default_status, is_enabled, created_at, updated_at)
 VALUES
-    ('YouTube',         'full documentary', 'New episode from Paper Trail MD.', '#investigation #documentary', 'queued', 1, NOW(), NOW()),
+    ('YouTube',         'full documentary', 'New case from Paper Trail MD.', '#investigation #documentary', 'queued', 1, NOW(), NOW()),
     ('YouTube Shorts',  'teaser',           'Short cut from Paper Trail MD.',    '#shorts #investigation',      'queued', 1, NOW(), NOW()),
     ('TikTok',          'teaser',           'Fresh PTMD clip just dropped.',      '#tiktok #investigation',      'queued', 1, NOW(), NOW()),
     ('Instagram Reels', 'teaser',           'New reel from Paper Trail MD.',      '#reels #investigation',       'queued', 1, NOW(), NOW()),
@@ -142,23 +142,23 @@ ON DUPLICATE KEY UPDATE
     updated_at             = NOW();
 
 -- Sample queue entry
-INSERT INTO social_post_queue (episode_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
+INSERT INTO social_post_queue (case_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
 SELECT
     e.id,
     'YouTube Shorts',
     'teaser',
-    '🔍 City Hall After Dark — Full episode drops Sunday. Subscribe so you don''t miss it. #investigation #accountability',
+    '🔍 City Hall After Dark — Full case drops Sunday. Subscribe so you don''t miss it. #investigation #accountability',
     '/uploads/clips/sample_teaser.mp4',
     NOW() + INTERVAL 2 DAY,
     'queued',
     NOW(),
     NOW()
-FROM episodes e WHERE e.slug = 'city-hall-after-dark' LIMIT 1;
+FROM cases e WHERE e.slug = 'city-hall-after-dark' LIMIT 1;
 
 -- Sample chat messages
 INSERT INTO chat_messages (username, message, status, emojis_json, created_at, updated_at) VALUES
 ('FactCheckFan',         'That procurement timeline is WILD. 🔥 Keep the receipts coming.',                           'approved', JSON_ARRAY('🔥'),      NOW() - INTERVAL 3 HOUR,  NOW() - INTERVAL 3 HOUR),
-('DocsOrItDidntHappen',  'Can we get the FOIA request list? Would love to dig deeper into episode 1.',               'approved', JSON_ARRAY('📄'),      NOW() - INTERVAL 2 HOUR,  NOW() - INTERVAL 2 HOUR),
+('DocsOrItDidntHappen',  'Can we get the FOIA request list? Would love to dig deeper into case 1.',               'approved', JSON_ARRAY('📄'),      NOW() - INTERVAL 2 HOUR,  NOW() - INTERVAL 2 HOUR),
 ('SkepticMode',          'Love the dry humor but also genuinely horrified. Appreciate the sourcing. 😅',             'approved', JSON_ARRAY('😅'),      NOW() - INTERVAL 90 MINUTE, NOW() - INTERVAL 90 MINUTE),
-('CivicNerd99',          'The school board episode connects dots I had never considered. Shared everywhere.',         'approved', JSON_ARRAY(),          NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 45 MINUTE),
-('PermitSurvivor',       'Episode 3 is my whole life as a small business owner. How is this legal?? 😤',            'approved', JSON_ARRAY('😤'),      NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 20 MINUTE);
+('CivicNerd99',          'The school board case connects dots I had never considered. Shared everywhere.',         'approved', JSON_ARRAY(),          NOW() - INTERVAL 45 MINUTE, NOW() - INTERVAL 45 MINUTE),
+('PermitSurvivor',       'case 3 is my whole life as a small business owner. How is this legal?? 😤',            'approved', JSON_ARRAY('😤'),      NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 20 MINUTE);

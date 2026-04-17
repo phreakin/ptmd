@@ -13,28 +13,28 @@ $pageSubheading = 'Welcome back, ' . (current_admin()['username'] ?? 'Admin');
 include __DIR__ . '/_admin_head.php';
 
 $pdo = get_db();
-$stats = ['episodes' => 0, 'queue' => 0, 'chat' => 0, 'ai' => 0];
+$stats = ['cases' => 0, 'queue' => 0, 'chat' => 0, 'ai' => 0];
 
 if ($pdo) {
-    $stats['episodes'] = (int) $pdo->query('SELECT COUNT(*) FROM episodes WHERE status = "published"')->fetchColumn();
+    $stats['cases'] = (int) $pdo->query('SELECT COUNT(*) FROM cases WHERE status = "published"')->fetchColumn();
     $stats['queue']    = (int) $pdo->query('SELECT COUNT(*) FROM social_post_queue WHERE status IN ("queued","scheduled")'  )->fetchColumn();
     $stats['chat']     = (int) $pdo->query('SELECT COUNT(*) FROM chat_messages WHERE status = "approved"')->fetchColumn();
     $stats['ai']       = (int) $pdo->query('SELECT COUNT(*) FROM ai_generations')->fetchColumn();
 }
 
-// Recent episodes
+// Recent cases
 $recentEps = [];
 if ($pdo) {
-    $recentEps = $pdo->query('SELECT id, title, slug, status, published_at FROM episodes ORDER BY updated_at DESC LIMIT 6')->fetchAll();
+    $recentEps = $pdo->query('SELECT id, title, slug, status, published_at FROM cases ORDER BY updated_at DESC LIMIT 6')->fetchAll();
 }
 
 // Recent queue
 $recentQueue = [];
 if ($pdo) {
     $recentQueue = $pdo->query(
-        'SELECT q.id, q.platform, q.status, q.scheduled_for, e.title AS episode_title
+        'SELECT q.id, q.platform, q.status, q.scheduled_for, e.title AS case_title
          FROM social_post_queue q
-         LEFT JOIN episodes e ON e.id = q.episode_id
+         LEFT JOIN cases e ON e.id = q.case_id
          ORDER BY q.scheduled_for ASC
          LIMIT 6'
     )->fetchAll();
@@ -48,8 +48,8 @@ if ($pdo) {
             <div class="stat-icon" style="background:rgba(46,196,182,0.15)">
                 <i class="fa-solid fa-film ptmd-text-teal"></i>
             </div>
-            <div class="stat-value ptmd-text-teal"><?php ee((string) $stats['episodes']); ?></div>
-            <div class="stat-label">Published Episodes</div>
+            <div class="stat-value ptmd-text-teal"><?php ee((string) $stats['cases']); ?></div>
+            <div class="stat-label">Published cases</div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -87,8 +87,8 @@ if ($pdo) {
         <div class="ptmd-panel p-lg">
             <h2 class="h6 mb-4 ptmd-muted text-uppercase" style="letter-spacing:.08em">Quick Actions</h2>
             <div class="d-flex flex-wrap gap-3">
-                <a href="/admin/episodes.php" class="btn btn-ptmd-outline">
-                    <i class="fa-solid fa-plus me-2"></i>New Episode
+                <a href="/admin/cases.php" class="btn btn-ptmd-outline">
+                    <i class="fa-solid fa-plus me-2"></i>New case
                 </a>
                 <a href="/admin/video-processor.php" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-scissors me-2"></i>Process Video
@@ -113,12 +113,12 @@ if ($pdo) {
 <!-- Recent content -->
 <div class="row g-4">
 
-    <!-- Recent episodes -->
+    <!-- Recent cases -->
     <div class="col-lg-7">
         <div class="ptmd-panel p-lg">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="h6 mb-0">Recent Episodes</h2>
-                <a href="/admin/episodes.php" class="btn btn-ptmd-ghost btn-sm">
+                <h2 class="h6 mb-0">Recent cases</h2>
+                <a href="/admin/cases.php" class="btn btn-ptmd-ghost btn-sm">
                     View All <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
             </div>
@@ -135,7 +135,7 @@ if ($pdo) {
                         <?php foreach ($recentEps as $ep): ?>
                             <tr>
                                 <td>
-                                    <a href="/admin/episodes.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>"
                                        class="ptmd-text-muted fw-500">
                                         <?php ee($ep['title']); ?>
                                     </a>
@@ -153,7 +153,7 @@ if ($pdo) {
                     </tbody>
                 </table>
             <?php else: ?>
-                <p class="ptmd-muted small">No episodes yet.</p>
+                <p class="ptmd-muted small">No cases yet.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -175,7 +175,7 @@ if ($pdo) {
                             <div>
                                 <div class="small fw-600 mb-1"><?php ee($item['platform']); ?></div>
                                 <div class="ptmd-muted" style="font-size:var(--text-xs)">
-                                    <?php ee($item['episode_title'] ?? 'Manual'); ?>
+                                    <?php ee($item['case_title'] ?? 'Manual'); ?>
                                 </div>
                             </div>
                             <div class="text-end">

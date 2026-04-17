@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episodes
+-- cases
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episodes (
+CREATE TABLE IF NOT EXISTS cases (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     title           VARCHAR(255)  NOT NULL,
     slug            VARCHAR(255)  NOT NULL UNIQUE,
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS episodes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episode Categories
+-- case Categories
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episode_categories (
+CREATE TABLE IF NOT EXISTS case_categories (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(120) NOT NULL UNIQUE,
     slug       VARCHAR(140) NOT NULL UNIQUE,
@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS episode_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Episode Tags
+-- case Tags
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS episode_tags (
+CREATE TABLE IF NOT EXISTS case_tags (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(120) NOT NULL UNIQUE,
     slug       VARCHAR(140) NOT NULL UNIQUE,
@@ -62,12 +62,12 @@ CREATE TABLE IF NOT EXISTS episode_tags (
     updated_at DATETIME     NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS episode_tag_map (
-    episode_id INT UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS case_tag_map (
+    case_id INT UNSIGNED NOT NULL,
     tag_id     INT UNSIGNED NOT NULL,
-    PRIMARY KEY (episode_id, tag_id),
-    CONSTRAINT fk_etm_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE,
-    CONSTRAINT fk_etm_tag     FOREIGN KEY (tag_id)     REFERENCES episode_tags(id) ON DELETE CASCADE
+    PRIMARY KEY (case_id, tag_id),
+    CONSTRAINT fk_etm_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+    CONSTRAINT fk_etm_tag     FOREIGN KEY (tag_id)     REFERENCES case_tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS social_platform_preferences (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_post_queue (
     id               INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
-    episode_id       INT UNSIGNED   NULL,
+    case_id       INT UNSIGNED   NULL,
     clip_id          INT UNSIGNED   NULL,
     platform         VARCHAR(80)    NOT NULL,
     content_type     VARCHAR(80)    NOT NULL,
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     last_error       TEXT           NULL,
     created_at       DATETIME       NOT NULL,
     updated_at       DATETIME       NOT NULL,
-    CONSTRAINT fk_spq_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_spq_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
     INDEX idx_clip_platform (clip_id, platform),
     INDEX idx_status_scheduled (status, scheduled_for)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -212,15 +212,15 @@ CREATE TABLE IF NOT EXISTS chat_moderation_logs (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_generations (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    episode_id      INT UNSIGNED  NULL,
-    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | episode_field_suggestion
+    case_id      INT UNSIGNED  NULL,
+    feature         VARCHAR(80)   NOT NULL,   -- video_ideas | title | keywords | description | caption | thumbnail_concept | case_field_suggestion
     input_prompt    TEXT          NOT NULL,
     output_text     MEDIUMTEXT    NOT NULL,
     model           VARCHAR(80)   NOT NULL,
     prompt_tokens   INT UNSIGNED  NOT NULL DEFAULT 0,
     response_tokens INT UNSIGNED  NOT NULL DEFAULT 0,
     created_at      DATETIME      NOT NULL,
-    CONSTRAINT fk_ag_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ag_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL,
     INDEX idx_feature (feature),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -285,11 +285,11 @@ CREATE TABLE IF NOT EXISTS overlay_batch_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Video Clips  (short-form clips extracted from episodes)
+-- Video Clips  (short-form clips extracted from cases)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS video_clips (
     id              INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    episode_id      INT UNSIGNED  NULL,
+    case_id      INT UNSIGNED  NULL,
     label           VARCHAR(255)  NOT NULL,
     source_path     VARCHAR(255)  NOT NULL,   -- relative to /uploads
     output_path     VARCHAR(255)  NULL,       -- processed version
@@ -300,7 +300,7 @@ CREATE TABLE IF NOT EXISTS video_clips (
     status          ENUM('raw','processing','ready','queued','posted') NOT NULL DEFAULT 'raw',
     created_at      DATETIME      NOT NULL,
     updated_at      DATETIME      NOT NULL,
-    CONSTRAINT fk_vc_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL
+    CONSTRAINT fk_vc_case FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
