@@ -12,6 +12,83 @@ require_once __DIR__ . '/../inc/bootstrap.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+/**
+ * Attempt to parse a JSON array payload from AI text output.
+ */
+function ai_parse_json_array(string $text): array
+{
+    $trimmed = trim($text);
+    if ($trimmed === '') {
+        return [];
+    }
+
+    $decoded = json_decode($trimmed, true);
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+
+    if (preg_match('/```(?:json)?\s*(\[.*\])\s*```/is', $trimmed, $matches)) {
+        $decoded = json_decode($matches[1], true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    $start = strpos($trimmed, '[');
+    $end   = strrpos($trimmed, ']');
+    if ($start !== false && $end !== false && $end > $start) {
+        $candidate = substr($trimmed, $start, $end - $start + 1);
+        $decoded   = json_decode($candidate, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    return [];
+}
+
+/**
+ * Persist structured video ideas for later admin use.
+ */
+function save_video_ideas(array $ideas, ?int $generationId, ?int $createdBy, string $scope, string $contextNotes): void
+{
+    $pdo = get_db();
+    if (!$pdo || !$ideas) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO ai_video_ideas
+             (generation_id, created_by, scope, context_notes, idea_title, premise, suggested_angle, rank_order, created_at, updated_at)
+             VALUES (:generation_id, :created_by, :scope, :context_notes, :idea_title, :premise, :suggested_angle, :rank_order, NOW(), NOW())'
+        );
+
+        foreach ($ideas as $idx => $idea) {
+            $title = trim((string) ($idea['title'] ?? ''));
+            $premise = trim((string) ($idea['premise'] ?? ''));
+            $angle = trim((string) ($idea['angle'] ?? ''));
+
+            if ($title === '' || $premise === '' || $angle === '') {
+                continue;
+            }
+
+            $stmt->execute([
+                'generation_id'  => $generationId,
+                'created_by'     => $createdBy,
+                'scope'          => $scope,
+                'context_notes'  => $contextNotes === '' ? null : $contextNotes,
+                'idea_title'     => mb_substr($title, 0, 255),
+                'premise'        => $premise,
+                'suggested_angle'=> $angle,
+                'rank_order'     => $idx + 1,
+            ]);
+        }
+    } catch (Throwable $e) {
+        error_log('[PTMD] Failed to save ai_video_ideas: ' . $e->getMessage());
+    }
+}
+
 if (!is_logged_in()) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'Unauthorized']);
@@ -32,7 +109,7 @@ if (!verify_csrf($_POST['csrf_token'] ?? null)) {
 
 $feature = trim((string) ($_POST['feature'] ?? ''));
 
-$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept'];
+$allowed = ['video_ideas', 'title', 'keywords', 'description', 'caption', 'thumbnail_concept', 'episode_field_suggestion'];
 if (!in_array($feature, $allowed, true)) {
     echo json_encode(['ok' => false, 'error' => 'Unknown feature: ' . e($feature)]);
     exit;
@@ -47,15 +124,26 @@ switch ($feature) {
 
     case 'video_ideas':
         $theme = trim((string) ($_POST['ideas_theme'] ?? ''));
+        $scope = strtolower(trim((string) ($_POST['ideas_scope'] ?? 'both')));
+        if (!in_array($scope, ['us', 'world', 'both'], true)) {
+            $scope = 'both';
+        }
+        $currentContext = trim((string) ($_POST['ideas_context'] ?? ''));
         $count = max(1, min(15, (int) ($_POST['ideas_count'] ?? 5)));
         $themeClause = $theme ? " Focus on the theme or keyword: \"{$theme}\"." : '';
+        $scopeLabel = $scope === 'us'
+            ? 'the United States'
+            : ($scope === 'world' ? 'global issues outside the U.S.' : 'both U.S. and global issues');
+        $contextClause = $currentContext !== ''
+            ? "Use this additional current-context guidance: {$currentContext}\n\n"
+            : '';
 
-        $userPrompt = "Generate {$count} compelling documentary episode ideas for Paper Trail MD.{$themeClause}\n\n"
-            . "For each idea:\n"
-            . "1. One-line working title\n"
-            . "2. One-sentence premise\n"
-            . "3. Suggested angle or hook\n\n"
-            . "Output as a numbered list.";
+        $userPrompt = "Today is " . date('Y-m-d') . ". Generate {$count} compelling documentary episode ideas for Paper Trail MD based on current social situations and issues in {$scopeLabel}.{$themeClause}\n\n"
+            . $contextClause
+            . "Return ONLY valid JSON (no markdown, no commentary) as an array where each item has exactly these keys:\n"
+            . "- title\n"
+            . "- premise\n"
+            . "- angle\n";
         break;
 
     case 'title':
@@ -218,6 +306,82 @@ switch ($feature) {
             . "Be specific and visual-director precise.";
         break;
 
+    case 'episode_field_suggestion':
+        $field = trim((string) ($_POST['suggest_field'] ?? ''));
+        $allowedFields = [
+            'title' => 'Title',
+            'slug' => 'Slug',
+            'excerpt' => 'Excerpt',
+            'body' => 'Body',
+            'keywords' => 'Keywords',
+            'video_url' => 'Video URL',
+            'duration' => 'Duration',
+            'thumbnail_image' => 'Thumbnail image path/URL',
+        ];
+        if (!isset($allowedFields[$field])) {
+            echo json_encode(['ok' => false, 'error' => 'Unknown field requested.']);
+            exit;
+        }
+
+        $epId = (int) ($_POST['suggest_episode'] ?? 0);
+        $episodeId = $epId ?: null;
+        $guidance = trim((string) ($_POST['suggest_guidance'] ?? ''));
+
+        $contextTitle = trim((string) ($_POST['context_title'] ?? ''));
+        $contextExcerpt = trim((string) ($_POST['context_excerpt'] ?? ''));
+        $contextBody = trim((string) ($_POST['context_body'] ?? ''));
+        $contextKeywords = trim((string) ($_POST['context_keywords'] ?? ''));
+        $contextVideoUrl = trim((string) ($_POST['context_video_url'] ?? ''));
+        $contextDuration = trim((string) ($_POST['context_duration'] ?? ''));
+        $contextThumbnail = trim((string) ($_POST['context_thumbnail_image'] ?? ''));
+
+        if ($epId > 0) {
+            $pdo = get_db();
+            if ($pdo) {
+                $ep = $pdo->prepare('SELECT title, excerpt, body, video_url, duration, thumbnail_image FROM episodes WHERE id = :id LIMIT 1');
+                $ep->execute(['id' => $epId]);
+                $epRow = $ep->fetch();
+                if ($epRow) {
+                    $contextTitle = $contextTitle !== '' ? $contextTitle : (string) ($epRow['title'] ?? '');
+                    $contextExcerpt = $contextExcerpt !== '' ? $contextExcerpt : (string) ($epRow['excerpt'] ?? '');
+                    $contextBody = $contextBody !== '' ? $contextBody : (string) ($epRow['body'] ?? '');
+                    $contextVideoUrl = $contextVideoUrl !== '' ? $contextVideoUrl : (string) ($epRow['video_url'] ?? '');
+                    $contextDuration = $contextDuration !== '' ? $contextDuration : (string) ($epRow['duration'] ?? '');
+                    $contextThumbnail = $contextThumbnail !== '' ? $contextThumbnail : (string) ($epRow['thumbnail_image'] ?? '');
+                }
+            }
+        }
+
+        $context = "Title: {$contextTitle}\n"
+            . "Excerpt: {$contextExcerpt}\n"
+            . "Body: " . mb_substr($contextBody, 0, 900) . "\n"
+            . "Keywords: {$contextKeywords}\n"
+            . "Video URL: {$contextVideoUrl}\n"
+            . "Duration: {$contextDuration}\n"
+            . "Thumbnail: {$contextThumbnail}\n";
+
+        $guidanceClause = $guidance !== '' ? "Additional admin guidance: {$guidance}\n\n" : '';
+        $fieldRuleMap = [
+            'title' => 'Provide one title line only (max 120 chars).',
+            'slug' => 'Provide one URL-safe lowercase slug line only using letters, numbers, and hyphens.',
+            'excerpt' => 'Provide one concise excerpt paragraph (1-2 sentences, max 300 chars).',
+            'body' => 'Provide one polished body draft section (around 180-300 words).',
+            'keywords' => 'Provide one comma-separated list of 8-12 relevant keywords.',
+            'video_url' => 'Provide either a suggested embed URL format or a clear placeholder URL line.',
+            'duration' => 'Provide one duration value in mm:ss format only.',
+            'thumbnail_image' => 'Provide one concise suggested thumbnail image path/URL or naming suggestion line.',
+        ];
+        $fieldRule = $fieldRuleMap[$field];
+
+        $userPrompt = "Suggest content for the '{$allowedFields[$field]}' field for a PTMD episode edit form.\n\n"
+            . $guidanceClause
+            . "Current episode context:\n{$context}\n"
+            . "Output rules:\n"
+            . "- Return only the suggestion text, no labels\n"
+            . "- Keep tone investigative, sharp, credible\n"
+            . "- {$fieldRule}\n";
+        break;
+
     default:
         echo json_encode(['ok' => false, 'error' => 'Unknown feature']);
         exit;
@@ -232,7 +396,7 @@ if (!$result['ok']) {
 }
 
 // ── Save to DB ────────────────────────────────────────────────────────────────
-save_ai_generation(
+$generationId = save_ai_generation(
     $feature,
     $userPrompt,
     $result['text'],
@@ -242,7 +406,40 @@ save_ai_generation(
     $episodeId
 );
 
+$ideas = [];
+if ($feature === 'video_ideas') {
+    $scope = strtolower(trim((string) ($_POST['ideas_scope'] ?? 'both')));
+    if (!in_array($scope, ['us', 'world', 'both'], true)) {
+        $scope = 'both';
+    }
+    $contextNotes = trim((string) ($_POST['ideas_context'] ?? ''));
+    $parsed = ai_parse_json_array($result['text']);
+
+    foreach ($parsed as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $title = trim((string) ($item['title'] ?? ''));
+        $premise = trim((string) ($item['premise'] ?? ''));
+        $angle = trim((string) ($item['angle'] ?? ''));
+        if ($title === '' || $premise === '' || $angle === '') {
+            continue;
+        }
+        $ideas[] = [
+            'title' => $title,
+            'premise' => $premise,
+            'angle' => $angle,
+        ];
+    }
+
+    if ($ideas) {
+        $admin = current_admin();
+        save_video_ideas($ideas, $generationId ?: null, isset($admin['id']) ? (int) $admin['id'] : null, $scope, $contextNotes);
+    }
+}
+
 echo json_encode([
-    'ok'   => true,
-    'text' => $result['text'],
+    'ok'    => true,
+    'text'  => $result['text'],
+    'ideas' => $ideas,
 ]);
