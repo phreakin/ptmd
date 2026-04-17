@@ -444,4 +444,223 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
     INDEX idx_aam_session_created (session_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================
+-- Blueprint Layer  (Phase 1 — reusable content templates)
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- Video Blueprints  (templates for long-form / primary video)
+-- ------------------------------------------------------------
+-- Each blueprint defines the intended structure, tone, and goals for
+-- a full case video (documentary, teaser cut, reaction, follow-up, etc.).
+-- Generate a video_instance from one of these when starting work on a case.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS video_blueprints (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    title               VARCHAR(255)  NOT NULL,
+    slug                VARCHAR(255)  NOT NULL UNIQUE,
+    blueprint_type      ENUM('documentary','teaser','reaction','follow_up','custom') NOT NULL DEFAULT 'documentary',
+    status              ENUM('active','draft','archived') NOT NULL DEFAULT 'draft',
+    objective           TEXT          NULL,             -- e.g. "Drive subscribers, establish case authority"
+    structure_json      JSON          NULL,             -- ordered sections/segments with labels + notes
+    brand_notes         TEXT          NULL,             -- voice, tone, required brand treatment
+    target_duration_sec INT UNSIGNED  NULL,             -- target length in seconds (e.g. 1200 = 20 min)
+    created_by          INT UNSIGNED  NULL,
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    CONSTRAINT fk_vb_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_vb_status      (status),
+    INDEX idx_vb_type_status (blueprint_type, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Clip Blueprints  (templates for short-form / social clips)
+-- ------------------------------------------------------------
+-- Each blueprint defines a clip format: hook structure, target duration,
+-- aspect ratio, and which platforms it is intended for.
+-- Generate a clip_instance from one of these when cutting clips from a case.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clip_blueprints (
+    id                  INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
+    title               VARCHAR(255)    NOT NULL,
+    slug                VARCHAR(255)    NOT NULL UNIQUE,
+    clip_type           ENUM('teaser','reveal','punch','humor','follow_up','custom') NOT NULL DEFAULT 'teaser',
+    status              ENUM('active','draft','archived') NOT NULL DEFAULT 'draft',
+    target_duration_sec SMALLINT UNSIGNED NULL,         -- e.g. 30, 45, 60
+    aspect_ratio        VARCHAR(20)     NULL,            -- "9:16" for vertical, "16:9" for landscape
+    platform_targets    JSON            NULL,            -- array of posting_sites.site_key values
+    structure_json      JSON            NULL,            -- hook / body / CTA structure
+    brand_notes         TEXT            NULL,
+    created_by          INT UNSIGNED    NULL,
+    created_at          DATETIME        NOT NULL,
+    updated_at          DATETIME        NOT NULL,
+    CONSTRAINT fk_cb_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_cb_status      (status),
+    INDEX idx_cb_type_status (clip_type, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Posting Blueprints  (templates for platform-specific post jobs)
+-- ------------------------------------------------------------
+-- Each blueprint defines how a piece of content should be posted to ONE
+-- platform: caption template, required hashtags, CTA pattern, brand rules.
+-- One posting_blueprint per platform variant (e.g. TikTok teaser, YT Shorts).
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS posting_blueprints (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    title               VARCHAR(255)  NOT NULL,
+    slug                VARCHAR(255)  NOT NULL UNIQUE,
+    site_key            VARCHAR(80)   NOT NULL,          -- FK to posting_sites.site_key
+    content_type        VARCHAR(80)   NOT NULL,          -- teaser, full_documentary, launch_thread, etc.
+    status              ENUM('active','draft','archived') NOT NULL DEFAULT 'draft',
+    caption_template    TEXT          NULL,              -- supports {title}, {hashtags}, {cta} tokens
+    required_hashtags   VARCHAR(500)  NULL,
+    banned_phrases      TEXT          NULL,              -- comma-separated phrases to reject in captions
+    cta_pattern         VARCHAR(255)  NULL,              -- e.g. "Subscribe + link in bio"
+    config_json         JSON          NULL,              -- extra platform-specific rules (char limit, etc.)
+    created_by          INT UNSIGNED  NULL,
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    CONSTRAINT fk_pb_site FOREIGN KEY (site_key)    REFERENCES posting_sites(site_key) ON DELETE CASCADE,
+    CONSTRAINT fk_pb_user FOREIGN KEY (created_by)  REFERENCES users(id)               ON DELETE SET NULL,
+    INDEX idx_pb_site_key    (site_key),
+    INDEX idx_pb_status      (status),
+    INDEX idx_pb_site_status (site_key, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Blueprint Schedule Rules  (per-blueprint cadence + priority)
+-- ------------------------------------------------------------
+-- Extends the flat social_post_schedules table with blueprint-level rules:
+-- priority ordering, minimum gap between posts, and max-per-day guard.
+-- Used by the auto-scheduler to find the next valid slot for a post_job.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS blueprint_schedule_rules (
+    id                   INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    posting_blueprint_id INT UNSIGNED  NOT NULL,
+    site_key             VARCHAR(80)   NOT NULL,         -- redundant with blueprint but useful for direct queries
+    day_of_week          ENUM('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+    post_time            TIME          NOT NULL,
+    timezone             VARCHAR(100)  NOT NULL DEFAULT 'America/Phoenix',
+    priority             TINYINT UNSIGNED NOT NULL DEFAULT 5,   -- 1 = highest, 10 = lowest
+    min_gap_hours        TINYINT UNSIGNED NOT NULL DEFAULT 0,   -- min hours between posts to this platform
+    max_per_day          TINYINT UNSIGNED NOT NULL DEFAULT 1,   -- max posts per day to this platform
+    is_active            TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at           DATETIME      NOT NULL,
+    updated_at           DATETIME      NOT NULL,
+    CONSTRAINT fk_bsr_blueprint FOREIGN KEY (posting_blueprint_id) REFERENCES posting_blueprints(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bsr_site      FOREIGN KEY (site_key)             REFERENCES posting_sites(site_key) ON DELETE CASCADE,
+    INDEX idx_bsr_active      (posting_blueprint_id, is_active),
+    INDEX idx_bsr_site_day    (site_key, day_of_week),
+    INDEX idx_bsr_priority    (priority)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Instance Layer  (generated content from blueprints)
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- Video Instances  (a specific video plan generated from a blueprint)
+-- ------------------------------------------------------------
+-- Created when an admin selects a video_blueprint for a given case.
+-- Tracks the lifecycle of that video from draft to posted.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS video_instances (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    video_blueprint_id  INT UNSIGNED  NOT NULL,
+    case_id             INT UNSIGNED  NULL,
+    title               VARCHAR(255)  NOT NULL,
+    status              ENUM('draft','approved','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
+    blueprint_version   SMALLINT UNSIGNED NOT NULL DEFAULT 1,  -- snapshot of blueprint version used
+    notes               TEXT          NULL,
+    created_by          INT UNSIGNED  NULL,
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    CONSTRAINT fk_vi_blueprint FOREIGN KEY (video_blueprint_id) REFERENCES video_blueprints(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_vi_case      FOREIGN KEY (case_id)            REFERENCES cases(id)            ON DELETE SET NULL,
+    CONSTRAINT fk_vi_user      FOREIGN KEY (created_by)         REFERENCES users(id)            ON DELETE SET NULL,
+    INDEX idx_vi_blueprint (video_blueprint_id),
+    INDEX idx_vi_case      (case_id),
+    INDEX idx_vi_status    (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Clip Instances  (a specific short clip generated from a blueprint)
+-- ------------------------------------------------------------
+-- Created when an admin selects a clip_blueprint for a case or video_instance.
+-- May reference an existing video_clips row once the clip is cut.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clip_instances (
+    id                  INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    clip_blueprint_id   INT UNSIGNED  NOT NULL,
+    video_instance_id   INT UNSIGNED  NULL,       -- parent video, if applicable
+    case_id             INT UNSIGNED  NULL,
+    video_clip_id       INT UNSIGNED  NULL,       -- existing video_clips row (once processed)
+    title               VARCHAR(255)  NOT NULL,
+    status              ENUM('draft','approved','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
+    blueprint_version   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    notes               TEXT          NULL,
+    created_by          INT UNSIGNED  NULL,
+    created_at          DATETIME      NOT NULL,
+    updated_at          DATETIME      NOT NULL,
+    CONSTRAINT fk_ci_blueprint      FOREIGN KEY (clip_blueprint_id)  REFERENCES clip_blueprints(id)   ON DELETE RESTRICT,
+    CONSTRAINT fk_ci_video_instance FOREIGN KEY (video_instance_id)  REFERENCES video_instances(id)   ON DELETE SET NULL,
+    CONSTRAINT fk_ci_case           FOREIGN KEY (case_id)            REFERENCES cases(id)             ON DELETE SET NULL,
+    CONSTRAINT fk_ci_video_clip     FOREIGN KEY (video_clip_id)      REFERENCES video_clips(id)       ON DELETE SET NULL,
+    CONSTRAINT fk_ci_user           FOREIGN KEY (created_by)         REFERENCES users(id)             ON DELETE SET NULL,
+    INDEX idx_ci_blueprint      (clip_blueprint_id),
+    INDEX idx_ci_video_instance (video_instance_id),
+    INDEX idx_ci_status         (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Post Jobs  (a post task generated from a posting blueprint)
+-- ------------------------------------------------------------
+-- One row per "content × platform" combination to be published.
+-- When the scheduler finds a valid slot it creates a social_post_queue row
+-- and stores its id in queue_id.  lock_key prevents duplicate queue inserts.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS post_jobs (
+    id                   INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    posting_blueprint_id INT UNSIGNED  NOT NULL,
+    clip_instance_id     INT UNSIGNED  NULL,
+    video_instance_id    INT UNSIGNED  NULL,
+    queue_id             INT UNSIGNED  NULL,        -- social_post_queue.id once enqueued
+    status               ENUM('draft','approved','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
+    scheduled_for        DATETIME      NULL,
+    conflict_reason      TEXT          NULL,         -- why scheduling was blocked
+    lock_key             VARCHAR(255)  NULL,         -- idempotency key (blueprint+instance hash)
+    created_by           INT UNSIGNED  NULL,
+    created_at           DATETIME      NOT NULL,
+    updated_at           DATETIME      NOT NULL,
+    CONSTRAINT fk_pj_blueprint      FOREIGN KEY (posting_blueprint_id) REFERENCES posting_blueprints(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_pj_clip_instance  FOREIGN KEY (clip_instance_id)     REFERENCES clip_instances(id)     ON DELETE SET NULL,
+    CONSTRAINT fk_pj_video_instance FOREIGN KEY (video_instance_id)    REFERENCES video_instances(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_pj_queue          FOREIGN KEY (queue_id)             REFERENCES social_post_queue(id)  ON DELETE SET NULL,
+    CONSTRAINT fk_pj_user           FOREIGN KEY (created_by)           REFERENCES users(id)              ON DELETE SET NULL,
+    UNIQUE KEY  uq_pj_lock_key      (lock_key),
+    INDEX idx_pj_blueprint  (posting_blueprint_id),
+    INDEX idx_pj_status     (status),
+    INDEX idx_pj_scheduled  (scheduled_for)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Content Status Log  (audit trail for all status transitions)
+-- ------------------------------------------------------------
+-- Records every status change on video_instances, clip_instances, and
+-- post_jobs.  Gives admins full visibility and supports recovery.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS content_status_log (
+    id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    entity_type  ENUM('video_instance','clip_instance','post_job') NOT NULL,
+    entity_id    INT UNSIGNED  NOT NULL,
+    from_status  VARCHAR(50)   NULL,
+    to_status    VARCHAR(50)   NOT NULL,
+    changed_by   INT UNSIGNED  NULL,    -- users.id (NULL = system/cron)
+    reason       TEXT          NULL,
+    created_at   DATETIME      NOT NULL,
+    INDEX idx_csl_entity  (entity_type, entity_id),
+    INDEX idx_csl_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

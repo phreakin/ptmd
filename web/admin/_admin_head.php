@@ -26,6 +26,7 @@ $navItems = [
     ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
     ['href' => '/admin/posting-sites.php',   'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
+    ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
     ['href' => '/admin/chat-rooms.php',      'label' => 'Chat Rooms',      'icon' => 'fa-door-open',       'id' => 'chat-rooms'],
     ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
@@ -152,7 +153,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 6, 5) as $item): ?>
+            <?php foreach (array_slice($navItems, 6, 6) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -168,7 +169,7 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <?php foreach (array_slice($navItems, 11) as $item): ?>
+            <?php foreach (array_slice($navItems, 12) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
