@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="ptmd_animated_chat_overlay">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/assets/brand/ptmd_animated_chat_overlay.zip!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
