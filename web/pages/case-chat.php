@@ -14,13 +14,13 @@ $roomSlug = 'case-chat';
 
 <section class="container py-5">
 
-    <div class="mb-4" data-animate>
-        <span class="ptmd-badge-teal mb-3 d-inline-block">
-            <i class="fa-solid fa-comments me-1"></i> Live Dispatch
+    <div class="mb-5" data-animate>
+        <span class="ptmd-badge-live mb-3 d-inline-block">
+            <span class="ptmd-live-dot me-1"></span>CASE CHAT
         </span>
         <h1 class="mb-2">Case Chat</h1>
         <p class="ptmd-hero-sub">
-            The audience dispatch feed. Drop your case notes, questions, and reactions.
+            The live audience dispatch feed. Drop your case notes, receipts, and reactions. 🧾
         </p>
     </div>
 
@@ -145,7 +145,7 @@ $roomSlug = 'case-chat';
                             <p class="ptmd-muted small mt-2 mb-0">
                                 <i class="fa-solid fa-shield-halved me-1"></i>
                                 Posting as <strong><?php ee($chatUser['display_name']); ?></strong>.
-                                Messages are moderated.
+                                Moderated. Be factual, be funny, drop receipts. 🧾
                             </p>
                         </form>
 
