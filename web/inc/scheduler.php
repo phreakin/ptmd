@@ -284,7 +284,8 @@ function scheduler_expand_schedule_to_queue(
     array $schedule,
     int $horizonDays,
     bool $dryRun = false,
-    ?\DateTimeImmutable $from = null
+    ?\DateTimeImmutable $from = null,
+    bool $contentAuto = false
 ): array {
     $from = $from ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
@@ -318,24 +319,57 @@ function scheduler_expand_schedule_to_queue(
             continue;
         }
 
+        // Build the candidate item
+        $candidate = [
+            'episode_id'    => null,
+            'clip_id'       => null,
+            'platform'      => $schedule['platform'],
+            'content_type'  => $schedule['content_type'],
+            'caption'       => '',
+            'asset_path'    => null,
+            'scheduled_for' => $scheduledFor,
+            'schedule_id'   => (int) $schedule['id'],
+            'auto_generated'=> 1,
+        ];
+
+        // Phase 4: auto-fill from platform preferences when enabled
+        $validationWarnings = [];
+        if ($contentAuto) {
+            $candidate = scheduler_auto_fill_item($pdo, $candidate);
+            $validationWarnings = scheduler_validate_queue_item($candidate);
+        }
+
+        // Items with validation warnings start as 'draft' for editor review;
+        // clean items are inserted as 'queued' so the scheduler can dispatch them.
+        $insertStatus = empty($validationWarnings) ? 'queued' : 'draft';
+        $lastError    = empty($validationWarnings) ? null : implode(' | ', $validationWarnings);
+
         try {
             $pdo->prepare(
                 'INSERT INTO social_post_queue
                  (episode_id, clip_id, platform, content_type, caption, asset_path,
-                  scheduled_for, status, schedule_id, auto_generated, retry_count, created_at, updated_at)
+                  scheduled_for, status, schedule_id, auto_generated, retry_count,
+                  last_error, created_at, updated_at)
                  VALUES
                  (:eid, NULL, :platform, :ct, :caption, NULL,
-                  :sched, "queued", :sid, 1, 0, NOW(), NOW())'
+                  :sched, :status, :sid, 1, 0,
+                  :last_error, NOW(), NOW())'
             )->execute([
-                'eid'      => null,
-                'platform' => $schedule['platform'],
-                'ct'       => $schedule['content_type'],
-                'caption'  => '',
-                'sched'    => $scheduledFor,
-                'sid'      => (int) $schedule['id'],
+                'eid'        => null,
+                'platform'   => $candidate['platform'],
+                'ct'         => $candidate['content_type'],
+                'caption'    => $candidate['caption'],
+                'sched'      => $scheduledFor,
+                'status'     => $insertStatus,
+                'sid'        => (int) $schedule['id'],
+                'last_error' => $lastError,
             ]);
             $generated++;
             $existingDates[$dateKey] = true;
+
+            if (!empty($validationWarnings)) {
+                $errors[] = 'Review needed for ' . $scheduledFor . ': ' . implode('; ', $validationWarnings);
+            }
         } catch (\PDOException $e) {
             $errors[] = 'Insert failed for ' . $scheduledFor . ': ' . $e->getMessage();
         }
@@ -343,7 +377,7 @@ function scheduler_expand_schedule_to_queue(
 
     // Update schedule's last_generated_at + last_run_status
     if (!$dryRun) {
-        $runStatus = empty($errors) ? 'ok' : 'error';
+        $runStatus = empty($errors) ? 'ok' : (array_filter($errors, fn($e) => !str_starts_with($e, 'Review')) === [] ? 'review' : 'error');
         $pdo->prepare(
             'UPDATE social_post_schedules
              SET last_generated_at = NOW(), last_run_status = :s, updated_at = NOW()
@@ -501,9 +535,10 @@ function scheduler_mark_retry_or_fail(
  */
 function scheduler_run(PDO $pdo, bool $dryRun = false): array
 {
-    $horizonDays  = max(1, (int) _scheduler_setting($pdo, 'scheduler_horizon_days', '30'));
-    $maxRetries   = max(0, (int) _scheduler_setting($pdo, 'scheduler_max_retries', '3'));
+    $horizonDays   = max(1, (int) _scheduler_setting($pdo, 'scheduler_horizon_days', '30'));
+    $maxRetries    = max(0, (int) _scheduler_setting($pdo, 'scheduler_max_retries', '3'));
     $retryInterval = max(1, (int) _scheduler_setting($pdo, 'scheduler_retry_interval', '15'));
+    $contentAuto   = _scheduler_setting($pdo, 'scheduler_content_auto', '0') === '1';
 
     // ── 1. Lock ───────────────────────────────────────────────────────────────
     if (!$dryRun && !scheduler_acquire_lock($pdo)) {
@@ -528,7 +563,7 @@ function scheduler_run(PDO $pdo, bool $dryRun = false): array
         )->fetchAll();
 
         foreach ($schedules as $schedule) {
-            $genResult = scheduler_expand_schedule_to_queue($pdo, $schedule, $horizonDays, $dryRun);
+            $genResult = scheduler_expand_schedule_to_queue($pdo, $schedule, $horizonDays, $dryRun, null, $contentAuto);
             $log['generation'][] = [
                 'schedule_id'   => (int) $schedule['id'],
                 'platform'      => $schedule['platform'],
@@ -587,6 +622,99 @@ function scheduler_run(PDO $pdo, bool $dryRun = false): array
     $log['ok']               = $log['total_errors'] === 0;
 
     return $log;
+}
+
+// ---------------------------------------------------------------------------
+// Content auto-fill  (Phase 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Auto-fill a queue item's caption and content_type from social_platform_preferences.
+ *
+ * Rules:
+ *  - content_type: use platform default if item value is empty or 'general'
+ *  - caption: compose from default_caption_prefix + default_hashtags when caption is empty
+ *
+ * Returns the (possibly updated) item array.  The 'auto_generated' flag is
+ * left as-is; callers are responsible for marking the item appropriately.
+ */
+function scheduler_auto_fill_item(object $pdo, array $item): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT default_content_type, default_caption_prefix, default_hashtags
+         FROM social_platform_preferences
+         WHERE platform = :p AND is_enabled = 1
+         LIMIT 1'
+    );
+    $stmt->execute(['p' => $item['platform']]);
+    $pref = $stmt->fetch();
+
+    if (!$pref) {
+        return $item; // no enabled preference row for this platform
+    }
+
+    // Auto-fill content_type when blank or generic
+    $currentCt = trim((string) ($item['content_type'] ?? ''));
+    if (in_array($currentCt, ['', 'general'], true)) {
+        $defaultCt = trim((string) ($pref['default_content_type'] ?? ''));
+        if ($defaultCt !== '') {
+            $item['content_type'] = $defaultCt;
+        }
+    }
+
+    // Auto-fill caption when empty
+    $caption = trim((string) ($item['caption'] ?? ''));
+    if ($caption === '') {
+        $prefix   = trim((string) ($pref['default_caption_prefix'] ?? ''));
+        $hashtags = trim((string) ($pref['default_hashtags']       ?? ''));
+        $parts    = array_filter([$prefix, $hashtags]);
+        if (!empty($parts)) {
+            $item['caption'] = implode("\n\n", $parts);
+        }
+    }
+
+    return $item;
+}
+
+/**
+ * Validate a queue item and return an array of human-readable warning strings.
+ *
+ * An empty return array means the item passed all checks.
+ * Warning-level issues (missing video asset, missing caption) do not block
+ * insertion but cause the item to be saved as 'draft' for editor review.
+ */
+function scheduler_validate_queue_item(array $item): array
+{
+    $errors = [];
+
+    $platform = trim((string) ($item['platform'] ?? ''));
+    if ($platform === '') {
+        $errors[] = 'Platform is required.';
+    }
+
+    if (trim((string) ($item['scheduled_for'] ?? '')) === '') {
+        $errors[] = 'scheduled_for is required.';
+    }
+
+    // Platforms that require a video asset before posting
+    $videoRequired = [
+        'YouTube', 'YouTube Shorts', 'TikTok',
+        'Instagram Reels', 'Facebook Reels',
+    ];
+    if (in_array($platform, $videoRequired, true)) {
+        $assetPath = trim((string) ($item['asset_path'] ?? ''));
+        $clipId    = (int) ($item['clip_id'] ?? 0);
+        if ($assetPath === '' && $clipId === 0) {
+            $errors[] = $platform . ' posts require a video asset (asset_path or clip_id). Please assign one before posting.';
+        }
+    }
+
+    // X (Twitter) is caption-first: warn when caption is empty
+    if ($platform === 'X' && trim((string) ($item['caption'] ?? '')) === '') {
+        $errors[] = 'X posts should have caption text. Please add a caption before posting.';
+    }
+
+    return $errors;
 }
 
 // ---------------------------------------------------------------------------

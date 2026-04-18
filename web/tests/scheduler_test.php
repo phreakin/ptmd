@@ -266,3 +266,278 @@ ptmd_assert_true(
     scheduler_verify_ip('1.2.3.4'),
     'ip: any IP allowed when DB unavailable (no allowlist)'
 );
+
+// =============================================================================
+// 11. scheduler_validate_queue_item — platform required
+// =============================================================================
+
+$missingPlatform = ['platform' => '', 'scheduled_for' => '2026-06-01 09:00:00', 'caption' => 'hello'];
+$errs = scheduler_validate_queue_item($missingPlatform);
+ptmd_assert_true(count($errs) > 0, 'validate: empty platform raises error');
+ptmd_assert_true(
+    in_array('Platform is required.', $errs, true),
+    'validate: platform-required message present'
+);
+
+// =============================================================================
+// 12. scheduler_validate_queue_item — scheduled_for required
+// =============================================================================
+
+$missingSched = ['platform' => 'TikTok', 'scheduled_for' => '', 'caption' => ''];
+$errs = scheduler_validate_queue_item($missingSched);
+ptmd_assert_true(count($errs) > 0, 'validate: empty scheduled_for raises error');
+ptmd_assert_true(
+    in_array('scheduled_for is required.', $errs, true),
+    'validate: scheduled_for-required message present'
+);
+
+// =============================================================================
+// 13. scheduler_validate_queue_item — video platform without asset warns
+// =============================================================================
+
+$noAsset = ['platform' => 'TikTok', 'scheduled_for' => '2026-06-01 09:00:00', 'caption' => '', 'asset_path' => '', 'clip_id' => 0];
+$errs = scheduler_validate_queue_item($noAsset);
+ptmd_assert_true(count($errs) > 0, 'validate: TikTok without asset raises warning');
+ptmd_assert_true(
+    (bool) array_filter($errs, fn($e) => str_contains($e, 'TikTok')),
+    'validate: TikTok warning message mentions platform'
+);
+
+// =============================================================================
+// 14. scheduler_validate_queue_item — video platform with asset_path passes
+// =============================================================================
+
+$withAsset = ['platform' => 'Instagram Reels', 'scheduled_for' => '2026-06-01 09:00:00', 'caption' => 'hi', 'asset_path' => '/uploads/clip.mp4', 'clip_id' => 0];
+$errs = scheduler_validate_queue_item($withAsset);
+ptmd_assert_true(count($errs) === 0, 'validate: Instagram Reels with asset_path passes validation');
+
+// =============================================================================
+// 15. scheduler_validate_queue_item — X platform without caption warns
+// =============================================================================
+
+$xNoCaption = ['platform' => 'X', 'scheduled_for' => '2026-06-01 09:00:00', 'caption' => '', 'asset_path' => '', 'clip_id' => 0];
+$errs = scheduler_validate_queue_item($xNoCaption);
+ptmd_assert_true(count($errs) > 0, 'validate: X without caption raises warning');
+ptmd_assert_true(
+    (bool) array_filter($errs, fn($e) => str_contains($e, 'X posts')),
+    'validate: X caption warning message present'
+);
+
+// =============================================================================
+// 16. scheduler_validate_queue_item — X platform with caption passes
+// =============================================================================
+
+$xWithCaption = ['platform' => 'X', 'scheduled_for' => '2026-06-01 09:00:00', 'caption' => 'New episode out now! #PTMD', 'asset_path' => '', 'clip_id' => 0];
+$errs = scheduler_validate_queue_item($xWithCaption);
+ptmd_assert_true(count($errs) === 0, 'validate: X with caption passes validation');
+
+// =============================================================================
+// 17. scheduler_auto_fill_item — fills caption from prefix + hashtags
+// =============================================================================
+
+/**
+ * Minimal mock PDO for auto-fill tests.
+ * Simulates a platform preferences row for 'TikTok'.
+ */
+class AutoFillMockStmt
+{
+    private string $platform;
+    public function __construct(string $p) { $this->platform = $p; }
+    public function execute(array $params): void {}
+    public function fetch(): array|false
+    {
+        return $this->platform === 'TikTok' ? [
+            'default_content_type'  => 'clip',
+            'default_caption_prefix'=> "New PTMD clip dropping now 🎬",
+            'default_hashtags'      => '#PTMD #Documentary #TrueCrime',
+        ] : false;
+    }
+}
+
+class AutoFillMockPdo
+{
+    public function prepare(string $sql): AutoFillMockStmt
+    {
+        // Extract the :p placeholder binding to know which platform to return
+        return new AutoFillMockStmt('TikTok');
+    }
+}
+
+$autoFillPdo = new AutoFillMockPdo();
+
+// Empty caption + generic content_type → both should be filled
+$itemToFill = [
+    'platform'     => 'TikTok',
+    'content_type' => 'general',
+    'caption'      => '',
+    'asset_path'   => null,
+    'clip_id'      => 0,
+];
+$filled = scheduler_auto_fill_item($autoFillPdo, $itemToFill);
+ptmd_assert_same($filled['content_type'], 'clip', 'auto_fill: content_type set from platform pref');
+ptmd_assert_true(
+    str_contains($filled['caption'], 'PTMD clip'),
+    'auto_fill: caption prefix injected'
+);
+ptmd_assert_true(
+    str_contains($filled['caption'], '#PTMD'),
+    'auto_fill: hashtags injected into caption'
+);
+
+// =============================================================================
+// 18. scheduler_auto_fill_item — does not overwrite existing values
+// =============================================================================
+
+$existingCaption = [
+    'platform'     => 'TikTok',
+    'content_type' => 'teaser',
+    'caption'      => 'My custom caption.',
+    'asset_path'   => null,
+    'clip_id'      => 0,
+];
+$filledExisting = scheduler_auto_fill_item($autoFillPdo, $existingCaption);
+ptmd_assert_same($filledExisting['caption'],      'My custom caption.', 'auto_fill: existing caption not overwritten');
+ptmd_assert_same($filledExisting['content_type'], 'teaser',             'auto_fill: existing content_type not overwritten');
+
+// =============================================================================
+// 19. scheduler_auto_fill_item — no-op when no pref row for platform
+// =============================================================================
+
+/**
+ * Returns false (no pref row) for any platform.
+ */
+class NoPrefMockStmt
+{
+    public function execute(array $params): void {}
+    public function fetch(): false { return false; }
+}
+
+class NoPrefMockPdo
+{
+    public function prepare(string $sql): NoPrefMockStmt { return new NoPrefMockStmt(); }
+}
+
+$noPrefPdo = new NoPrefMockPdo();
+$unchanged = scheduler_auto_fill_item($noPrefPdo, $itemToFill);
+ptmd_assert_same($unchanged['content_type'], 'general', 'auto_fill: content_type unchanged when no pref row');
+ptmd_assert_same($unchanged['caption'],      '',        'auto_fill: caption unchanged when no pref row');
+
+// =============================================================================
+// 20. scheduler_expand_schedule_to_queue — content_auto uses auto-fill
+// =============================================================================
+
+/**
+ * Mock PDO that:
+ *  - Returns empty list for existing queue dates (SELECT DATE).
+ *  - Returns a platform pref row for auto-fill (SELECT default_content_type…).
+ *  - Accepts INSERT and UPDATE without error.
+ */
+class ContentAutoMockStmt
+{
+    private string $sql;
+    public function __construct(string $sql) { $this->sql = $sql; }
+    public function execute(array $p = []): void {}
+    public function fetchAll(): array
+    {
+        // existing dates query → no existing items
+        return [];
+    }
+    public function fetch(): array|false
+    {
+        // platform prefs query
+        return [
+            'default_content_type'   => 'short-clip',
+            'default_caption_prefix' => 'Watch this 🔍',
+            'default_hashtags'       => '#PTMD',
+        ];
+    }
+    public function bindValue(mixed ...$args): void {}
+}
+
+class ContentAutoMockPdo
+{
+    public array $insertedCaptions = [];
+    public array $insertedStatuses = [];
+
+    public function prepare(string $sql): ContentAutoMockStmt { return new ContentAutoMockStmt($sql); }
+}
+
+// Use a recording mock so we can inspect inserted rows
+class ContentAutoRecordingStmt
+{
+    public string $sql;
+    private ContentAutoRecordingPdo $pdo;
+
+    public function __construct(string $sql, ContentAutoRecordingPdo $pdo)
+    {
+        $this->sql = $sql;
+        $this->pdo = $pdo;
+    }
+
+    public function execute(array $params = []): void
+    {
+        if (str_contains($this->sql, 'INSERT INTO social_post_queue')) {
+            $this->pdo->captionLog[] = $params['caption'] ?? null;
+            $this->pdo->statusLog[]  = $params['status']  ?? null;
+        }
+    }
+
+    public function fetchAll(): array { return []; }
+    public function fetch(): array|false
+    {
+        return [
+            'default_content_type'   => 'short-clip',
+            'default_caption_prefix' => 'Watch this 🔍',
+            'default_hashtags'       => '#PTMD',
+        ];
+    }
+    public function bindValue(mixed ...$args): void {}
+}
+
+class ContentAutoRecordingPdo
+{
+    public array $captionLog = [];
+    public array $statusLog  = [];
+
+    public function prepare(string $sql): ContentAutoRecordingStmt
+    {
+        return new ContentAutoRecordingStmt($sql, $this);
+    }
+}
+
+$recPdo   = new ContentAutoRecordingPdo();
+$capSched = [
+    'id'              => 10,
+    'platform'        => 'TikTok',
+    'content_type'    => 'general',
+    'day_of_week'     => 'Monday',
+    'post_time'       => '10:00:00',
+    'timezone'        => 'UTC',
+    'recurrence_type' => 'weekly',
+];
+
+// Run with contentAuto = true, horizon 8 days (≈ 1 Monday occurrence)
+$from8   = new \DateTimeImmutable('2026-04-13 00:00:00', new \DateTimeZone('UTC')); // a Monday
+$capResult = scheduler_expand_schedule_to_queue($recPdo, $capSched, 8, false, $from8, true);
+
+ptmd_assert_true($capResult['generated'] >= 1, 'content_auto: at least one item generated');
+if (!empty($recPdo->captionLog)) {
+    ptmd_assert_true(
+        str_contains($recPdo->captionLog[0] ?? '', 'Watch this'),
+        'content_auto: auto-filled caption used in INSERT'
+    );
+}
+
+// =============================================================================
+// 21. scheduler_expand_schedule_to_queue — contentAuto=false leaves caption empty
+// =============================================================================
+
+$plainPdo = new ContentAutoRecordingPdo();
+scheduler_expand_schedule_to_queue($plainPdo, $capSched, 8, false, $from8, false);
+if (!empty($plainPdo->captionLog)) {
+    ptmd_assert_same(
+        $plainPdo->captionLog[0],
+        '',
+        'content_auto disabled: caption stays empty in INSERT'
+    );
+}

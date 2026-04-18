@@ -59,5 +59,6 @@ VALUES
     ('scheduler_retry_interval',  '15', 'int',    'Scheduler Retry Interval (min)',   'system', NOW()),
     ('scheduler_horizon_days',    '30', 'int',    'Queue Generation Horizon (days)',  'system', NOW()),
     ('scheduler_lock_expires',    '',   'string', 'Scheduler Lock (auto-managed)',    'system', NOW()),
-    ('scheduler_ip_allowlist',    '',   'string', 'Scheduler IP Allowlist (comma)',   'system', NOW())
+    ('scheduler_ip_allowlist',    '',   'string', 'Scheduler IP Allowlist (comma)',   'system', NOW()),
+    ('scheduler_content_auto',    '0',  'bool',   'Auto-fill Captions from Platform Prefs', 'system', NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();
