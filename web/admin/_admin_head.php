@@ -9,32 +9,48 @@
 require_once __DIR__ . '/../inc/bootstrap.php';
 require_login();
 
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
+$canonicalAdminPath = ptmd_admin_route_from_script($_SERVER['SCRIPT_NAME'] ?? '');
+if (
+    in_array(strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')), ['GET', 'HEAD'], true)
+    && $canonicalAdminPath
+    && $requestPath !== $canonicalAdminPath
+) {
+    header('Location: ' . $canonicalAdminPath, true, 301);
+    exit;
+}
+
 $adminUser  = current_admin();
 $flash      = pull_flash();
 $pageTitle  = $pageTitle  ?? 'Admin | Paper Trail MD';
 $activePage = $activePage ?? '';
+$pageShellClass = trim((string) ($pageShellClass ?? ''));
+$mainClasses = 'ptmd-admin-content ptmd-page-shell';
+if ($pageShellClass !== '') {
+    $mainClasses .= ' ' . preg_replace('/[^A-Za-z0-9 _-]/', '', $pageShellClass);
+}
 
 $navItems = [
-    ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
-    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-sliders',       'id' => 'site-editor'],
-    ['href' => '/admin/cases.php',        'label' => 'cases',        'icon' => 'fa-film',           'id' => 'cases'],
-    ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
-    ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
-    ['href' => '/admin/edit-jobs.php',       'label' => 'Edit Jobs',       'icon' => 'fa-film-simple',    'id' => 'edit-jobs'],
-    ['href' => '/admin/media.php',           'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
-    ['href' => '/admin/ai-tools.php',        'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
-    ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
-    ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
-    ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
-    ['href' => '/admin/monitor.php',         'label' => 'Monitor',         'icon' => 'fa-chart-line',     'id' => 'monitor'],
-    ['href' => '/admin/content-workflow.php','label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
-    ['href' => '/admin/posting-sites.php',   'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
-    ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
-    ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
-    ['href' => '/admin/chat-rooms.php',      'label' => 'Chat Rooms',      'icon' => 'fa-door-open',       'id' => 'chat-rooms'],
-    ['href' => '/admin/chat-users.php',      'label' => 'Chat Users',      'icon' => 'fa-users',           'id' => 'chat-users'],
-    ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',            'id' => 'settings'],
-    ['href' => '/admin/site-tests.php',      'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
+    ['href' => route_admin('dashboard'),        'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
+    ['href' => route_admin('site-editor'),      'label' => 'Site Editor',     'icon' => 'fa-sliders',        'id' => 'site-editor'],
+    ['href' => route_admin('cases'),            'label' => 'Cases',           'icon' => 'fa-film',           'id' => 'cases'],
+    ['href' => route_admin('video-processor'),  'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
+    ['href' => route_admin('overlay-tool'),     'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
+    ['href' => route_admin('edit-jobs'),        'label' => 'Edit Jobs',       'icon' => 'fa-film-simple',    'id' => 'edit-jobs'],
+    ['href' => route_admin('media'),            'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
+    ['href' => route_admin('ai-tools'),         'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
+    ['href' => route_admin('ai-assistant'),     'label' => 'The Analyst',     'icon' => 'fa-robot',          'id' => 'ai-assistant'],
+    ['href' => route_admin('posts'),            'label' => 'Dispatch',        'icon' => 'fa-calendar-check', 'id' => 'posts'],
+    ['href' => route_admin('social-schedule'),  'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
+    ['href' => route_admin('monitor'),          'label' => 'Intelligence',    'icon' => 'fa-chart-line',     'id' => 'monitor'],
+    ['href' => route_admin('content-workflow'), 'label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
+    ['href' => route_admin('posting-sites'),    'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
+    ['href' => route_admin('blueprints'),       'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
+    ['href' => route_admin('chat'),             'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
+    ['href' => route_admin('chat-rooms'),       'label' => 'Chat Rooms',      'icon' => 'fa-door-open',      'id' => 'chat-rooms'],
+    ['href' => route_admin('chat-users'),       'label' => 'Chat Users',      'icon' => 'fa-users',          'id' => 'chat-users'],
+    ['href' => route_admin('settings'),         'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
+    ['href' => route_admin('site-tests'),       'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
 ];
 ?>
 <!DOCTYPE html>
@@ -42,6 +58,7 @@ $navItems = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php ee(csrf_token()); ?>">
     <title><?php ee($pageTitle); ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css">
@@ -58,15 +75,13 @@ $navItems = [
 </head>
 <body>
 <div class="ptmd-admin-shell">
-
-<!-- ── Topbar ──────────────────────────────────────────────────────────────── -->
-<header class="ptmd-admin-topbar d-flex align-items-center justify-content-between px-4">
+    <header class="ptmd-admin-topbar d-flex align-items-center justify-content-between px-4">
     <div class="d-flex align-items-center gap-3">
         <!-- Mobile menu toggle (Bootstrap offcanvas could be wired here) -->
         <button class="btn btn-ptmd-ghost d-lg-none" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
             <i class="fa-solid fa-bars"></i>
         </button>
-        <a href="/admin/dashboard.php" class="d-flex align-items-center gap-2 text-decoration-none">
+        <a href="<?php ee(route_admin('dashboard')); ?>" class="d-flex align-items-center gap-2 text-decoration-none">
             <img
                 src="/assets/brand/logos/ptmd_lockup.png"
                 alt="Paper Trail MD"
@@ -86,7 +101,7 @@ $navItems = [
     </a>
 
     <div class="d-flex align-items-center gap-3">
-        <a href="/index.php" target="_blank" rel="noopener"
+        <a href="<?php ee(route_home()); ?>" target="_blank" rel="noopener"
            class="btn btn-ptmd-ghost btn-sm d-none d-md-inline-flex align-items-center gap-2"
            data-tippy-content="View public site">
             <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -99,7 +114,7 @@ $navItems = [
             >
                 <?php echo e(strtoupper(substr($adminUser['username'] ?? 'A', 0, 1))); ?>
             </div>
-            <a href="/admin/logout.php" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Logout">
+            <a href="<?php ee(route_admin_logout()); ?>" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Logout">
                 <i class="fa-solid fa-right-from-bracket"></i>
             </a>
         </div>
@@ -156,7 +171,7 @@ $navItems = [
                     <?php ee($item['label']); ?>
                 </a>
             <?php endforeach; ?>
-            <a href="/admin/logout.php" class="ptmd-nav-item">
+            <a href="<?php ee(route_admin_logout()); ?>" class="ptmd-nav-item">
                 <span class="nav-icon"><i class="fa-solid fa-right-from-bracket" style="color:var(--ptmd-error)"></i></span>
                 <span style="color:var(--ptmd-error)">Logout</span>
             </a>
@@ -166,7 +181,7 @@ $navItems = [
 </aside>
 
 <!-- ── Main content ────────────────────────────────────────────────────────── -->
-<main class="ptmd-admin-content ptmd-page-shell">
+<main class="<?php echo e(trim($mainClasses)); ?>">
 
     <?php if ($flash): ?>
         <div class="alert ptmd-alert alert-<?php ee($flash['type']); ?> alert-dismissible fade show mb-4" role="alert">

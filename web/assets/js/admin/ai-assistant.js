@@ -1,13 +1,16 @@
 /**
- * PTMD Admin — AI Copilot chat UI
+ * PTMD Admin — The Analyst UI
  *
- * Loaded only on admin/ai-assistant.php via $extraScripts.
- * Requires: a <meta name="csrf-token"> with a valid token to be present
- * before this script executes.
+ * Real session-backed assistant UI using /api/ai_assistant.php
+ * Reworked from the older Copilot DOM bindings to the new Analyst page shell.
+ *
+ * Requires:
+ * - <meta name="csrf-token"> in the admin head
+ * - The Analyst page markup IDs/classes from admin/ai-assistant.php
  */
 'use strict';
 
-// ── Local HTML-escape helper (self-contained; app.js loads after this block) ──
+// ── Small safe HTML escape helper ─────────────────────────────────────────────
 const escHtml = (str) =>
     String(str ?? '')
         .replace(/&/g, '&amp;')
@@ -18,237 +21,300 @@ const escHtml = (str) =>
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let activeSessionId = null;
-const ENDPOINT      = '/api/ai_assistant.php';
-const csrfToken     = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+const ENDPOINT = '/api/ai_assistant.php';
+const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
-// ── DOM refs ──────────────────────────────────────────────────────────────────
-const messagesEl   = document.getElementById('copilotMessages');
-const welcomeEl    = document.getElementById('copilotWelcome');
-const typingEl     = document.getElementById('copilotTyping');
-const form         = document.getElementById('copilotForm');
-const inputEl      = document.getElementById('copilotInput');
-const sendBtn      = document.getElementById('copilotSendBtn');
-const sessionIdEl  = document.getElementById('copilotSessionId');
-const sessionList  = document.getElementById('sessionList');
-const newConvoBtn  = document.getElementById('newConvoBtn');
+// ── DOM refs (The Analyst page) ───────────────────────────────────────────────
+const conversationEl = document.getElementById('analystConversation');
+const emptyStateEl = document.getElementById('analystEmptyState');
+const loadingStateEl = document.getElementById('analystLoadingState');
+const promptInputEl = document.getElementById('analystPromptInput');
+const sendButtonEl = document.getElementById('analystSendButton');
+const scopeEl = document.getElementById('analystScope');
+const modeEl = document.getElementById('analystMode');
 
-// ── Markdown → HTML (minimal, safe subset) ────────────────────────────────────
-function renderMarkdown(text) {
-    // Escape HTML first, then apply simple markdown transforms
-    let s = escHtml(text);
+// Optional session/history support if you add these later
+const sessionListEl = document.getElementById('analystSessionList');
+const newSessionBtnEl = document.getElementById('analystNewSessionBtn');
 
-    // Code blocks
-    s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-
-    // Inline code
-    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Bold
-    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-    // Italic
-    s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-    // Headings (### ## #)
-    s = s.replace(/^### (.+)$/gm, '<h6 class="mb-1 mt-3 ptmd-text-teal">$1</h6>');
-    s = s.replace(/^## (.+)$/gm,  '<h5 class="mb-1 mt-3">$1</h5>');
-    s = s.replace(/^# (.+)$/gm,   '<h4 class="mb-1 mt-3">$1</h4>');
-
-    // Unordered list items (- or *)
-    s = s.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
-    s = s.replace(/(<li>[\s\S]*?<\/li>)/g, (match) => '<ul class="mb-2 ps-4">' + match + '</ul>');
-
-    // Ordered list items
-    s = s.replace(/^[ \t]*\d+\. (.+)$/gm, '<li>$1</li>');
-
-    // Links [text](url) — only allow safe admin links
-    s = s.replace(/\[([^\]]+)\]\((\/admin\/[^\)]+)\)/g, '<a href="$2" class="ptmd-text-teal">$1</a>');
-
-    // Line breaks
-    s = s.replace(/\n{2,}/g, '</p><p class="mb-2">');
-    s = s.replace(/\n/g, '<br>');
-
-    return '<p class="mb-2">' + s + '</p>';
-}
-
-// ── Append a message bubble ───────────────────────────────────────────────────
-function appendMessage(role, content) {
-    if (welcomeEl) welcomeEl.style.display = 'none';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'ptmd-copilot-message ptmd-copilot-message--' + role;
-
-    if (role === 'user') {
-        wrap.innerHTML = `
-            <div class="copilot-msg-bubble copilot-msg-bubble--user">
-                ${escHtml(content)}
-            </div>`;
-    } else {
-        wrap.innerHTML = `
-            <div class="copilot-msg-avatar">
-                <i class="fa-solid fa-robot"></i>
-            </div>
-            <div class="copilot-msg-bubble copilot-msg-bubble--assistant">
-                ${renderMarkdown(content)}
-            </div>`;
-    }
-
-    messagesEl.appendChild(wrap);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-// ── Load an existing session ──────────────────────────────────────────────────
-async function loadSession(sid) {
-    try {
-        const res  = await fetch(`${ENDPOINT}?session_id=${encodeURIComponent(sid)}`, {
-            credentials: 'same-origin',
-        });
-        const data = await res.json();
-        if (!data.ok) {
-            window.PTMDToast?.error(data.error ?? 'Could not load session.');
-            return;
-        }
-
-        // Clear chat
-        messagesEl.innerHTML = '';
-        if (welcomeEl) messagesEl.appendChild(welcomeEl);
-        if (welcomeEl) welcomeEl.style.display = 'none';
-
-        activeSessionId = sid;
-        sessionIdEl.value = String(sid);
-
-        data.messages.forEach(m => appendMessage(m.role, m.content));
-
-        // Mark active in sidebar
-        document.querySelectorAll('.copilot-session-item').forEach(btn => {
-            btn.classList.toggle('active', parseInt(btn.dataset.sessionId) === sid);
-        });
-    } catch {
-        window.PTMDToast?.error('Network error loading session.');
-    }
-}
-
-// ── Start a new conversation ──────────────────────────────────────────────────
-function startNewConvo() {
-    activeSessionId   = null;
+// Hidden session id support if you add it later
+let sessionIdEl = document.getElementById('analystSessionId');
+if (!sessionIdEl) {
+    sessionIdEl = document.createElement('input');
+    sessionIdEl.type = 'hidden';
+    sessionIdEl.id = 'analystSessionId';
     sessionIdEl.value = '';
+    document.body.appendChild(sessionIdEl);
+}
 
-    // Reset chat area
-    messagesEl.innerHTML = '';
-    if (welcomeEl) {
-        messagesEl.appendChild(welcomeEl);
-        welcomeEl.style.display = '';
+// Guard: only run on The Analyst page
+if (!conversationEl || !promptInputEl || !sendButtonEl) {
+    // Quietly do nothing if this script was loaded elsewhere
+} else {
+    // ── Markdown → HTML (minimal, safe subset) ───────────────────────────────
+    function renderMarkdown(text) {
+        let s = escHtml(text);
+
+        // Code blocks
+        s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+        // Inline code
+        s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Bold
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+        // Italic
+        s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+        // Headings
+        s = s.replace(/^### (.+)$/gm, '<h6 class="mb-1 mt-3 ptmd-text-teal">$1</h6>');
+        s = s.replace(/^## (.+)$/gm, '<h5 class="mb-1 mt-3">$1</h5>');
+        s = s.replace(/^# (.+)$/gm, '<h4 class="mb-1 mt-3">$1</h4>');
+
+        // Unordered lists
+        s = s.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
+        s = s.replace(/(<li>[\s\S]*?<\/li>)/g, (match) => '<ul class="mb-2 ps-4">' + match + '</ul>');
+
+        // Safe admin links only
+        s = s.replace(/\[([^\]]+)\]\((\/admin\/[^\)]+)\)/g, '<a href="$2" class="ptmd-text-teal">$1</a>');
+
+        // Paragraphs / line breaks
+        s = s.replace(/\n{2,}/g, '</p><p class="mb-2">');
+        s = s.replace(/\n/g, '<br>');
+
+        return '<p class="mb-2">' + s + '</p>';
     }
 
-    document.querySelectorAll('.copilot-session-item').forEach(btn => btn.classList.remove('active'));
-    inputEl.focus();
-}
+    // ── UI helpers ────────────────────────────────────────────────────────────
+    function hideEmptyState() {
+        if (emptyStateEl) emptyStateEl.classList.add('d-none');
+    }
 
-// ── Add session to sidebar list ───────────────────────────────────────────────
-function prependSessionToList(sid, title) {
-    const emptyNote = sessionList.querySelector('.copilot-sessions-empty');
-    if (emptyNote) emptyNote.remove();
+    function showEmptyState() {
+        if (emptyStateEl) emptyStateEl.classList.remove('d-none');
+    }
 
-    const btn = document.createElement('button');
-    btn.className = 'copilot-session-item active';
-    btn.dataset.sessionId = String(sid);
-    btn.title = title;
-    btn.innerHTML = `
-        <i class="fa-regular fa-message copilot-session-icon"></i>
-        <span class="copilot-session-label">${escHtml(title)}</span>`;
-    btn.addEventListener('click', () => loadSession(sid));
+    function showLoading() {
+        if (loadingStateEl) loadingStateEl.classList.remove('d-none');
+        sendButtonEl.disabled = true;
+    }
 
-    // Deactivate others
-    document.querySelectorAll('.copilot-session-item').forEach(b => b.classList.remove('active'));
+    function hideLoading() {
+        if (loadingStateEl) loadingStateEl.classList.add('d-none');
+        sendButtonEl.disabled = false;
+    }
 
-    sessionList.prepend(btn);
-}
+    function scrollConversationToBottom() {
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+    }
 
-// ── Send a message ────────────────────────────────────────────────────────────
-async function sendMessage(text) {
-    text = text.trim();
-    if (!text) return;
+    function autoResizeTextarea() {
+        promptInputEl.style.height = 'auto';
+        promptInputEl.style.height = Math.min(promptInputEl.scrollHeight, 160) + 'px';
+    }
 
-    appendMessage('user', text);
-    inputEl.value = '';
-    autoResizeTextarea();
+    // ── Message rendering ─────────────────────────────────────────────────────
+    function appendMessage(role, content) {
+        hideEmptyState();
 
-    sendBtn.disabled = true;
-    typingEl.style.display = 'flex';
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+        const wrap = document.createElement('article');
+        wrap.className = `analyst-message analyst-message--${role}`;
 
-    const fd = new FormData();
-    fd.append('csrf_token', csrfToken());
-    fd.append('message',    text);
-    fd.append('session_id', sessionIdEl.value);
+        const bubble = document.createElement('div');
+        bubble.className = 'analyst-bubble glass-card';
 
-    try {
-        const res  = await fetch(ENDPOINT, {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: fd,
-        });
-        const data = await res.json();
+        const label = document.createElement('div');
+        label.className = 'analyst-bubble__label';
+        label.textContent = role === 'user' ? 'You' : 'The Analyst';
 
-        typingEl.style.display = 'none';
+        const body = document.createElement('div');
+        body.className = 'analyst-bubble__body';
 
-        if (data.ok) {
-            appendMessage('assistant', data.text);
-
-            // New session was created
-            if (!activeSessionId && data.session_id) {
-                activeSessionId   = data.session_id;
-                sessionIdEl.value = String(data.session_id);
-
-                const title = text.length > 60 ? text.slice(0, 60) + '…' : text;
-                prependSessionToList(data.session_id, title);
-            }
+        if (role === 'user') {
+            body.innerHTML = escHtml(content);
         } else {
-            window.PTMDToast?.error(data.error ?? 'Something went wrong.');
+            body.innerHTML = renderMarkdown(content);
         }
-    } catch {
-        typingEl.style.display = 'none';
-        window.PTMDToast?.error('Network error. Please try again.');
-    } finally {
-        sendBtn.disabled = false;
-        inputEl.focus();
+
+        bubble.appendChild(label);
+        bubble.appendChild(body);
+        wrap.appendChild(bubble);
+        conversationEl.appendChild(wrap);
+        scrollConversationToBottom();
     }
-}
 
-// ── Auto-resize textarea ──────────────────────────────────────────────────────
-function autoResizeTextarea() {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
-}
-
-// ── Event: form submit ────────────────────────────────────────────────────────
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    sendMessage(inputEl.value);
-});
-
-// ── Event: Enter to send, Shift+Enter for newline ─────────────────────────────
-inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(inputEl.value);
+    function clearConversation() {
+        conversationEl.innerHTML = '';
+        if (emptyStateEl) {
+            conversationEl.appendChild(emptyStateEl);
+            showEmptyState();
+        }
     }
-});
 
-inputEl.addEventListener('input', autoResizeTextarea);
+    // ── Session sidebar/history helpers (optional) ───────────────────────────
+    function markActiveSessionInList(sid) {
+        if (!sessionListEl) return;
 
-// ── Event: new conversation button ────────────────────────────────────────────
-newConvoBtn?.addEventListener('click', startNewConvo);
+        sessionListEl.querySelectorAll('.analyst-history-item, .copilot-session-item').forEach((item) => {
+            const itemSid = parseInt(item.dataset.sessionId || '0', 10);
+            item.classList.toggle('is-active', itemSid === sid);
+            item.classList.toggle('active', itemSid === sid);
+        });
+    }
 
-// ── Event: session items in sidebar ──────────────────────────────────────────
-document.querySelectorAll('.copilot-session-item').forEach(btn => {
-    btn.addEventListener('click', () => loadSession(parseInt(btn.dataset.sessionId)));
-});
+    function prependSessionToList(sid, title) {
+        if (!sessionListEl) return;
 
-// ── Event: quick-start chips ──────────────────────────────────────────────────
-document.querySelectorAll('.copilot-starter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        startNewConvo();
-        sendMessage(chip.dataset.starter);
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'analyst-history-item glass-card is-active';
+        item.dataset.sessionId = String(sid);
+        item.innerHTML = `
+            <div class="analyst-history-item__top">
+                <span class="analyst-history-item__label">${escHtml(title)}</span>
+                <span class="analyst-history-item__time">Now</span>
+            </div>
+            <div class="analyst-history-item__meta">
+                <span class="analyst-history-item__type">Session</span>
+                <span class="analyst-history-item__context">The Analyst</span>
+            </div>
+        `;
+        item.addEventListener('click', () => loadSession(sid));
+
+        sessionListEl.querySelectorAll('.analyst-history-item, .copilot-session-item').forEach((btn) => {
+            btn.classList.remove('is-active', 'active');
+        });
+
+        sessionListEl.prepend(item);
+    }
+
+    function startNewSession() {
+        activeSessionId = null;
+        sessionIdEl.value = '';
+        clearConversation();
+        markActiveSessionInList(-1);
+        promptInputEl.focus();
+    }
+
+    // ── Load an existing session ──────────────────────────────────────────────
+    async function loadSession(sid) {
+        try {
+            const res = await fetch(`${ENDPOINT}?session_id=${encodeURIComponent(sid)}`, {
+                credentials: 'same-origin',
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                window.PTMDToast?.error(data.error ?? 'Could not load session.');
+                return;
+            }
+
+            activeSessionId = sid;
+            sessionIdEl.value = String(sid);
+
+            clearConversation();
+            hideEmptyState();
+
+            data.messages.forEach((m) => appendMessage(m.role, m.content));
+            markActiveSessionInList(sid);
+        } catch {
+            window.PTMDToast?.error('Network error loading session.');
+        }
+    }
+
+    // ── Send a message using the real backend ─────────────────────────────────
+    async function sendMessage(textOverride = null) {
+        const text = (textOverride ?? promptInputEl.value).trim();
+        if (!text) return;
+
+        appendMessage('user', text);
+
+        if (!textOverride) {
+            promptInputEl.value = '';
+            autoResizeTextarea();
+        }
+
+        showLoading();
+
+        const fd = new FormData();
+        fd.append('csrf_token', csrfToken());
+        fd.append('message', text);
+        fd.append('session_id', sessionIdEl.value);
+
+        // Extra context fields for future backend use
+        if (scopeEl) fd.append('scope', scopeEl.value);
+        if (modeEl) fd.append('mode', modeEl.value);
+
+        try {
+            const res = await fetch(ENDPOINT, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: fd,
+            });
+
+            const data = await res.json();
+            hideLoading();
+
+            if (data.ok) {
+                appendMessage('assistant', data.text);
+
+                if (!activeSessionId && data.session_id) {
+                    activeSessionId = data.session_id;
+                    sessionIdEl.value = String(data.session_id);
+
+                    const title = text.length > 60 ? text.slice(0, 60) + '…' : text;
+                    prependSessionToList(data.session_id, title);
+                }
+            } else {
+                window.PTMDToast?.error(data.error ?? 'Something went wrong.');
+            }
+        } catch {
+            hideLoading();
+            window.PTMDToast?.error('Network error. Please try again.');
+        } finally {
+            promptInputEl.focus();
+        }
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────────
+    sendButtonEl.addEventListener('click', () => sendMessage());
+
+    promptInputEl.addEventListener('keydown', (e) => {
+        // Enter sends, Shift+Enter for newline
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+
+        // Ctrl/Cmd + Enter also sends
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+        }
     });
-});
+
+    promptInputEl.addEventListener('input', autoResizeTextarea);
+
+    document.querySelectorAll('[data-analyst-prompt]').forEach((button) => {
+        button.addEventListener('click', () => {
+            sendMessage(button.getAttribute('data-analyst-prompt') || '');
+        });
+    });
+
+    if (newSessionBtnEl) {
+        newSessionBtnEl.addEventListener('click', startNewSession);
+    }
+
+    if (sessionListEl) {
+        sessionListEl.querySelectorAll('[data-session-id]').forEach((item) => {
+            item.addEventListener('click', () => {
+                const sid = parseInt(item.dataset.sessionId || '0', 10);
+                if (sid) loadSession(sid);
+            });
+        });
+    }
+
+    // Initial sizing
+    autoResizeTextarea();
+}

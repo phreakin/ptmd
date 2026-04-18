@@ -46,6 +46,57 @@ body::before {
     color: var(--ptmd-text-dim);
 }
 
+.ptmd-footer {
+    width: 100%;
+    padding: 16px 24px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: auto;
+}
+
+.ptmd-footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.footer-brand {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.footer-divider {
+    opacity: 0.5;
+}
+
+.footer-right {
+    display: flex;
+    gap: 16px;
+}
+
+.footer-link {
+    font-size: 14px;
+    opacity: 0.75;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.footer-link:hover {
+    opacity: 1;
+}
+
+
 @media (max-width: 1024px) {
     .ptmd-admin-shell {
         grid-template-columns: 1fr;

@@ -308,7 +308,7 @@ function fmtDateTime(str) {
                 if (data.members_only) {
                     messagesEl.innerHTML = `<div class="ptmd-muted small text-center py-4">
                         <i class="fa-solid fa-lock me-2"></i>Members only room.
-                        <a href="/index.php?page=chat-login" class="ptmd-text-teal">Sign in</a> to view messages.
+                        <a href="/chat-login" class="ptmd-text-teal">Sign in</a> to view messages.
                     </div>`;
                 }
                 return;

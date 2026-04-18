@@ -1,91 +1,85 @@
 <?php
 /**
- * PTMD — Front Controller / Router
+ * PTMD - Front Controller / Router
  *
- * All requests are routed here via .htaccess.
- * Admin pages have their own entry points under /admin/.
- *
- * Routing modes (both supported):
- *   1. CLEAN PATHS (preferred, used by route helpers):
- *        /              → home
- *        /cases         → cases
- *        /case/{slug}   → case (slug extracted from path)
- *        /series        → series
- *        /chat          → case-chat
- *        /case-chat     → case-chat (alias)
- *        /about         → about
- *        /contact       → contact
- *        /login         → login
- *        /chat-login    → chat-login
- *        /register      → register
- *        /account       → account
- *        /logout        → logout (POST only, inline handler)
- *
- *   2. LEGACY QUERY STRING (back-compat):
- *        /index.php?page=cases
- *        /index.php?page=case&slug=foo
- *        ...
- *
- * Both map to the same internal page names in $allowedPages and include
- * the same file under /pages/<page>.php.
+ * All public requests are routed here via .htaccess. Clean path-based routes
+ * are canonical; legacy query-string routes are redirected to their clean
+ * equivalents for GET/HEAD traffic.
  */
 
 require_once __DIR__ . '/inc/bootstrap.php';
 
-// ── Allowed public pages ──────────────────────────────────────────────────────
 $allowedPages = [
-    'home', 'cases', 'case', 'about', 'series', 'contact',
+    'home', 'cases', 'case', 'about', 'contact',
     'case-chat', 'register', 'chat-login', 'login', 'account',
 ];
 
-// ── Clean-path → page-name table ──────────────────────────────────────────────
 $cleanRoutes = [
-    ''            => 'home',
-    'cases'       => 'cases',
-    'series'      => 'series',
-    'about'       => 'about',
-    'contact'     => 'contact',
-    'chat'        => 'case-chat',   // preferred clean alias
-    'case-chat'   => 'case-chat',   // legacy alias still works
-    'login'       => 'login',
-    'chat-login'  => 'chat-login',
-    'register'    => 'register',
-    'account'     => 'account',
-    'logout'      => 'logout',
+    ''           => 'home',
+    'cases'      => 'cases',
+    'about'      => 'about',
+    'contact'    => 'contact',
+    'chat'       => 'case-chat',
+    'login'      => 'login',
+    'chat-login' => 'chat-login',
+    'register'   => 'register',
+    'account'    => 'account',
+    'logout'     => 'logout',
 ];
 
-// ── Resolve page ──────────────────────────────────────────────────────────────
-// 1. Try clean-path routing first.
-$page = null;
-$slug = null;
+$requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$canRedirect = in_array($requestMethod, ['GET', 'HEAD'], true);
 
 $uriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 $trimmed = trim($uriPath, '/');
 
-// Only interpret as a clean route if we didn't hit /index.php directly.
-if ($trimmed !== 'index.php') {
-    if (isset($cleanRoutes[$trimmed])) {
+$page = 'home';
+$slug = null;
+
+if ($trimmed === 'index.php') {
+    $legacyPage = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
+    $legacySlug = isset($_GET['slug']) ? trim((string) $_GET['slug']) : '';
+
+    if ($canRedirect) {
+        $canonical = ptmd_public_route_path($legacyPage, $legacySlug);
+        if ($canonical !== null) {
+            header('Location: ' . $canonical, true, 301);
+            exit;
+        }
+    }
+
+    $page = $legacyPage;
+    $slug = $legacySlug !== '' ? $legacySlug : null;
+} else {
+    if ($trimmed === 'series') {
+        if ($canRedirect) {
+            header('Location: ' . route_cases(), true, 301);
+            exit;
+        }
+        $page = 'cases';
+    } elseif ($trimmed === 'case-chat') {
+        if ($canRedirect) {
+            header('Location: ' . route_chat(), true, 301);
+            exit;
+        }
+        $page = 'case-chat';
+    } elseif (isset($cleanRoutes[$trimmed])) {
         $page = $cleanRoutes[$trimmed];
     } elseif (str_starts_with($trimmed, 'case/')) {
-        // /case/<slug>
         $page = 'case';
         $slug = substr($trimmed, strlen('case/'));
+    } elseif ($trimmed !== '') {
+        http_response_code(404);
+        $page = 'home';
     }
 }
 
-// 2. Fall back to legacy ?page=X query param.
-if ($page === null) {
-    $page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
-}
-
-// Slug override from query string still wins if explicitly set.
-if (isset($_GET['slug']) && $_GET['slug'] !== '') {
+if (isset($_GET['slug']) && $_GET['slug'] !== '' && $page === 'case') {
     $slug = trim((string) $_GET['slug']);
 }
 
-// ── Logout — inline handler, no template needed ───────────────────────────────
 if ($page === 'logout') {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && verify_csrf_token($_POST['csrf_token'] ?? '')) {
+    if ($requestMethod === 'POST' && verify_csrf_token($_POST['csrf_token'] ?? '')) {
         viewer_logout();
     }
     header('Location: ' . route_home());
@@ -97,7 +91,6 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'home';
 }
 
-// ── case detail — resolve slug early ──────────────────────────────────────────
 $current_case = null;
 
 if ($page === 'case') {
@@ -113,10 +106,20 @@ if ($page === 'case') {
     }
 }
 
-// ── Page title ────────────────────────────────────────────────────────────────
+$routeKey = match ($page) {
+    'case-chat' => 'chat',
+    default => $page,
+};
+
+$canonicalPath = ptmd_public_route_path($page, $current_case['slug'] ?? ($slug ?? '')) ?? route_home();
+$GLOBALS['ptmd_route_context'] = ptmd_route_context(
+    $routeKey,
+    $canonicalPath,
+    $page === 'case' ? ($current_case['slug'] ?? $slug) : null
+);
+
 $pageTitle = page_title($page, $current_case);
 
-// ── Render ────────────────────────────────────────────────────────────────────
 include __DIR__ . '/inc/head.php';
 include __DIR__ . '/inc/header.php';
 include __DIR__ . '/pages/' . $page . '.php';

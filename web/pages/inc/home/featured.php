@@ -39,7 +39,7 @@
                     <div>
                         <a
                             class="btn btn-ptmd-primary"
-                            href="/index.php?page=case&amp;slug=<?php ee($featuredcase['slug']); ?>"
+                            href="<?php ee(route_case((string) $featuredcase['slug'])); ?>"
                         >
                             <i class="fa-solid fa-play me-2"></i>Watch + Read
                         </a>
@@ -52,7 +52,7 @@
         <div class="ptmd-panel p-lg ptmd-text-muted">
             <i class="fa-solid fa-circle-info me-2"></i>
             No published cases yet. Import <code>database/seed.sql</code> or add one via
-            <a href="/admin/cases.php">Admin → cases</a>.
+            <a href="<?php ee(route_admin('cases')); ?>">Admin → Cases</a>.
         </div>
     <?php endif; ?>
 </section>

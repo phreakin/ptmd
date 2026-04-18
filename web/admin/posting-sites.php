@@ -6,6 +6,8 @@
  * (posting_sites) and their per-site default options (site_posting_options).
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle      = 'Posting Sites | PTMD Admin';
 $activePage     = 'posting-sites';
 $pageHeading    = 'Posting Sites';
@@ -20,7 +22,7 @@ $pdo = get_db();
 // ---------------------------------------------------------------------------
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/posting-sites.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('posting-sites'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? '';
@@ -39,9 +41,9 @@ if ($pdo && is_post()) {
                 'INSERT INTO posting_sites (site_key, display_name, is_active, sort_order, created_at, updated_at)
                  VALUES (:key, :name, 1, :order, NOW(), NOW())'
             )->execute(['key' => $siteKey, 'name' => $displayName, 'order' => $sortOrder]);
-            redirect('/admin/posting-sites.php', 'Site added.', 'success');
+            redirect(route_admin('posting-sites'), 'Site added.', 'success');
         }
-        redirect('/admin/posting-sites.php', 'Site key and display name are required.', 'warning');
+        redirect(route_admin('posting-sites'), 'Site key and display name are required.', 'warning');
     }
 
     if ($postAction === 'toggle') {
@@ -50,7 +52,7 @@ if ($pdo && is_post()) {
         if ($siteId > 0) {
             $pdo->prepare('UPDATE posting_sites SET is_active = :a, updated_at = NOW() WHERE id = :id')
                 ->execute(['a' => $isActive ? 0 : 1, 'id' => $siteId]);
-            redirect('/admin/posting-sites.php', 'Site updated.', 'success');
+            redirect(route_admin('posting-sites'), 'Site updated.', 'success');
         }
     }
 
@@ -60,7 +62,7 @@ if ($pdo && is_post()) {
         if ($siteId > 0) {
             $pdo->prepare('UPDATE posting_sites SET sort_order = :order, updated_at = NOW() WHERE id = :id')
                 ->execute(['order' => $sortOrder, 'id' => $siteId]);
-            redirect('/admin/posting-sites.php', 'Sort order updated.', 'success');
+            redirect(route_admin('posting-sites'), 'Sort order updated.', 'success');
         }
     }
 
@@ -68,7 +70,7 @@ if ($pdo && is_post()) {
         $siteId = (int) ($_POST['id'] ?? 0);
         if ($siteId > 0) {
             $pdo->prepare('DELETE FROM posting_sites WHERE id = :id')->execute(['id' => $siteId]);
-            redirect('/admin/posting-sites.php', 'Site deleted.', 'success');
+            redirect(route_admin('posting-sites'), 'Site deleted.', 'success');
         }
     }
 
@@ -101,7 +103,7 @@ if ($pdo && is_post()) {
                 'hashtags'=> $hashtags,
                 'status'  => $defaultStatus,
             ]);
-            redirect('/admin/posting-sites.php', 'Posting options saved.', 'success');
+            redirect(route_admin('posting-sites'), 'Posting options saved.', 'success');
         }
     }
 }
@@ -127,7 +129,7 @@ $sites = $pdo ? $pdo->query(
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-plus me-2 ptmd-text-teal"></i>Add Posting Site
     </h2>
-    <form method="post" action="/admin/posting-sites.php">
+    <form method="post" action="<?php echo e(route_admin('posting-sites')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
@@ -168,7 +170,7 @@ $sites = $pdo ? $pdo->query(
                     </div>
                     <div class="d-flex gap-2">
                         <!-- Toggle active -->
-                        <form method="post" action="/admin/posting-sites.php" class="d-inline">
+                        <form method="post" action="<?php echo e(route_admin('posting-sites')); ?>" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="_action" value="toggle">
                             <input type="hidden" name="id" value="<?php ee((string) $site['id']); ?>">
@@ -179,7 +181,7 @@ $sites = $pdo ? $pdo->query(
                             </button>
                         </form>
                         <!-- Delete -->
-                        <form method="post" action="/admin/posting-sites.php" class="d-inline">
+                        <form method="post" action="<?php echo e(route_admin('posting-sites')); ?>" class="d-inline">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="_action" value="delete">
                             <input type="hidden" name="id" value="<?php ee((string) $site['id']); ?>">
@@ -194,7 +196,7 @@ $sites = $pdo ? $pdo->query(
                 </div>
 
                 <!-- Sort order + posting options inline form -->
-                <form method="post" action="/admin/posting-sites.php">
+                <form method="post" action="<?php echo e(route_admin('posting-sites')); ?>">
                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                     <input type="hidden" name="_action" value="save_options">
                     <input type="hidden" name="site_id" value="<?php ee((string) $site['id']); ?>">

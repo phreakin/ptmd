@@ -31,7 +31,7 @@ $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 // ---------------------------------------------------------------------------
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/blueprints.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('blueprints'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? '';
@@ -53,7 +53,7 @@ if ($pdo && is_post()) {
         $adminId         = (current_admin()['id'] ?? null) ? (int) current_admin()['id'] : null;
 
         if ($title === '') {
-            redirect('/admin/blueprints.php?tab=video', 'Title is required.', 'warning');
+            redirect(route_admin('blueprints', ['tab' => 'video']), 'Title is required.', 'warning');
         }
 
         if ($id > 0) {
@@ -68,7 +68,7 @@ if ($pdo && is_post()) {
                 'obj'   => $objective, 'brand' => $brandNotes, 'dur' => $targetDuration,
                 'id'    => $id,
             ]);
-            redirect('/admin/blueprints.php?tab=video', 'Video blueprint updated.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'video']), 'Video blueprint updated.', 'success');
         } else {
             $pdo->prepare(
                 'INSERT INTO video_blueprints
@@ -79,7 +79,7 @@ if ($pdo && is_post()) {
                 'obj'   => $objective, 'brand' => $brandNotes, 'dur' => $targetDuration,
                 'by'    => $adminId,
             ]);
-            redirect('/admin/blueprints.php?tab=video', 'Video blueprint created.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'video']), 'Video blueprint created.', 'success');
         }
     }
 
@@ -88,7 +88,7 @@ if ($pdo && is_post()) {
         if ($id > 0) {
             $pdo->prepare('UPDATE video_blueprints SET status = "archived", updated_at = NOW() WHERE id = :id')
                 ->execute(['id' => $id]);
-            redirect('/admin/blueprints.php?tab=video', 'Video blueprint archived.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'video']), 'Video blueprint archived.', 'success');
         }
     }
 
@@ -114,7 +114,7 @@ if ($pdo && is_post()) {
         $platformJson = !empty($platformTargets) ? json_encode($platformTargets) : null;
 
         if ($title === '') {
-            redirect('/admin/blueprints.php?tab=clip', 'Title is required.', 'warning');
+            redirect(route_admin('blueprints', ['tab' => 'clip']), 'Title is required.', 'warning');
         }
 
         if ($id > 0) {
@@ -129,7 +129,7 @@ if ($pdo && is_post()) {
                 'dur'   => $duration, 'ar' => $aspectRatio, 'brand' => $brandNotes,
                 'pt'    => $platformJson, 'id' => $id,
             ]);
-            redirect('/admin/blueprints.php?tab=clip', 'Clip blueprint updated.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'clip']), 'Clip blueprint updated.', 'success');
         } else {
             $pdo->prepare(
                 'INSERT INTO clip_format_templates
@@ -141,7 +141,7 @@ if ($pdo && is_post()) {
                 'dur'   => $duration, 'ar' => $aspectRatio, 'brand' => $brandNotes,
                 'pt'    => $platformJson, 'by' => $adminId,
             ]);
-            redirect('/admin/blueprints.php?tab=clip', 'Clip blueprint created.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'clip']), 'Clip blueprint created.', 'success');
         }
     }
 
@@ -150,7 +150,7 @@ if ($pdo && is_post()) {
         if ($id > 0) {
             $pdo->prepare('UPDATE clip_format_templates SET status = "archived", updated_at = NOW() WHERE id = :id')
                 ->execute(['id' => $id]);
-            redirect('/admin/blueprints.php?tab=clip', 'Clip blueprint archived.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'clip']), 'Clip blueprint archived.', 'success');
         }
     }
 
@@ -170,14 +170,14 @@ if ($pdo && is_post()) {
         $adminId         = (current_admin()['id'] ?? null) ? (int) current_admin()['id'] : null;
 
         if ($title === '' || $siteKey === '') {
-            redirect('/admin/blueprints.php?tab=posting', 'Title and platform are required.', 'warning');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Title and platform are required.', 'warning');
         }
 
         // Verify site_key exists
         $siteCheck = $pdo->prepare('SELECT id FROM posting_sites WHERE site_key = :key LIMIT 1');
         $siteCheck->execute(['key' => $siteKey]);
         if (!$siteCheck->fetch()) {
-            redirect('/admin/blueprints.php?tab=posting', 'Unknown platform site key.', 'warning');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Unknown platform site key.', 'warning');
         }
 
         if ($id > 0) {
@@ -192,7 +192,7 @@ if ($pdo && is_post()) {
                 'status' => $status, 'cap' => $captionTemplate, 'rh' => $reqHashtags,
                 'bp' => $bannedPhrases, 'cta' => $ctaPattern, 'id' => $id,
             ]);
-            redirect('/admin/blueprints.php?tab=posting', 'Posting blueprint updated.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Posting blueprint updated.', 'success');
         } else {
             $pdo->prepare(
                 'INSERT INTO posting_blueprints
@@ -204,7 +204,7 @@ if ($pdo && is_post()) {
                 'status' => $status, 'cap' => $captionTemplate, 'rh' => $reqHashtags,
                 'bp' => $bannedPhrases, 'cta' => $ctaPattern, 'by' => $adminId,
             ]);
-            redirect('/admin/blueprints.php?tab=posting', 'Posting blueprint created.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Posting blueprint created.', 'success');
         }
     }
 
@@ -213,7 +213,7 @@ if ($pdo && is_post()) {
         if ($id > 0) {
             $pdo->prepare('UPDATE posting_blueprints SET status = "archived", updated_at = NOW() WHERE id = :id')
                 ->execute(['id' => $id]);
-            redirect('/admin/blueprints.php?tab=posting', 'Posting blueprint archived.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Posting blueprint archived.', 'success');
         }
     }
 
@@ -240,16 +240,16 @@ if ($pdo && is_post()) {
                 'pt'  => $postTime, 'tz' => $timezone, 'pri' => $priority,
                 'gap' => $minGap, 'mpd' => $maxPerDay,
             ]);
-            redirect('/admin/blueprints.php?tab=posting', 'Schedule rule added.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Schedule rule added.', 'success');
         }
-        redirect('/admin/blueprints.php?tab=posting', 'Invalid schedule rule — check all fields.', 'warning');
+        redirect(route_admin('blueprints', ['tab' => 'posting']), 'Invalid schedule rule — check all fields.', 'warning');
     }
 
     if ($postAction === 'delete_rule') {
         $ruleId = (int) ($_POST['id'] ?? 0);
         if ($ruleId > 0) {
             $pdo->prepare('DELETE FROM blueprint_schedule_rules WHERE id = :id')->execute(['id' => $ruleId]);
-            redirect('/admin/blueprints.php?tab=posting', 'Schedule rule deleted.', 'success');
+            redirect(route_admin('blueprints', ['tab' => 'posting']), 'Schedule rule deleted.', 'success');
         }
     }
 }
@@ -316,7 +316,7 @@ if ($editId > 0 && $pdo) {
     }
 }
 
-$tabBase = '/admin/blueprints.php?tab=';
+$tabBase = route_admin('blueprints') . '?tab=';
 ?>
 
 <!-- Tab navigation -->

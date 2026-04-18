@@ -49,8 +49,12 @@ if ($pdo) {
             <div class="stat-icon" style="background:rgba(46,196,182,0.15)">
                 <i class="fa-solid fa-film ptmd-text-teal"></i>
             </div>
-            <div class="stat-value ptmd-text-teal"><?php ee((string) $stats['cases']); ?></div>
-            <div class="stat-label">Published cases</div>
+            <div class="stat-value ptmd-text-teal">
+                <?php ee((string) $stats['cases']); ?>
+            </div>
+            <div class="stat-label">
+                Published Cases
+            </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -65,15 +69,17 @@ if ($pdo) {
     <div class="col-6 col-lg-3">
         <div class="ptmd-card-stat">
             <div class="stat-icon" style="background:rgba(193,18,31,0.12)">
-                <i class="fa-solid fa-comments" style="color:#ff4d5a"></i>
+                <i class="fas fa-comments" style="color:#ff4d5a"></i>
             </div>
             <div class="stat-value" style="color:#ff4d5a"><?php ee((string) $stats['chat']); ?></div>
-            <div class="stat-label">Approved Chat</div>
+            <div class="stat-label">
+                <span class="ptmd-status ptmd-status-approved" style="font-size:var(--text-xs)">Approved</span>
+            </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="ptmd-card-stat">
-            <div class="stat-icon" style="background:rgba(106,13,173,0.15)">
+            <div class="stat-icon">
                 <i class="fa-solid fa-wand-magic-sparkles" style="color:#c084fc"></i>
             </div>
             <div class="stat-value" style="color:#c084fc"><?php ee((string) $stats['ai']); ?></div>
@@ -88,26 +94,26 @@ if ($pdo) {
         <div class="ptmd-panel p-lg">
             <h2 class="h6 mb-4 ptmd-muted text-uppercase" style="letter-spacing:.08em">Quick Actions</h2>
             <div class="d-flex flex-wrap gap-3">
-                <a href="/admin/cases.php" class="btn btn-ptmd-outline">
+                <a href="<?php ee(route_admin('cases')); ?>" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-plus me-2"></i>New case
                 </a>
-                <a href="/admin/video-processor.php" class="btn btn-ptmd-outline">
+                <a href="<?php ee(route_admin('video-processor')); ?>" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-scissors me-2"></i>Process Video
                 </a>
-                <a href="/admin/overlay-tool.php" class="btn btn-ptmd-outline">
+                <a href="<?php ee(route_admin('overlay-tool')); ?>" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-layer-group me-2"></i>Apply Overlays
                 </a>
-                <a href="/admin/ai-tools.php" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
+                <a href="<?php ee(route_admin('ai-tools')); ?>" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
                     <i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Content Studio
                 </a>
-                <a href="/admin/ai-assistant.php" class="btn btn-ptmd-outline" style="border-color:rgba(46,196,182,0.4);color:var(--ptmd-teal)">
-                    <i class="fa-solid fa-robot me-2"></i>AI Copilot
+                <a href="<?php ee(route_admin('ai-assistant')); ?>" class="btn btn-ptmd-outline" style="border-color:rgba(46,196,182,0.4);color:var(--ptmd-teal)">
+                    <i class="fa-solid fa-robot me-2"></i>The Analyst
                 </a>
-                <a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
+                <a href="<?php ee(route_admin('social-schedule')); ?>" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-calendar me-2"></i>Schedule Post
                 </a>
-                <a href="/admin/monitor.php" class="btn btn-ptmd-outline">
-                    <i class="fa-solid fa-chart-line me-2"></i>Monitor
+                <a href="<?php ee(route_admin('monitor')); ?>" class="btn btn-ptmd-outline">
+                    <i class="fa-solid fa-chart-line me-2"></i>Intelligence
                 </a>
             </div>
         </div>
@@ -122,7 +128,7 @@ if ($pdo) {
         <div class="ptmd-panel p-lg">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="h6 mb-0">Recent Cases</h2>
-                <a href="/admin/cases.php" class="btn btn-ptmd-ghost btn-sm">
+                <a href="<?php ee(route_admin('cases')); ?>" class="btn btn-ptmd-ghost btn-sm">
                     View All <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
             </div>
@@ -139,7 +145,7 @@ if ($pdo) {
                         <?php foreach ($recentEps as $ep): ?>
                             <tr>
                                 <td>
-                                    <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="<?php ee(route_admin('cases', ['edit' => (string) $ep['id']])); ?>"
                                        class="ptmd-text-muted fw-500">
                                         <?php ee($ep['title']); ?>
                                     </a>
@@ -167,7 +173,7 @@ if ($pdo) {
         <div class="ptmd-panel p-lg">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="h6 mb-0">Upcoming Queue</h2>
-                <a href="/admin/posts.php" class="btn btn-ptmd-ghost btn-sm">
+                <a href="<?php ee(route_admin('posts')); ?>" class="btn btn-ptmd-ghost btn-sm">
                     View All <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
             </div>

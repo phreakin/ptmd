@@ -6,7 +6,7 @@ require_once __DIR__ . '/../inc/chat_auth.php';
 
 // Already logged in?
 if (is_chat_logged_in()) {
-    redirect('/index.php?page=case-chat');
+    redirect(route_chat());
 }
 
 $errors = [];
@@ -76,7 +76,7 @@ if (is_post()) {
 
                     $newId = (int) $pdo->lastInsertId();
                     chat_login($newId, false);
-                    redirect('/index.php?page=case-chat', 'Welcome! You can now post in Case Chat.', 'success');
+                    redirect(route_chat(), 'Welcome! You can now post in Case Chat.', 'success');
                 }
             }
         }
@@ -107,7 +107,7 @@ if (is_post()) {
     <?php endif; ?>
 
     <div class="ptmd-panel p-xl" data-animate>
-        <form method="post" action="/index.php?page=register" autocomplete="off" novalidate>
+        <form method="post" action="<?php ee(route_register()); ?>" autocomplete="off" novalidate>
             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
 
             <div class="mb-4">
@@ -153,7 +153,7 @@ if (is_post()) {
 
         <p class="ptmd-muted small text-center mt-4 mb-0">
             Already have an account?
-            <a href="/index.php?page=chat-login" class="ptmd-text-teal">Sign in</a>
+            <a href="<?php ee(route_chat_login()); ?>" class="ptmd-text-teal">Sign in</a>
         </p>
     </div>
 

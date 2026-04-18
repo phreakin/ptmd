@@ -9,6 +9,8 @@
  * Batch submission → /api/apply_overlays.php
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Overlay Tool | PTMD Admin';
 $activePage   = 'overlay-tool';
 $pageHeading  = 'Overlay Tool';
@@ -94,7 +96,7 @@ if ($pdo) {
             <?php if (!$brandOverlays && !$dbOverlays): ?>
                 <div class="ptmd-muted small">
                     No overlay assets found in <code>/assets/brand/overlays/</code> or media library.
-                    <a href="/admin/media.php">Upload one via Media Library</a>.
+                    <a href="<?php ee(route_admin('media')); ?>">Upload one via Media Library</a>.
                 </div>
             <?php endif; ?>
 
@@ -242,8 +244,8 @@ if ($pdo) {
             <?php if (!$dbClips && !$localClips): ?>
                 <div class="ptmd-muted small">
                     No clips found. Upload clips via
-                    <a href="/admin/video-processor.php">Video Processor</a>
-                    or the <a href="/admin/media.php">Media Library</a>.
+                    <a href="<?php ee(route_admin('video-processor')); ?>">Video Processor</a>
+                    or the <a href="<?php ee(route_admin('media')); ?>">Media Library</a>.
                 </div>
             <?php endif; ?>
 
@@ -379,7 +381,7 @@ if ($pdo) {
                             </td>
                             <td>
                                 <a
-                                    href="/admin/overlay-tool.php?view_job=<?php ee((string) $job['id']); ?>"
+                                    href="<?php ee(route_admin('overlay-tool', ['view_job' => (string) $job['id']])); ?>"
                                     class="btn btn-ptmd-ghost btn-sm"
                                     data-tippy-content="View items"
                                 >

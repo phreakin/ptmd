@@ -49,11 +49,11 @@ if ($pdo) {
 
 if (is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/site-editor.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('site-editor'), 'Invalid CSRF token.', 'danger');
     }
 
     if (!$pdo) {
-        redirect('/admin/site-editor.php', 'Database unavailable.', 'danger');
+        redirect(route_admin('site-editor'), 'Database unavailable.', 'danger');
     }
 
     $enabledModules = array_filter(
@@ -88,7 +88,7 @@ if (is_post()) {
 
     $json = json_encode($finalOrder, JSON_UNESCAPED_SLASHES);
     if ($json === false) {
-        redirect('/admin/site-editor.php', 'Could not encode layout.', 'danger');
+        redirect(route_admin('site-editor'), 'Could not encode layout.', 'danger');
     }
 
     $stmt = $pdo->prepare(
@@ -103,13 +103,13 @@ if (is_post()) {
         'group_name' => 'homepage',
     ]);
 
-    redirect('/admin/site-editor.php', 'Homepage layout updated.', 'success');
+    redirect(route_admin('site-editor'), 'Homepage layout updated.', 'success');
 }
 
 $enabledMap = array_fill_keys($currentOrder, true);
 ?>
 
-<form method="post" action="/admin/site-editor.php">
+<form method="post" action="<?php ee(route_admin('site-editor')); ?>">
     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
     <input type="hidden" name="module_order" id="moduleOrderInput" value="<?php ee(implode(',', $currentOrder)); ?>">
 
@@ -119,7 +119,7 @@ $enabledMap = array_fill_keys($currentOrder, true);
                 <h2 class="h5 mb-1">Homepage Modules</h2>
                 <p class="ptmd-muted small mb-0">Drag to reorder, click arrows to nudge, and toggle what appears on the page.</p>
             </div>
-            <a href="/index.php?page=home" target="_blank" rel="noopener" class="btn btn-ptmd-ghost btn-sm">
+            <a href="<?php ee(route_home()); ?>" target="_blank" rel="noopener" class="btn btn-ptmd-ghost btn-sm">
                 <i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Preview Homepage
             </a>
         </div>

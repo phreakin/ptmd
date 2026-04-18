@@ -8,4 +8,4 @@ require_once __DIR__ . '/../inc/bootstrap.php';
 require_once __DIR__ . '/../inc/chat_auth.php';
 
 chat_logout();
-redirect('/index.php?page=case-chat', 'You have been signed out.', 'info');
+redirect(route_chat(), 'You have been signed out.', 'info');

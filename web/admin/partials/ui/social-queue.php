@@ -1,8 +1,16 @@
 <section class="ptmd-screen-queue ptmd-stack-md">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
         <div class="ptmd-stack-sm">
-            <h2 class="h6 mb-0">Social Queue</h2>
-            <p class="ptmd-muted mb-0 small">Control-room triage for pending, blocked, stale, and at-risk dispatches.</p>
+            <h2 class="h6 mb-0">
+                <span class="ptmd-icon ptmd-icon-queue"></span>
+                Social Queue
+            </h2>
+            <p class="ptmd-muted mb-0 small">
+                <span class="ptmd-status ptmd-status-good">
+                    <span class="ptmd-icon ptmd-icon-check"></span>
+                    Control-room triage for pending, blocked, stale, and at-risk dispatches
+                </span>
+                </p>
         </div>
         <span class="ptmd-status ptmd-status-warning">2 blocked items</span>
     </div>

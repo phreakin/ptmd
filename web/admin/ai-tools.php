@@ -67,7 +67,7 @@ if ($pdo) {
     <div class="alert ptmd-alert alert-warning mb-5" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
         <strong>OpenAI API key not configured.</strong>
-        Go to <a href="/admin/settings.php">Settings</a> and set the
+        Go to <a href="<?php ee(route_admin('settings')); ?>">Settings</a> and set the
         <strong>OpenAI API Key</strong> to enable AI features.
     </div>
 <?php endif; ?>

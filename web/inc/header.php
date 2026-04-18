@@ -43,17 +43,8 @@ $flash = pull_flash();
                         </a>
                     </li>
                     <li class="nav-item">
-<<<<<<< HEAD
                         <a class="nav-link" href="<?php ee(route_cases()); ?>">
-=======
-                        <a class="nav-link" href="/index.php?page=cases">
->>>>>>> 8d1ffc660c62b1a7a2a8c6632767004f6683a206
                             <i class="fa-solid fa-folder-open fa-sm me-1"></i>Cases
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php ee(route_series()); ?>">
-                            <i class="fa-solid fa-layer-group fa-sm me-1"></i>Series
                         </a>
                     </li>
                     <li class="nav-item">

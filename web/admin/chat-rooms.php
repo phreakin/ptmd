@@ -3,7 +3,7 @@
  * PTMD Admin — Chat Rooms
  *
  * Create, edit, and archive chat rooms.  Each room has a unique slug used
- * in the public URL (/index.php?page=case-chat&room=<slug>) and can be
+ * in the public URL (/chat?room=<slug>) and can be
  * linked to a specific case.
  */
 
@@ -20,7 +20,7 @@ $pdo = get_db();
 // ── POST actions ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/chat-rooms.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('chat-rooms'), 'Invalid CSRF token.', 'danger');
     }
 
     $action = trim((string) ($_POST['action'] ?? ''));
@@ -44,7 +44,7 @@ if ($pdo && is_post()) {
 
         if ($name === '' || $slug === '') {
             set_flash('Name and slug are required.', 'danger');
-            redirect('/admin/chat-rooms.php');
+            redirect(route_admin('chat-rooms'));
         }
 
         // Normalise slug
@@ -68,7 +68,7 @@ if ($pdo && is_post()) {
                 'te'      => $triviaEnabled,
                 'de'      => $donationsEnabled,
             ]);
-            redirect('/admin/chat-rooms.php', 'Room created.', 'success');
+            redirect(route_admin('chat-rooms'), 'Room created.', 'success');
         } else {
             $stmt = $pdo->prepare(
                 'UPDATE chat_rooms SET slug=:slug, name=:name, description=:desc, case_id=:case_id,
@@ -89,7 +89,7 @@ if ($pdo && is_post()) {
                 'de'      => $donationsEnabled,
                 'id'      => $id,
             ]);
-            redirect('/admin/chat-rooms.php', 'Room updated.', 'success');
+            redirect(route_admin('chat-rooms'), 'Room updated.', 'success');
         }
     }
 
@@ -98,7 +98,7 @@ if ($pdo && is_post()) {
         $id = (int) ($_POST['id'] ?? 0);
         $pdo->prepare('UPDATE chat_rooms SET is_archived = NOT is_archived, updated_at = NOW() WHERE id = :id')
             ->execute(['id' => $id]);
-        redirect('/admin/chat-rooms.php', 'Room updated.', 'success');
+        redirect(route_admin('chat-rooms'), 'Room updated.', 'success');
     }
 }
 
@@ -125,7 +125,7 @@ if ($pdo) {
     }
 }
 
-$pageActions = '<a href="/admin/chat-rooms.php" class="btn btn-ptmd-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>New Room</a>';
+$pageActions = '<a href="' . e(route_admin('chat-rooms')) . '" class="btn btn-ptmd-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>New Room</a>';
 
 include __DIR__ . '/_admin_head.php';
 ?>
@@ -133,7 +133,7 @@ include __DIR__ . '/_admin_head.php';
 <!-- ── Room Form ──────────────────────────────────────────────────────────────── -->
 <div class="ptmd-panel p-lg mb-5">
     <h2 class="h5 mb-4"><?php echo $editRoom ? 'Edit Room' : 'New Room'; ?></h2>
-    <form method="post" action="/admin/chat-rooms.php">
+    <form method="post" action="<?php echo e(route_admin('chat-rooms')); ?>">
         <?php csrf_input(); ?>
         <input type="hidden" name="action" value="<?php echo $editRoom ? 'update' : 'create'; ?>">
         <?php if ($editRoom): ?>
@@ -211,7 +211,7 @@ include __DIR__ . '/_admin_head.php';
                 <?php echo $editRoom ? 'Save Changes' : 'Create Room'; ?>
             </button>
             <?php if ($editRoom): ?>
-                <a href="/admin/chat-rooms.php" class="btn btn-ptmd-ghost">Cancel</a>
+                <a href="<?php ee(route_admin('chat-rooms')); ?>" class="btn btn-ptmd-ghost">Cancel</a>
             <?php endif; ?>
         </div>
     </form>
@@ -266,12 +266,12 @@ include __DIR__ . '/_admin_head.php';
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <a href="/admin/chat-rooms.php?edit=<?php ee($room['id']); ?>"
+                                    <a href="<?php ee(route_admin('chat-rooms', ['edit' => (string) $room['id']])); ?>"
                                        class="btn btn-ptmd-ghost btn-sm"
                                        data-tippy-content="Edit room">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
-                                    <form method="post" action="/admin/chat-rooms.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('chat-rooms')); ?>" class="d-inline">
                                         <?php csrf_input(); ?>
                                         <input type="hidden" name="action" value="toggle_archive">
                                         <input type="hidden" name="id" value="<?php ee($room['id']); ?>">
@@ -280,7 +280,7 @@ include __DIR__ . '/_admin_head.php';
                                             <i class="fa-solid <?php echo $room['is_archived'] ? 'fa-box-open' : 'fa-box-archive'; ?>"></i>
                                         </button>
                                     </form>
-                                    <a href="/admin/chat.php?room=<?php ee($room['id']); ?>"
+                                    <a href="<?php ee(route_admin('chat', ['room' => (string) $room['id']])); ?>"
                                        class="btn btn-ptmd-ghost btn-sm"
                                        data-tippy-content="Moderate messages">
                                         <i class="fa-solid fa-comments"></i>

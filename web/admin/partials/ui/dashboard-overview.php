@@ -1,9 +1,14 @@
 <section class="ptmd-screen-dashboard ptmd-stack-lg">
     <header class="d-flex flex-wrap justify-content-between align-items-start gap-3">
         <div class="ptmd-stack-sm">
-            <div class="ptmd-heading-section">Investigative command status</div>
-            <h2 class="ptmd-heading-hero mb-0">Control Room Dashboard</h2>
-            <p class="ptmd-muted mb-0">Prioritized by workflow risk, evidence gaps, and publish impact.</p>
+            <div class="ptmd-heading-section">
+                Investigative command status
+            </div>
+            <h2 class="ptmd-heading-hero mb-0">
+                Control Room Dashboard
+            </h2>
+            <p class="ptmd-muted mb-0">
+                Prioritized by workflow risk, evidence gaps, and publish impact.</p>
         </div>
         <div class="ptmd-state-card ptmd-state-card--stale">
             <h4>Data freshness</h4>

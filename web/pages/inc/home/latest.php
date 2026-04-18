@@ -2,7 +2,7 @@
 <section class="container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4" data-animate>
         <h2 class="mb-0">Latest cases</h2>
-        <a class="btn btn-ptmd-outline" href="/index.php?page=cases">
+        <a class="btn btn-ptmd-outline" href="<?php ee(route_cases()); ?>">
             Browse All <i class="fa-solid fa-arrow-right ms-2"></i>
         </a>
     </div>
@@ -41,7 +41,7 @@
                             </small>
                             <a
                                 class="btn btn-ptmd-outline btn-sm"
-                                href="/index.php?page=case&amp;slug=<?php ee($ep['slug']); ?>"
+                                href="<?php ee(route_case((string) $ep['slug'])); ?>"
                             >
                                 Open <i class="fa-solid fa-arrow-right ms-1"></i>
                             </a>

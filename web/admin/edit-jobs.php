@@ -20,7 +20,7 @@ $pdo = get_db();
 // ── Handle POST actions (retry, cancel, run-worker) ───────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/edit-jobs.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('edit-jobs'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? '';
@@ -28,7 +28,7 @@ if ($pdo && is_post()) {
     if ($postAction === 'run_worker') {
         $summary = run_edit_job_worker($pdo, 0, 100);
         redirect(
-            '/admin/edit-jobs.php',
+            route_admin('edit-jobs'),
             sprintf(
                 'Worker finished: %d outputs processed (%d failed) across %d job(s).',
                 $summary['processed'],
@@ -51,7 +51,7 @@ if ($pdo && is_post()) {
                  WHERE job_id = :jid AND status = "pending"'
             )->execute(['jid' => $jobId]);
         }
-        redirect('/admin/edit-jobs.php', 'Job canceled.', 'info');
+        redirect(route_admin('edit-jobs'), 'Job canceled.', 'info');
     }
 
     if ($postAction === 'retry_output') {
@@ -74,7 +74,7 @@ if ($pdo && is_post()) {
                 )->execute(['id' => $jid]);
             }
         }
-        redirect('/admin/edit-jobs.php', 'Output queued for retry.', 'success');
+        redirect(route_admin('edit-jobs'), 'Output queued for retry.', 'success');
     }
 }
 
@@ -160,7 +160,7 @@ $PLATFORMS = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Faceboo
 <div class="alert ptmd-alert alert-warning mb-4" role="alert">
     <i class="fa-solid fa-hourglass-half me-2"></i>
     <strong><?php ee((string) $pendingCount); ?> output(s)</strong> pending in the queue.
-    <form method="post" action="/admin/edit-jobs.php" class="d-inline ms-3">
+    <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>" class="d-inline ms-3">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="run_worker">
         <button class="btn btn-ptmd-outline btn-sm" type="submit">
@@ -175,7 +175,7 @@ $PLATFORMS = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Faceboo
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-plus-circle me-2 ptmd-text-teal"></i>Create New Edit Job
     </h2>
-    <form method="post" action="/admin/edit-jobs.php" id="editJobForm">
+    <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>" id="editJobForm">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="create_job">
 
@@ -285,7 +285,7 @@ $PLATFORMS = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Faceboo
 // Handle create_job POST (HTML form → redirect)
 if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/edit-jobs.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('edit-jobs'), 'Invalid CSRF token.', 'danger');
     }
 
     $label       = trim((string) ($_POST['label']          ?? 'Untitled Edit Job'));
@@ -297,7 +297,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
     $platforms   = $_POST['platforms'] ?? ['generic'];
 
     if ($sourcePath === '' || !vp_is_safe_path($sourcePath)) {
-        redirect('/admin/edit-jobs.php', 'Invalid or missing source path.', 'danger');
+        redirect(route_admin('edit-jobs'), 'Invalid or missing source path.', 'danger');
     }
     if (!in_array($captionMode, ['none','embedded','sidecar'], true)) {
         $captionMode = 'none';
@@ -347,7 +347,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
         ]);
     }
 
-    redirect('/admin/edit-jobs.php?view_job=' . $jobId, 'Edit job created.', 'success');
+    redirect(route_admin('edit-jobs', ['view_job' => $jobId]), 'Edit job created.', 'success');
 }
 ?>
 
@@ -376,7 +376,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
         </div>
         <div class="d-flex gap-2">
             <?php if (in_array($jobDetail['status'], ['pending','processing'], true)): ?>
-                <form method="post" action="/admin/edit-jobs.php">
+                <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>">
                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                     <input type="hidden" name="_action" value="cancel">
                     <input type="hidden" name="job_id" value="<?php ee((string) $jobDetail['id']); ?>">
@@ -386,7 +386,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
                     </button>
                 </form>
             <?php endif; ?>
-            <a href="/admin/edit-jobs.php" class="btn btn-ptmd-outline btn-sm">
+            <a href="<?php ee(route_admin('edit-jobs')); ?>" class="btn btn-ptmd-outline btn-sm">
                 <i class="fa-solid fa-arrow-left me-1"></i>Back to Jobs
             </a>
         </div>
@@ -425,7 +425,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
                                         <?php echo e(basename((string) $out['output_path'])); ?>
                                     </a>
                                     <?php if ($out['queue_item_id']): ?>
-                                        <a href="/admin/posts.php" class="ptmd-muted ms-1"
+                                        <a href="<?php ee(route_admin('posts')); ?>" class="ptmd-muted ms-1"
                                            data-tippy-content="In social queue">
                                             <i class="fa-solid fa-calendar-check"></i>
                                         </a>
@@ -450,7 +450,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
                             <td>
                                 <div class="d-flex gap-1">
                                     <?php if ($out['status'] === 'failed'): ?>
-                                        <form method="post" action="/admin/edit-jobs.php">
+                                        <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>">
                                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                             <input type="hidden" name="_action" value="retry_output">
                                             <input type="hidden" name="output_id" value="<?php ee((string) $out['id']); ?>">
@@ -491,7 +491,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
             <i class="fa-solid fa-list-check me-2 ptmd-text-teal"></i>All Edit Jobs
         </h2>
         <?php if (!$viewJobId): ?>
-            <form method="post" action="/admin/edit-jobs.php">
+            <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>">
                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                 <input type="hidden" name="_action" value="run_worker">
                 <button class="btn btn-ptmd-outline btn-sm" type="submit">
@@ -522,7 +522,7 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
                         <tr>
                             <td class="ptmd-muted">#<?php ee((string) $job['id']); ?></td>
                             <td class="fw-500 ptmd-text-muted">
-                                <a href="/admin/edit-jobs.php?view_job=<?php ee((string) $job['id']); ?>">
+                                <a href="<?php ee(route_admin('edit-jobs', ['view_job' => (string) $job['id']])); ?>">
                                     <?php ee($job['label']); ?>
                                 </a>
                             </td>
@@ -564,14 +564,14 @@ if ($pdo && is_post() && ($_POST['_action'] ?? '') === 'create_job') {
                             <td>
                                 <div class="d-flex gap-1">
                                     <a
-                                        href="/admin/edit-jobs.php?view_job=<?php ee((string) $job['id']); ?>"
+                                        href="<?php ee(route_admin('edit-jobs', ['view_job' => (string) $job['id']])); ?>"
                                         class="btn btn-ptmd-ghost btn-sm"
                                         data-tippy-content="View details"
                                     >
                                         <i class="fa-solid fa-eye"></i>
                                     </a>
                                     <?php if (in_array($job['status'], ['pending','processing'], true)): ?>
-                                        <form method="post" action="/admin/edit-jobs.php" class="d-inline">
+                                        <form method="post" action="<?php echo e(route_admin('edit-jobs')); ?>" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                             <input type="hidden" name="_action" value="cancel">
                                             <input type="hidden" name="job_id" value="<?php ee((string) $job['id']); ?>">

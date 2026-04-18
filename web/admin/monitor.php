@@ -11,12 +11,14 @@
  *  — Manual sync trigger
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle      = 'Monitor | PTMD Admin';
 $activePage     = 'monitor';
 $pageHeading    = 'Monitor';
 $pageSubheading = 'Pipeline health, social post performance, and site engagement analytics.';
-$pageActions    = '<a href="/admin/posts.php" class="btn btn-ptmd-outline btn-sm">'
-                . '<i class="fa-solid fa-calendar-check me-2"></i>Social Queue</a>';
+$pageActions    = '<a href="' . e(route_admin('posts')) . '" class="btn btn-ptmd-outline btn-sm">'
+                . '<i class="fa-solid fa-calendar-check me-2"></i>Dispatch</a>';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -201,7 +203,7 @@ function monitor_status_class(string $status): string
             <p class="ptmd-muted small mb-0">
                 Refreshes external social metrics for all posted queue items and rolls up today's site event totals.
                 Platform metrics are stubs until API credentials are configured in
-                <a href="/admin/settings.php">Settings</a>.
+                <a href="<?php ee(route_admin('settings')); ?>">Settings</a>.
             </p>
         </div>
         <button id="runSyncBtn" class="btn btn-ptmd-teal">
@@ -220,7 +222,7 @@ function monitor_status_class(string $status): string
                 <h2 class="h6 mb-0">
                     <i class="fa-solid fa-scissors me-2 ptmd-text-teal"></i>Clip Library
                 </h2>
-                <a href="/admin/video-processor.php" class="btn btn-ptmd-ghost btn-sm">
+                <a href="<?php ee(route_admin('video-processor')); ?>" class="btn btn-ptmd-ghost btn-sm">
                     Manage <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
             </div>
@@ -242,7 +244,7 @@ function monitor_status_class(string $status): string
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p class="ptmd-muted small">No clips yet. <a href="/admin/video-processor.php">Upload your first video</a>.</p>
+                <p class="ptmd-muted small">No clips yet. <a href="<?php ee(route_admin('video-processor')); ?>">Upload your first video</a>.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -254,7 +256,7 @@ function monitor_status_class(string $status): string
                 <h2 class="h6 mb-0">
                     <i class="fa-solid fa-calendar-check me-2 ptmd-text-teal"></i>Social Queue
                 </h2>
-                <a href="/admin/posts.php" class="btn btn-ptmd-ghost btn-sm">
+                <a href="<?php ee(route_admin('posts')); ?>" class="btn btn-ptmd-ghost btn-sm">
                     Manage <i class="fa-solid fa-arrow-right ms-1"></i>
                 </a>
             </div>
@@ -276,7 +278,7 @@ function monitor_status_class(string $status): string
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p class="ptmd-muted small">Queue is empty. <a href="/admin/posts.php">Add a post</a>.</p>
+                <p class="ptmd-muted small">Queue is empty. <a href="<?php ee(route_admin('posts')); ?>">Add a post</a>.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -290,7 +292,7 @@ function monitor_status_class(string $status): string
         <h2 class="h6 mb-0">
             <i class="fa-solid fa-layer-group me-2 ptmd-text-teal"></i>Recent Overlay Batches
         </h2>
-        <a href="/admin/overlay-tool.php" class="btn btn-ptmd-ghost btn-sm">
+        <a href="<?php ee(route_admin('overlay-tool')); ?>" class="btn btn-ptmd-ghost btn-sm">
             Overlay Tool <i class="fa-solid fa-arrow-right ms-1"></i>
         </a>
     </div>
@@ -321,7 +323,7 @@ function monitor_status_class(string $status): string
                             <?php echo e(date('M j, Y g:ia', strtotime($job['created_at']))); ?>
                         </td>
                         <td>
-                            <a href="/admin/overlay-tool.php?view_job=<?php ee((string) $job['id']); ?>"
+                            <a href="<?php ee(route_admin('overlay-tool', ['view_job' => (string) $job['id']])); ?>"
                                class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View items">
                                 <i class="fa-solid fa-list"></i>
                             </a>
@@ -341,7 +343,7 @@ function monitor_status_class(string $status): string
             <i class="fa-solid fa-chart-bar me-2 ptmd-text-teal"></i>Social Post Performance
         </h2>
         <!-- Platform filter -->
-        <form method="get" action="/admin/monitor.php" class="d-flex gap-2 align-items-center">
+        <form method="get" action="<?php echo e(route_admin('monitor')); ?>" class="d-flex gap-2 align-items-center">
             <?php if ($from !== date('Y-m-d', strtotime('-7 days'))): ?>
                 <input type="hidden" name="date_from" value="<?php ee($from); ?>">
                 <input type="hidden" name="date_to"   value="<?php ee($to); ?>">
@@ -450,7 +452,7 @@ function monitor_status_class(string $status): string
             <i class="fa-solid fa-eye me-2 ptmd-text-teal"></i>Site Analytics
         </h2>
         <!-- Date range filter -->
-        <form method="get" action="/admin/monitor.php" class="d-flex gap-2 align-items-center flex-wrap">
+        <form method="get" action="<?php echo e(route_admin('monitor')); ?>" class="d-flex gap-2 align-items-center flex-wrap">
             <?php if ($filterPlatform !== ''): ?>
                 <input type="hidden" name="platform" value="<?php ee($filterPlatform); ?>">
             <?php endif; ?>
@@ -531,7 +533,7 @@ function monitor_status_class(string $status): string
                     <?php foreach ($topEpisodes as $ep): ?>
                         <tr>
                             <td>
-                                <a href="/admin/episodes.php?edit=<?php ee((string) $ep['episode_id']); ?>"
+                                <a href="<?php ee(route_admin('episodes', ['edit' => (string) $ep['episode_id']])); ?>"
                                    class="fw-500 ptmd-text-muted">
                                     <?php ee($ep['title']); ?>
                                 </a>

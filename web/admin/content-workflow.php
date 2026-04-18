@@ -5,6 +5,8 @@
  * Topic -> case draft -> asset assignment -> social queue automation.
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Content Workflow | PTMD Admin';
 $activePage   = 'content-workflow';
 $pageHeading  = 'Content Workflow Automation';
@@ -17,7 +19,7 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/content-workflow.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('content-workflow'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = trim((string) ($_POST['_action'] ?? 'run_workflow'));
@@ -27,9 +29,9 @@ if ($pdo && is_post()) {
         $result = ptmd_process_due_social_queue($pdo, $limit);
         if (!empty($result['ok'])) {
             $msg = 'Worker processed ' . (int) $result['processed'] . ' due posts (' . (int) $result['posted'] . ' posted, ' . (int) $result['failed'] . ' failed).';
-            redirect('/admin/content-workflow.php', $msg, 'success');
+            redirect(route_admin('content-workflow'), $msg, 'success');
         }
-        redirect('/admin/content-workflow.php', 'Worker failed: ' . ($result['error'] ?? 'Unknown error'), 'danger');
+        redirect(route_admin('content-workflow'), 'Worker failed: ' . ($result['error'] ?? 'Unknown error'), 'danger');
     }
 
     if ($postAction === 'run_workflow') {
@@ -53,10 +55,10 @@ if ($pdo && is_post()) {
                     . (int) $workflowResult['dispatch']['posted'] . ' posted, '
                     . (int) $workflowResult['dispatch']['failed'] . ' failed.';
             }
-            redirect('/admin/content-workflow.php', $msg, 'success');
+            redirect(route_admin('content-workflow'), $msg, 'success');
         }
 
-        redirect('/admin/content-workflow.php', 'Workflow failed: ' . ($workflowResult['error'] ?? 'Unknown error'), 'danger');
+        redirect(route_admin('content-workflow'), 'Workflow failed: ' . ($workflowResult['error'] ?? 'Unknown error'), 'danger');
     }
 }
 
@@ -94,7 +96,7 @@ $workflows = $pdo
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-gears me-2 ptmd-text-teal"></i>Create Workflow
     </h2>
-    <form method="post" action="/admin/content-workflow.php">
+    <form method="post" action="<?php echo e(route_admin('content-workflow')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="run_workflow">
         <div class="row g-3">
@@ -153,7 +155,7 @@ $workflows = $pdo
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-rocket me-2 ptmd-text-teal"></i>Run Posting Worker
     </h2>
-    <form method="post" action="/admin/content-workflow.php" class="row g-3 align-items-end">
+    <form method="post" action="<?php echo e(route_admin('content-workflow')); ?>" class="row g-3 align-items-end">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="run_worker">
         <div class="col-md-3">

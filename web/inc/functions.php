@@ -49,8 +49,8 @@ function upload_url(string $path): string
 // The .htaccess front controller rewrites these to index.php which then
 // resolves them back to the internal page name.
 //
-// Back-compat: legacy "/index.php?page=X" URLs still work; they are handled
-// by the front controller's query-string fallback.
+// Back-compat: legacy "/index.php?page=X" URLs are normalized by the front
+// controller, but helpers should always emit canonical clean paths.
 // ---------------------------------------------------------------------------
 
 /**
@@ -76,7 +76,8 @@ function route_case(string $slug): string
 {
     return '/case/' . rawurlencode($slug);
 }
-function route_series(): string     { return '/series'; }
+/** Temporary compatibility shim while /series permanently redirects to /cases. */
+function route_series(): string     { return route_cases(); }
 function route_chat(): string       { return '/chat'; }
 function route_about(): string      { return '/about'; }
 function route_contact(): string    { return '/contact'; }
@@ -90,14 +91,152 @@ function route_account(): string    { return '/account'; }
 function route_logout(): string     { return '/logout'; }
 
 /**
- * Admin route helper — builds /admin or /admin/<path>.
- * Note: individual admin pages still resolve via their own .php files;
- * .htaccess lets clean /admin/<name> resolve to /admin/<name>.php.
+ * Admin route helper — returns the canonical clean admin path for a module.
  */
-function route_admin(string $path = ''): string
+function route_admin(string $path = '', array $query = []): string
 {
     $path = trim($path, '/');
-    return $path === '' ? '/admin' : '/admin/' . $path;
+    $base = match ($path) {
+        '', 'dashboard'       => '/admin',
+        'control-room'       => '/admin/control-room',
+        'login'              => '/admin/login',
+        'logout'             => '/admin/logout',
+        'ai-assistant',
+        'the-analyst'        => '/admin/the-analyst',
+        'posts',
+        'dispatch'           => '/admin/dispatch',
+        'monitor',
+        'intelligence'       => '/admin/intelligence',
+        default              => '/admin/' . $path,
+    };
+
+    return !empty($query) ? url($base, $query) : $base;
+}
+
+function route_admin_login(string $return = ''): string
+{
+    return $return !== ''
+        ? route_admin('login', ['return' => $return])
+        : route_admin('login');
+}
+
+function route_admin_logout(): string
+{
+    return route_admin('logout');
+}
+
+/**
+ * Convert a public page key to its canonical clean path.
+ * Returns null for unknown route keys.
+ */
+function ptmd_public_route_path(string $page, string $slug = ''): ?string
+{
+    return match ($page) {
+        'home'       => route_home(),
+        'cases'      => route_cases(),
+        'case'       => $slug !== '' ? route_case($slug) : route_cases(),
+        'chat',
+        'case-chat'  => route_chat(),
+        'about'      => route_about(),
+        'contact'    => route_contact(),
+        'login'      => route_login(),
+        'chat-login' => route_chat_login(),
+        'register'   => route_register(),
+        'account'    => route_account(),
+        'logout'     => route_logout(),
+        'series'     => route_cases(),
+        default      => null,
+    };
+}
+
+/**
+ * Map an admin PHP script name to its canonical clean route.
+ */
+function ptmd_admin_route_from_script(?string $scriptName): ?string
+{
+    $name = basename((string) $scriptName);
+    if ($name === '' || !str_ends_with($name, '.php')) {
+        return null;
+    }
+
+    $base = substr($name, 0, -4);
+
+    return match ($base) {
+        'dashboard'    => route_admin('dashboard'),
+        'login'        => route_admin('login'),
+        'logout'       => route_admin('logout'),
+        'ai-assistant' => route_admin('ai-assistant'),
+        'posts'        => route_admin('posts'),
+        'monitor'      => route_admin('monitor'),
+        default        => route_admin($base),
+    };
+}
+
+/**
+ * Normalize the current route into a stable context payload for templates and
+ * future AI-aware surfaces.
+ *
+ * @return array{route_key:string, canonical_path:string, case_slug:?string}
+ */
+function ptmd_route_context(string $routeKey, string $canonicalPath, ?string $caseSlug = null): array
+{
+    return [
+        'route_key'      => $routeKey,
+        'canonical_path' => $canonicalPath,
+        'case_slug'      => $caseSlug !== null && $caseSlug !== '' ? $caseSlug : null,
+    ];
+}
+
+/**
+ * Accept either a root-relative path or a legacy public page key and return a
+ * safe canonical public return target.
+ */
+function ptmd_safe_public_return_path(string $return = '', string $slug = ''): string
+{
+    $return = trim($return);
+    if ($return === '') {
+        return route_account();
+    }
+
+    if (str_starts_with($return, '/')) {
+        $path = parse_url($return, PHP_URL_PATH);
+        if (!is_string($path) || $path === '' || str_starts_with($path, '/admin')) {
+            return route_account();
+        }
+        if (str_ends_with($path, '.php') || str_starts_with($path, '//')) {
+            return route_account();
+        }
+        return $return;
+    }
+
+    $page = preg_replace('/[^a-z0-9\-]/', '', strtolower($return));
+    return ptmd_public_route_path($page, $slug) ?? route_account();
+}
+
+/**
+ * Accept either a root-relative admin path or a legacy admin page key and
+ * return a safe canonical admin return target.
+ */
+function ptmd_safe_admin_return_path(string $return = ''): string
+{
+    $return = trim($return);
+    if ($return === '') {
+        return route_admin('dashboard');
+    }
+
+    if (str_starts_with($return, '/')) {
+        $path = parse_url($return, PHP_URL_PATH);
+        if (!is_string($path) || $path === '' || !str_starts_with($path, '/admin')) {
+            return route_admin('dashboard');
+        }
+        if (str_ends_with($path, '.php') || str_starts_with($path, '//')) {
+            return route_admin('dashboard');
+        }
+        return $return;
+    }
+
+    $page = preg_replace('/[^a-z0-9\-]/', '', strtolower($return));
+    return route_admin($page);
 }
 
 // ---------------------------------------------------------------------------
@@ -156,11 +295,11 @@ function is_logged_in(): bool
 function require_login(string $return = ''): void
 {
     if (!is_logged_in()) {
-        $url = '/admin/login.php';
-        if ($return !== '') {
-            $url .= '?return=' . urlencode($return);
-        }
-        header('Location: ' . $url);
+        $target = $return !== ''
+            ? ptmd_safe_admin_return_path($return)
+            : ptmd_safe_admin_return_path((string) ($_SERVER['REQUEST_URI'] ?? ''));
+
+        header('Location: ' . route_admin_login($target));
         exit;
     }
 }
@@ -235,6 +374,12 @@ function redirect(string $url, string $message = '', string $type = 'info'): nev
     }
     header('Location: ' . $url);
     exit;
+}
+
+/** Store a flash message without redirecting immediately. */
+function set_flash(string $message, string $type = 'info'): void
+{
+    $_SESSION['flash'] = ['message' => $message, 'type' => $type];
 }
 
 /** Pull and clear the flash message for the current request. */
@@ -404,7 +549,6 @@ function page_title(string $page, ?array $case = null): string
         'home'       => site_setting('site_name', 'Paper Trail MD'),
         'cases'      => 'Cases | '       . site_setting('site_name', 'Paper Trail MD'),
         'about'      => 'About | '       . site_setting('site_name', 'Paper Trail MD'),
-        'series'     => 'Series | '      . site_setting('site_name', 'Paper Trail MD'),
         'contact'    => 'Contact | '     . site_setting('site_name', 'Paper Trail MD'),
         'case-chat'  => 'Case Chat | '   . site_setting('site_name', 'Paper Trail MD'),
         'register'   => 'Register | '    . site_setting('site_name', 'Paper Trail MD'),
@@ -669,15 +813,17 @@ CURRENT SITE SNAPSHOT:
 {$context}
 
 ADMIN MODULES YOU CAN HELP WITH:
-- cases (create, edit, publish, archive) → /admin/cases.php
-- Video Processor (trim clips, extract short-form content) → /admin/video-processor.php
-- Overlay Tool (apply branded overlays to clips) → /admin/overlay-tool.php
-- Media Library (thumbnails, intros, watermarks, overlays, clips) → /admin/media.php
-- AI Content Studio (titles, keywords, descriptions, captions, thumbnail concepts) → /admin/ai-tools.php
-- Social Queue (manage scheduled posts) → /admin/posts.php
-- Post Schedule (configure posting cadence per platform) → /admin/social-schedule.php
-- Case Chat moderation (approve, flag, block viewer messages) → /admin/chat.php
-- Settings (site config, OpenAI API key, brand assets) → /admin/settings.php
+- cases (create, edit, publish, archive) → /admin/cases
+- Video Processor (trim clips, extract short-form content) → /admin/video-processor
+- Overlay Tool (apply branded overlays to clips) → /admin/overlay-tool
+- Media Library (thumbnails, intros, watermarks, overlays, clips) → /admin/media
+- AI Content Studio (titles, keywords, descriptions, captions, thumbnail concepts) → /admin/ai-tools
+- The Analyst (assistant and system copilot) → /admin/the-analyst
+- Dispatch (manage scheduled posts) → /admin/dispatch
+- Post Schedule (configure posting cadence per platform) → /admin/social-schedule
+- Intelligence (analytics and performance monitoring) → /admin/intelligence
+- Case Chat moderation (approve, flag, block viewer messages) → /admin/chat
+- Settings (site config, OpenAI API key, brand assets) → /admin/settings
 
 GUIDELINES:
 - Be concise, direct, and helpful. Match the PTMD tone: investigative, sharp, occasionally funny.

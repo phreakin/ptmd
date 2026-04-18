@@ -6,6 +6,8 @@
  * Seed data is already in social_post_schedules via seed.sql.
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Post Schedule | PTMD Admin';
 $activePage   = 'social-schedule';
 $pageHeading  = 'Social Post Schedule';
@@ -17,7 +19,7 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/social-schedule.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('social-schedule'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'toggle';
@@ -26,7 +28,7 @@ if ($pdo && is_post()) {
         $delId = (int) ($_POST['id'] ?? 0);
         if ($delId > 0) {
             $pdo->prepare('DELETE FROM social_post_schedules WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/social-schedule.php', 'Schedule deleted.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule deleted.', 'success');
         }
     }
 
@@ -36,7 +38,7 @@ if ($pdo && is_post()) {
         if ($togId > 0) {
             $pdo->prepare('UPDATE social_post_schedules SET is_active = :a, updated_at = NOW() WHERE id = :id')
                 ->execute(['a' => $active ? 0 : 1, 'id' => $togId]);
-            redirect('/admin/social-schedule.php', 'Schedule updated.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule updated.', 'success');
         }
     }
 
@@ -58,7 +60,7 @@ if ($pdo && is_post()) {
                 'time'     => $postTime,
                 'tz'       => $timezone,
             ]);
-            redirect('/admin/social-schedule.php', 'Schedule added.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule added.', 'success');
         }
     }
 }
@@ -81,7 +83,7 @@ $days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-plus me-2 ptmd-text-teal"></i>Add Posting Window
     </h2>
-    <form method="post" action="/admin/social-schedule.php">
+    <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
@@ -138,7 +140,7 @@ $days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
                             <td class="ptmd-text-teal"><?php echo e(date('g:ia', strtotime($s['post_time']))); ?></td>
                             <td class="ptmd-muted" style="font-size:var(--text-xs)"><?php ee($s['timezone']); ?></td>
                             <td>
-                                <form method="post" action="/admin/social-schedule.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="toggle">
                                     <input type="hidden" name="id" value="<?php ee((string) $s['id']); ?>">
@@ -149,7 +151,7 @@ $days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
                                 </form>
                             </td>
                             <td>
-                                <form method="post" action="/admin/social-schedule.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="delete">
                                     <input type="hidden" name="id" value="<?php ee((string) $s['id']); ?>">

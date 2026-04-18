@@ -97,6 +97,31 @@ function ptmd_e2e_record(array &$group, string $name, bool $ok, string $message,
     ];
 }
 
+function ptmd_e2e_location_path(?string $location): string
+{
+    if (!is_string($location) || $location === '') {
+        return '';
+    }
+
+    $path = parse_url($location, PHP_URL_PATH);
+    return is_string($path) ? $path : '';
+}
+
+function ptmd_e2e_location_query(?string $location): array
+{
+    if (!is_string($location) || $location === '') {
+        return [];
+    }
+
+    $query = parse_url($location, PHP_URL_QUERY);
+    if (!is_string($query) || $query === '') {
+        return [];
+    }
+
+    parse_str($query, $params);
+    return is_array($params) ? $params : [];
+}
+
 function run_ptmd_e2e_tests(): array
 {
     $started = microtime(true);
@@ -119,21 +144,15 @@ function run_ptmd_e2e_tests(): array
 
     // Public routes
     $public = [];
-    $publicRoutes = [
-        '/index.php' => 200,
-        '/index.php?page=home' => 200,
-        '/index.php?page=cases' => 200,
-        '/index.php?page=cold-cases' => 200,
-        '/index.php?page=closed-cases' => 200,
-        '/index.php?page=case-chat' => 200,
-        '/index.php?page=open-cases' => 200,
-        '/index.php?page=case-detail' => 200,
-        '/index.php?page=case-detail&slug=test-case' => 200,
-        '/index.php?page=login' => 200,
-        '/index.php?page=account' => 302,  // redirects to login when not authenticated
+    $canonicalPublicRoutes = [
+        route_home() => 200,
+        route_cases() => 200,
+        route_chat() => 200,
+        route_login() => 200,
+        route_register() => 200,
     ];
 
-    foreach ($publicRoutes as $route => $expectedStatus) {
+    foreach ($canonicalPublicRoutes as $route => $expectedStatus) {
         $res = ptmd_e2e_request($baseUrl, $route);
         $ok = $res['ok'] && (($res['status'] ?? 0) === $expectedStatus);
         ptmd_e2e_record(
@@ -145,6 +164,55 @@ function run_ptmd_e2e_tests(): array
         );
     }
 
+    $accountRes = ptmd_e2e_request($baseUrl, route_account());
+    $accountLocation = (string) ($accountRes['location'] ?? '');
+    $accountLocationPath = ptmd_e2e_location_path($accountLocation);
+    $accountLocationQuery = ptmd_e2e_location_query($accountLocation);
+    $accountOk = $accountRes['ok']
+        && (($accountRes['status'] ?? 0) === 302)
+        && $accountLocationPath === route_login()
+        && (($accountLocationQuery['return'] ?? '') === route_account());
+    ptmd_e2e_record(
+        $public,
+        'GET ' . route_account() . ' (anonymous)',
+        $accountOk,
+        $accountOk ? 'Redirected to login' : 'Account auth redirect failed',
+        ['actual_status' => $accountRes['status'] ?? null, 'location' => $accountLocation]
+    );
+
+    $legacyPublicRedirects = [
+        '/index.php' => route_home(),
+        '/index.php?page=home' => route_home(),
+        '/index.php?page=cases' => route_cases(),
+        '/index.php?page=case-chat' => route_chat(),
+        '/index.php?page=login' => route_login(),
+        '/index.php?page=register' => route_register(),
+        '/index.php?page=account' => route_account(),
+        '/series' => route_cases(),
+        '/case-chat' => route_chat(),
+    ];
+
+    foreach ($legacyPublicRedirects as $route => $expectedLocation) {
+        $res = ptmd_e2e_request($baseUrl, $route);
+        $actualLocationPath = ptmd_e2e_location_path((string) ($res['location'] ?? ''));
+        $ok = $res['ok']
+            && (($res['status'] ?? 0) === 301)
+            && $actualLocationPath === $expectedLocation;
+        ptmd_e2e_record(
+            $public,
+            "GET {$route} (legacy redirect)",
+            $ok,
+            $ok ? 'Permanent redirect to canonical route' : 'Legacy redirect failed',
+            [
+                'expected_status' => 301,
+                'expected_location' => $expectedLocation,
+                'actual_status' => $res['status'] ?? null,
+                'location' => $res['location'] ?? null,
+                'error' => $res['error'] ?? null,
+            ]
+        );
+    }
+
     $caseslug = '';
     $pdo = get_db();
     if ($pdo) {
@@ -153,10 +221,24 @@ function run_ptmd_e2e_tests(): array
         $caseslug = (string) $slugStmt->fetchColumn();
     }
     if ($caseslug !== '') {
-        $epPath = '/index.php?page=case&slug=' . rawurlencode($caseslug);
-        $res = ptmd_e2e_request($baseUrl, $epPath);
-        $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
-        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'case page loaded' : 'case page failed', ['actual_status' => $res['status'] ?? null]);
+        $casePath = route_case($caseslug);
+        $caseRes = ptmd_e2e_request($baseUrl, $casePath);
+        $caseOk = $caseRes['ok'] && (($caseRes['status'] ?? 0) === 200);
+        ptmd_e2e_record($public, "GET {$casePath}", $caseOk, $caseOk ? 'case page loaded' : 'case page failed', ['actual_status' => $caseRes['status'] ?? null]);
+
+        $legacyCasePath = '/index.php?page=case&slug=' . rawurlencode($caseslug);
+        $legacyCaseRes = ptmd_e2e_request($baseUrl, $legacyCasePath);
+        $legacyCaseLocationPath = ptmd_e2e_location_path((string) ($legacyCaseRes['location'] ?? ''));
+        $legacyCaseOk = $legacyCaseRes['ok']
+            && (($legacyCaseRes['status'] ?? 0) === 301)
+            && $legacyCaseLocationPath === $casePath;
+        ptmd_e2e_record(
+            $public,
+            "GET {$legacyCasePath} (legacy redirect)",
+            $legacyCaseOk,
+            $legacyCaseOk ? 'Case redirect canonicalized' : 'Legacy case redirect failed',
+            ['actual_status' => $legacyCaseRes['status'] ?? null, 'location' => $legacyCaseRes['location'] ?? null]
+        );
     } else {
         ptmd_e2e_record($public, 'case detail route', true, 'Skipped: no published case found');
     }
@@ -171,15 +253,49 @@ function run_ptmd_e2e_tests(): array
         $sessionIsValid ? 'Admin session is active' : 'Admin session is missing or invalid'
     );
 
-    $login = ptmd_e2e_request($baseUrl, '/admin/login.php');
+    $login = ptmd_e2e_request($baseUrl, route_admin('login'));
     $loginOk = $login['ok'] && (($login['status'] ?? 0) === 200);
-    ptmd_e2e_record($auth, 'GET /admin/login.php (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
+    ptmd_e2e_record($auth, 'GET ' . route_admin('login') . ' (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
 
-    $anonDashboard = ptmd_e2e_request($baseUrl, '/admin/dashboard.php');
-    $anonLocation = (string) ($anonDashboard['location'] ?? '');
-    $redirectsToLogin = str_contains($anonLocation, '/admin/login.php');
-    $anonDashOk = $anonDashboard['ok'] && (($anonDashboard['status'] ?? 0) === 302) && $redirectsToLogin;
-    ptmd_e2e_record($auth, 'GET /admin/dashboard.php (anonymous)', $anonDashOk, $anonDashOk ? 'Redirected to login' : 'Auth redirect failed', ['actual_status' => $anonDashboard['status'] ?? null, 'location' => $anonDashboard['location'] ?? null]);
+    $legacyAdminLogin = ptmd_e2e_request($baseUrl, '/admin/login.php');
+    $legacyAdminLoginPath = ptmd_e2e_location_path((string) ($legacyAdminLogin['location'] ?? ''));
+    $legacyAdminLoginOk = $legacyAdminLogin['ok']
+        && (($legacyAdminLogin['status'] ?? 0) === 301)
+        && $legacyAdminLoginPath === route_admin('login');
+    ptmd_e2e_record(
+        $auth,
+        'GET /admin/login.php (legacy redirect)',
+        $legacyAdminLoginOk,
+        $legacyAdminLoginOk ? 'Permanent redirect to clean admin login' : 'Legacy admin login redirect failed',
+        ['actual_status' => $legacyAdminLogin['status'] ?? null, 'location' => $legacyAdminLogin['location'] ?? null]
+    );
+
+    $anonymousAdminRoutes = [
+        route_admin('dashboard'),
+        route_admin('control-room'),
+        route_admin('cases'),
+        route_admin('ai-assistant'),
+        route_admin('posts'),
+        route_admin('monitor'),
+    ];
+
+    foreach ($anonymousAdminRoutes as $route) {
+        $res = ptmd_e2e_request($baseUrl, $route);
+        $location = (string) ($res['location'] ?? '');
+        $locationPath = ptmd_e2e_location_path($location);
+        $locationQuery = ptmd_e2e_location_query($location);
+        $ok = $res['ok']
+            && (($res['status'] ?? 0) === 302)
+            && $locationPath === route_admin('login')
+            && (($locationQuery['return'] ?? '') === $route);
+        ptmd_e2e_record(
+            $auth,
+            "GET {$route} (anonymous)",
+            $ok,
+            $ok ? 'Redirected to clean admin login' : 'Admin auth redirect failed',
+            ['actual_status' => $res['status'] ?? null, 'location' => $location]
+        );
+    }
 
     $adminFiles = glob(__DIR__ . '/../admin/*.php') ?: [];
     // Exclude partials and auth endpoints that are not standard in-session page views.
@@ -190,9 +306,14 @@ function run_ptmd_e2e_tests(): array
     sort($adminFiles);
 
     if ($sessionIsValid) {
+        $seenPaths = [];
         foreach ($adminFiles as $file) {
             $name = basename($file);
-            $path = '/admin/' . $name;
+            $path = ptmd_admin_route_from_script($name);
+            if (!is_string($path) || $path === '' || isset($seenPaths[$path])) {
+                continue;
+            }
+            $seenPaths[$path] = true;
             $res = ptmd_e2e_request($baseUrl, $path, 'GET', [], $authCookie);
             $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
             ptmd_e2e_record($auth, "GET {$path} (admin session)", $ok, $ok ? 'Admin page loaded' : 'Admin page failed', ['actual_status' => $res['status'] ?? null, 'error' => $res['error'] ?? null]);

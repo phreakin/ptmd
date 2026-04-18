@@ -15,7 +15,7 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/chat.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('chat'), 'Invalid CSRF token.', 'danger');
     }
 
     $msgId     = (int) ($_POST['id']     ?? 0);
@@ -33,7 +33,7 @@ if ($pdo && is_post()) {
                     'INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at)
                      VALUES (:msg, :mod, :action, NOW())'
                 )->execute(['msg' => $msgId, 'mod' => $modUserId ?: null, 'action' => $action]);
-                redirect('/admin/chat.php?' . http_build_query($_GET), "Message {$action}.", 'success');
+                redirect(route_admin('chat', $_GET), "Message {$action}.", 'success');
                 break;
 
             case 'delete':
@@ -44,7 +44,7 @@ if ($pdo && is_post()) {
                     'INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at)
                      VALUES (:msg, :mod, "deleted", NOW())'
                 )->execute(['msg' => $msgId, 'mod' => $modUserId ?: null]);
-                redirect('/admin/chat.php?' . http_build_query($_GET), 'Message soft-deleted.', 'success');
+                redirect(route_admin('chat', $_GET), 'Message soft-deleted.', 'success');
                 break;
 
             case 'restore':
@@ -55,7 +55,7 @@ if ($pdo && is_post()) {
                     'INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at)
                      VALUES (:msg, :mod, "restored", NOW())'
                 )->execute(['msg' => $msgId, 'mod' => $modUserId ?: null]);
-                redirect('/admin/chat.php?' . http_build_query($_GET), 'Message restored.', 'success');
+                redirect(route_admin('chat', $_GET), 'Message restored.', 'success');
                 break;
 
             case 'pin':
@@ -67,7 +67,7 @@ if ($pdo && is_post()) {
                     'INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at)
                      VALUES (:msg, :mod, :action, NOW())'
                 )->execute(['msg' => $msgId, 'mod' => $modUserId ?: null, 'action' => $action . 'ned']);
-                redirect('/admin/chat.php?' . http_build_query($_GET), "Message {$action}ned.", 'success');
+                redirect(route_admin('chat', $_GET), "Message {$action}ned.", 'success');
                 break;
 
             case 'hide':
@@ -75,7 +75,7 @@ if ($pdo && is_post()) {
                     ->execute(['r' => '', 'id' => $msgId]);
                 $pdo->prepare('INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at) VALUES (:msg,:mod,"hidden",NOW())')
                     ->execute(['msg' => $msgId, 'mod' => $modUserId ?: null]);
-                redirect('/admin/chat.php?' . http_build_query($_GET), 'Message hidden.', 'success');
+                redirect(route_admin('chat', $_GET), 'Message hidden.', 'success');
                 break;
 
             case 'unhide':
@@ -83,7 +83,7 @@ if ($pdo && is_post()) {
                     ->execute(['id' => $msgId]);
                 $pdo->prepare('INSERT INTO chat_moderation_logs (chat_message_id, moderator_id, action, created_at) VALUES (:msg,:mod,"unhidden",NOW())')
                     ->execute(['msg' => $msgId, 'mod' => $modUserId ?: null]);
-                redirect('/admin/chat.php?' . http_build_query($_GET), 'Message unhidden.', 'success');
+                redirect(route_admin('chat', $_GET), 'Message unhidden.', 'success');
                 break;
         }
     }
@@ -130,26 +130,26 @@ if ($pdo) {
 <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
     <?php foreach (['all', 'approved', 'flagged', 'blocked'] as $tab): ?>
         <?php $q = array_merge($_GET, ['status' => $tab]); unset($q['deleted']); unset($q['hidden']); ?>
-        <a href="/admin/chat.php?<?php echo http_build_query($q); ?>"
+        <a href="<?php ee(route_admin('chat', $q)); ?>"
            class="btn btn-sm <?php echo $filterStatus === $tab && !$filterDeleted && !$filterHidden ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">
             <?php ee(ucfirst($tab)); ?>
         </a>
     <?php endforeach; ?>
     <?php $dq = array_merge($_GET, ['deleted' => '1', 'status' => 'all']); unset($dq['hidden']); ?>
-    <a href="/admin/chat.php?<?php echo http_build_query($dq); ?>"
+    <a href="<?php ee(route_admin('chat', $dq)); ?>"
        class="btn btn-sm <?php echo $filterDeleted ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>"
        style="<?php echo $filterDeleted ? '' : 'border-color:var(--ptmd-error);color:var(--ptmd-error)'; ?>">
         <i class="fa-solid fa-trash me-1"></i>Deleted
     </a>
     <?php $hq = array_merge($_GET, ['hidden' => '1', 'status' => 'all']); unset($hq['deleted']); ?>
-    <a href="/admin/chat.php?<?php echo http_build_query($hq); ?>"
+    <a href="<?php ee(route_admin('chat', $hq)); ?>"
        class="btn btn-sm <?php echo $filterHidden ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>"
        style="<?php echo $filterHidden ? '' : 'border-color:var(--ptmd-warning);color:var(--ptmd-warning)'; ?>">
         <i class="fa-solid fa-eye-slash me-1"></i>Hidden
     </a>
 
     <?php if ($rooms): ?>
-        <form method="get" action="/admin/chat.php" class="d-flex gap-2 align-items-center ms-auto">
+        <form method="get" action="<?php echo e(route_admin('chat')); ?>" class="d-flex gap-2 align-items-center ms-auto">
             <input type="hidden" name="status" value="<?php ee($filterStatus); ?>">
             <?php if ($filterDeleted): ?><input type="hidden" name="deleted" value="1"><?php endif; ?>
             <select class="form-select form-select-sm" name="room" style="width:auto" onchange="this.form.submit()">
@@ -225,7 +225,7 @@ if ($pdo) {
                 <!-- Actions -->
                 <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
                     <?php if ($isDeleted): ?>
-                        <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                        <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                             <input type="hidden" name="action" value="restore">
@@ -235,7 +235,7 @@ if ($pdo) {
                         </form>
                     <?php else: ?>
                         <?php if ($msg['status'] !== 'approved'): ?>
-                            <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                            <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                                 <input type="hidden" name="action" value="approved">
@@ -245,7 +245,7 @@ if ($pdo) {
                             </form>
                         <?php endif; ?>
                         <?php if ($msg['status'] !== 'flagged'): ?>
-                            <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                            <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                                 <input type="hidden" name="action" value="flagged">
@@ -257,7 +257,7 @@ if ($pdo) {
                             </form>
                         <?php endif; ?>
                         <?php if ($msg['status'] !== 'blocked'): ?>
-                            <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                            <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                                 <input type="hidden" name="action" value="blocked">
@@ -270,7 +270,7 @@ if ($pdo) {
                             </form>
                         <?php endif; ?>
                         <!-- Pin / Unpin -->
-                        <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                        <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                             <input type="hidden" name="action" value="<?php echo $msg['is_pinned'] ? 'unpin' : 'pin'; ?>">
@@ -281,7 +281,7 @@ if ($pdo) {
                             </button>
                         </form>
                         <!-- Soft delete -->
-                        <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                        <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                             <input type="hidden" name="action" value="delete">
@@ -294,7 +294,7 @@ if ($pdo) {
                         </form>
                         <!-- Hide / Unhide -->
                         <?php if ($isHidden): ?>
-                            <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                            <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                                 <input type="hidden" name="action" value="unhide">
@@ -303,7 +303,7 @@ if ($pdo) {
                                 </button>
                             </form>
                         <?php else: ?>
-                            <form method="post" action="/admin/chat.php?<?php echo http_build_query($_GET); ?>">
+                            <form method="post" action="<?php echo e(route_admin('chat', $_GET)); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="id" value="<?php ee((string) $msg['id']); ?>">
                                 <input type="hidden" name="action" value="hide">
@@ -327,4 +327,3 @@ if ($pdo) {
 <?php endif; ?>
 
 <?php include __DIR__ . '/_admin_footer.php'; ?>
-

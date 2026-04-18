@@ -7,7 +7,7 @@
 
 $tags       = get_case_tags((int) $current_case['id']);
 $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
-            . '/index.php?page=case&slug=' . urlencode($current_case['slug']);
+            . route_case((string) $current_case['slug']);
 ?>
 
 <section class="container py-5">
@@ -16,10 +16,10 @@ $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="/index.php">Home</a>
+                <a href="<?php ee(route_home()); ?>">Home</a>
             </li>
             <li class="breadcrumb-item">
-                <a href="/index.php?page=cases">Cases</a>
+                <a href="<?php ee(route_cases()); ?>">Cases</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 <?php ee($current_case['title']); ?>
@@ -107,7 +107,7 @@ $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
 
     <!-- Back -->
     <div class="mt-4" data-animate>
-        <a href="/index.php?page=cases" class="btn btn-ptmd-outline">
+        <a href="<?php ee(route_cases()); ?>" class="btn btn-ptmd-outline">
             <i class="fa-solid fa-arrow-left me-2"></i>Back to cases
         </a>
     </div>

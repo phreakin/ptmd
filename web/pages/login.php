@@ -8,9 +8,8 @@
 
 // Already logged in → go to account
 if (is_viewer_logged_in()) {
-    $returnPage = isset($_GET['return']) ? trim($_GET['return']) : 'account';
-    $safe = preg_replace('/[^a-z0-9\-]/', '', $returnPage);
-    redirect('/index.php?page=' . ($safe ?: 'account'));
+    $returnPath = isset($_GET['return']) ? trim((string) $_GET['return']) : '';
+    redirect(ptmd_safe_public_return_path($returnPath));
 }
 
 $flash     = pull_flash();
@@ -19,32 +18,31 @@ $activeTab = 'signin'; // default tab
 // ── POST handler ──────────────────────────────────────────────────────────────
 if (is_post()) {
     $action = trim((string) ($_POST['action'] ?? ''));
+    $returnRaw = trim((string) ($_POST['return_path'] ?? ($_GET['return'] ?? '')));
+    $returnSlug = trim((string) ($_POST['return_slug'] ?? ($_GET['slug'] ?? '')));
+    $loginQuery = [];
+    if ($returnRaw !== '') {
+        $loginQuery['return'] = $returnRaw;
+    }
+    if ($returnSlug !== '') {
+        $loginQuery['slug'] = $returnSlug;
+    }
+    $loginUrl = !empty($loginQuery) ? url('/login', $loginQuery) : route_login();
+    $registerTabUrl = url('/login', array_merge($loginQuery, ['tab' => 'register']));
+    $errorReturnUrl = $action === 'register' ? $registerTabUrl : $loginUrl;
 
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         set_flash('Invalid form submission. Please try again.', 'danger');
-        redirect('/index.php?page=login');
+        redirect($errorReturnUrl);
     }
 
     $pdo = get_db();
     if (!$pdo) {
         set_flash('Database connection unavailable.', 'danger');
-        redirect('/index.php?page=login');
+        redirect($errorReturnUrl);
     }
 
-    // Return URL (sanitised to page names only)
-    $returnRaw  = trim((string) ($_POST['return_page'] ?? ($_GET['return'] ?? '')));
-    $returnPage = preg_replace('/[^a-z0-9\-]/', '', $returnRaw) ?: 'account';
-    $returnSlug = trim((string) ($_POST['return_slug'] ?? ''));
-    $returnSlug = preg_replace('/[^a-z0-9\-]/', '', $returnSlug);
-
-    function build_return_url(string $page, string $slug = ''): string
-    {
-        $url = '/index.php?page=' . $page;
-        if ($slug !== '') {
-            $url .= '&slug=' . rawurlencode($slug);
-        }
-        return $url;
-    }
+    $returnPath = ptmd_safe_public_return_path($returnRaw, $returnSlug);
 
     // ── Sign In ───────────────────────────────────────────────────────────────
     if ($action === 'login') {
@@ -53,7 +51,7 @@ if (is_post()) {
 
         if ($email === '' || $password === '') {
             set_flash('Email and password are required.', 'danger');
-            redirect('/index.php?page=login');
+            redirect($loginUrl);
         }
 
         $stmt = $pdo->prepare(
@@ -65,11 +63,11 @@ if (is_post()) {
 
         if ($viewer && password_verify($password, $viewer['password_hash'])) {
             viewer_login((int) $viewer['id']);
-            redirect(build_return_url($returnPage, $returnSlug), 'Welcome back!', 'success');
+            redirect($returnPath, 'Welcome back!', 'success');
         }
 
         set_flash('Invalid email or password.', 'danger');
-        redirect('/index.php?page=login');
+        redirect($loginUrl);
     }
 
     // ── Register ──────────────────────────────────────────────────────────────
@@ -84,27 +82,27 @@ if (is_post()) {
         // Validate
         if ($username === '' || $email === '' || $password === '') {
             set_flash('Username, email, and password are required.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         if (!preg_match('/^[a-zA-Z0-9_\-]{3,50}$/', $username)) {
             set_flash('Username must be 3–50 characters and contain only letters, numbers, underscores, or hyphens.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 150) {
             set_flash('Please enter a valid email address.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         if (strlen($password) < 8) {
             set_flash('Password must be at least 8 characters.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         if ($password !== $passwordConf) {
             set_flash('Passwords do not match.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         // Uniqueness checks
@@ -112,14 +110,14 @@ if (is_post()) {
         $checkUser->execute(['u' => $username]);
         if ($checkUser->fetchColumn()) {
             set_flash('That username is already taken.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         $checkEmail = $pdo->prepare('SELECT id FROM viewer_users WHERE email = :e LIMIT 1');
         $checkEmail->execute(['e' => $email]);
         if ($checkEmail->fetchColumn()) {
             set_flash('An account with that email already exists.', 'danger');
-            redirect('/index.php?page=login#register');
+            redirect($registerTabUrl);
         }
 
         // Insert
@@ -140,11 +138,11 @@ if (is_post()) {
         ]);
 
         viewer_login((int) $pdo->lastInsertId());
-        redirect(build_return_url($returnPage, $returnSlug), 'Account created! Welcome to Paper Trail MD.', 'success');
+        redirect($returnPath, 'Account created! Welcome to Paper Trail MD.', 'success');
     }
 
     // Unknown action
-    redirect('/index.php?page=login');
+    redirect($loginUrl);
 }
 
 // Detect which tab to show based on anchor or flash
@@ -152,8 +150,17 @@ if (isset($_GET['tab']) && $_GET['tab'] === 'register') {
     $activeTab = 'register';
 }
 
-$returnParam = isset($_GET['return']) ? trim($_GET['return']) : 'account';
+$returnParam = isset($_GET['return']) ? trim((string) $_GET['return']) : route_account();
 $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
+$loginPageQuery = [];
+if ($returnParam !== '') {
+    $loginPageQuery['return'] = $returnParam;
+}
+if ($returnSlugParam !== '') {
+    $loginPageQuery['slug'] = $returnSlugParam;
+}
+$signInTabUrl = !empty($loginPageQuery) ? url('/login', $loginPageQuery) : route_login();
+$registerTabUrl = url('/login', array_merge($loginPageQuery, ['tab' => 'register']));
 ?>
 
 <section class="container py-5">
@@ -161,7 +168,7 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
         <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
 
             <div class="text-center mb-5" data-animate>
-                <a href="/index.php" class="d-inline-block mb-3">
+                <a href="<?php ee(route_home()); ?>" class="d-inline-block mb-3">
                     <img
                         src="/assets/brand/logos/ptmd_lockup.png"
                         alt="<?php ee(site_setting('site_name', 'Paper Trail MD')); ?>"
@@ -170,7 +177,7 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
                     >
                 </a>
                 <h1 class="h4 mb-1">Your Account</h1>
-                <p class="ptmd-muted small">Save episodes. Track your favorites.</p>
+                <p class="ptmd-muted small">Save cases. Track your favorites.</p>
             </div>
 
             <?php if ($flash): ?>
@@ -222,10 +229,10 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
                         role="tabpanel"
                         aria-labelledby="signinTab"
                     >
-                        <form method="post" action="/index.php?page=login" novalidate>
+                        <form method="post" action="<?php ee(route_login()); ?>" novalidate>
                             <input type="hidden" name="csrf_token"   value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="action"        value="login">
-                            <input type="hidden" name="return_page"  value="<?php ee($returnParam); ?>">
+                            <input type="hidden" name="return_path"  value="<?php ee($returnParam); ?>">
                             <input type="hidden" name="return_slug"  value="<?php ee($returnSlugParam); ?>">
 
                             <div class="mb-3">
@@ -258,9 +265,18 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
 
                         <p class="text-center ptmd-muted small mt-4 mb-0">
                             No account?
-                            <button class="btn btn-link btn-sm p-0" style="color:var(--ptmd-teal)" onclick="document.getElementById('registerTab').click()">
+                            <a
+                                class="btn btn-link btn-sm p-0"
+                                href="<?php ee($registerTabUrl); ?>"
+                                data-bs-toggle="tab"
+                                data-bs-target="#registerPane"
+                                role="button"
+                                aria-controls="registerPane"
+                                aria-selected="<?php echo $activeTab === 'register' ? 'true' : 'false'; ?>"
+                                style="color:var(--ptmd-teal)"
+                            >
                                 Create one
-                            </button>
+                            </a>
                         </p>
                     </div>
 
@@ -271,10 +287,10 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
                         role="tabpanel"
                         aria-labelledby="registerTab"
                     >
-                        <form method="post" action="/index.php?page=login" novalidate>
+                        <form method="post" action="<?php ee(route_login()); ?>" novalidate>
                             <input type="hidden" name="csrf_token"  value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="action"       value="register">
-                            <input type="hidden" name="return_page" value="<?php ee($returnParam); ?>">
+                            <input type="hidden" name="return_path" value="<?php ee($returnParam); ?>">
                             <input type="hidden" name="return_slug" value="<?php ee($returnSlugParam); ?>">
 
                             <div class="mb-3">
@@ -342,9 +358,18 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
 
                         <p class="text-center ptmd-muted small mt-4 mb-0">
                             Already have an account?
-                            <button class="btn btn-link btn-sm p-0" style="color:var(--ptmd-teal)" onclick="document.getElementById('signinTab').click()">
+                            <a
+                                class="btn btn-link btn-sm p-0"
+                                href="<?php ee($signInTabUrl); ?>"
+                                data-bs-toggle="tab"
+                                data-bs-target="#signinPane"
+                                role="button"
+                                aria-controls="signinPane"
+                                aria-selected="<?php echo $activeTab === 'signin' ? 'true' : 'false'; ?>"
+                                style="color:var(--ptmd-teal)"
+                            >
                                 Sign in
-                            </button>
+                            </a>
                         </p>
                     </div>
 
@@ -352,7 +377,7 @@ $returnSlugParam = isset($_GET['slug']) ? trim($_GET['slug']) : '';
             </div><!-- /ptmd-auth-card -->
 
             <p class="text-center ptmd-muted small mt-4">
-                <a href="/index.php">← Back to site</a>
+                <a href="<?php ee(route_home()); ?>">← Back to site</a>
             </p>
 
         </div>

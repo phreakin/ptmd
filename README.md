@@ -34,7 +34,10 @@ This repository is not just a website. It is the foundation for a full **content
   Shared core logic including bootstrap, config, DB, helpers, auth, chat auth, workflow, social dispatch, and video processing
 
 - `/home/runner/work/ptmd/ptmd/web/pages/`  
-  Public page templates such as home, cases, case detail, series, chat, and auth pages
+  Route-level public page templates such as home, cases, case detail, chat, and auth pages
+
+- `/home/runner/work/ptmd/ptmd/web/pages/inc/`  
+  Reusable public includes and homepage-specific sections under `pages/inc/home/`
 
 - `/home/runner/work/ptmd/ptmd/web/admin/`  
   Admin pages and shared admin shell files such as `_admin_head.php` and `_admin_footer.php`
@@ -206,6 +209,20 @@ The platform should be built so that:
 - APIs remain clear and extendable
 - automation is DB-backed and observable
 - AI systems can sit on top of well-structured internal data
+
+---
+
+### Legacy naming debt intentionally retained
+
+This routing cleanup makes clean URLs canonical, but it does **not** rename the deeper episode-era data model yet.
+
+Still intentionally retained for stability:
+- `episodes` tables and joins
+- `episode_favorites`
+- `episode_id` analytics and payload fields
+- `web/admin/episodes.php` and related admin references that still map to legacy data structures
+
+That deeper schema and payload cleanup should happen in a separate sprint with explicit migration planning.
 
 ---
 

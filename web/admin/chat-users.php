@@ -16,7 +16,7 @@ $pdo = get_db();
 // ── POST: role/ban/mute/strike actions ────────────────────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/chat-users.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('chat-users'), 'Invalid CSRF token.', 'danger');
     }
     $targetId = (int) ($_POST['target_id'] ?? 0);
     $action   = trim((string) ($_POST['action'] ?? ''));
@@ -62,7 +62,7 @@ if ($pdo && is_post()) {
                     ->execute(['id' => $targetId]);
                 break;
         }
-        redirect('/admin/chat-users.php?' . http_build_query(array_filter(['q' => $_GET['q'] ?? '', 'role' => $_GET['role'] ?? '', 'status' => $_GET['status'] ?? ''])), 'Action applied.', 'success');
+        redirect(route_admin('chat-users', array_filter(['q' => $_GET['q'] ?? '', 'role' => $_GET['role'] ?? '', 'status' => $_GET['status'] ?? ''])), 'Action applied.', 'success');
     }
 }
 
@@ -149,7 +149,7 @@ $roleBadgeStyle = [
 </div>
 
 <!-- Filter bar -->
-<form method="get" action="/admin/chat-users.php" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+<form method="get" action="<?php echo e(route_admin('chat-users')); ?>" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
     <input class="form-control form-control-sm" style="max-width:220px" name="q" value="<?php ee($q); ?>" placeholder="Search username / display name…">
     <select class="form-select form-select-sm" style="width:auto" name="role">
         <option value="">All Roles</option>
@@ -164,7 +164,7 @@ $roleBadgeStyle = [
         <?php endforeach; ?>
     </select>
     <button class="btn btn-ptmd-teal btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Filter</button>
-    <a href="/admin/chat-users.php" class="btn btn-ptmd-ghost btn-sm">Clear</a>
+    <a href="<?php ee(route_admin('chat-users')); ?>" class="btn btn-ptmd-ghost btn-sm">Clear</a>
     <span class="ptmd-muted small ms-auto"><?php echo number_format($total); ?> user<?php echo $total !== 1 ? 's' : ''; ?></span>
 </form>
 
@@ -240,7 +240,7 @@ $roleBadgeStyle = [
                 <td>
                     <div class="d-flex gap-1 flex-wrap">
                         <!-- Set Role -->
-                        <form method="post" action="/admin/chat-users.php?<?php echo http_build_query(array_filter(['q'=>$q,'role'=>$fRole,'status'=>$fStat,'page'=>$page])); ?>" class="d-inline-flex align-items-center gap-1">
+                        <form method="post" action="<?php echo e(route_admin('chat-users', array_filter(['q' => $q, 'role' => $fRole, 'status' => $fStat, 'page' => $page]))); ?>" class="d-inline-flex align-items-center gap-1">
                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                             <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                             <input type="hidden" name="action" value="set_role">
@@ -253,7 +253,7 @@ $roleBadgeStyle = [
                         <!-- Mute / Unmute -->
                         <?php if (!$isBanned): ?>
                             <?php if ($isMuted): ?>
-                                <form method="post" action="/admin/chat-users.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('chat-users')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                     <input type="hidden" name="action" value="unmute">
@@ -268,7 +268,7 @@ $roleBadgeStyle = [
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
-                                            <form method="post" action="/admin/chat-users.php">
+                                            <form method="post" action="<?php echo e(route_admin('chat-users')); ?>">
                                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                                 <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                                 <input type="hidden" name="action" value="mute_1h">
@@ -276,7 +276,7 @@ $roleBadgeStyle = [
                                             </form>
                                         </li>
                                         <li>
-                                            <form method="post" action="/admin/chat-users.php">
+                                            <form method="post" action="<?php echo e(route_admin('chat-users')); ?>">
                                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                                 <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                                 <input type="hidden" name="action" value="mute_24h">
@@ -289,7 +289,7 @@ $roleBadgeStyle = [
                         <?php endif; ?>
                         <!-- Ban / Unban -->
                         <?php if ($isBanned): ?>
-                            <form method="post" action="/admin/chat-users.php" class="d-inline">
+                            <form method="post" action="<?php echo e(route_admin('chat-users')); ?>" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                 <input type="hidden" name="action" value="unban">
@@ -298,7 +298,7 @@ $roleBadgeStyle = [
                                 </button>
                             </form>
                         <?php else: ?>
-                            <form method="post" action="/admin/chat-users.php" class="d-inline">
+                            <form method="post" action="<?php echo e(route_admin('chat-users')); ?>" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                 <input type="hidden" name="action" value="ban">
@@ -312,7 +312,7 @@ $roleBadgeStyle = [
                         <?php endif; ?>
                         <!-- Reset strikes -->
                         <?php if ((int)$u['strike_count'] > 0): ?>
-                            <form method="post" action="/admin/chat-users.php" class="d-inline">
+                            <form method="post" action="<?php echo e(route_admin('chat-users')); ?>" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                 <input type="hidden" name="target_id" value="<?php ee((string)$u['id']); ?>">
                                 <input type="hidden" name="action" value="reset_strikes">
@@ -322,7 +322,7 @@ $roleBadgeStyle = [
                             </form>
                         <?php endif; ?>
                         <!-- View messages -->
-                        <a href="/admin/chat.php?user_id=<?php ee((string)$u['id']); ?>"
+                        <a href="<?php ee(route_admin('chat', ['user_id' => (string) $u['id']])); ?>"
                            class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View Messages">
                             <i class="fa-solid fa-message"></i>
                         </a>
@@ -339,7 +339,7 @@ $roleBadgeStyle = [
     <div class="d-flex justify-content-center gap-2 mt-4">
         <?php for ($p = 1; $p <= $pages; $p++): ?>
             <?php $pq = array_filter(['q'=>$q,'role'=>$fRole,'status'=>$fStat,'page'=>$p]); ?>
-            <a href="/admin/chat-users.php?<?php echo http_build_query($pq); ?>"
+            <a href="<?php ee(route_admin('chat-users', $pq)); ?>"
                class="btn btn-sm <?php echo $p === $page ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">
                 <?php echo $p; ?>
             </a>

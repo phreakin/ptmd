@@ -32,8 +32,7 @@ CREATE TABLE IF NOT EXISTS clip_blueprints
     CONSTRAINT fk_cb_hook FOREIGN KEY (hook_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
     CONSTRAINT fk_cb_setup FOREIGN KEY (setup_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
     CONSTRAINT fk_cb_payoff FOREIGN KEY (payoff_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
-    CONSTRAINT fk_cb_loop FOREIGN KEY (loop_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
-    CONSTRAINT fk_cb_overlay FOREIGN KEY (overlay_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
+    CONSTRAINT fk_cb_loop FOREIGN KEY (loop_asset_id) REFERENCES assets(id) ON DELETE SET NULL,    CONSTRAINT fk_cb_overlay FOREIGN KEY (overlay_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
     CONSTRAINT fk_cb_subtitle FOREIGN KEY (subtitle_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
     CONSTRAINT fk_cb_caption FOREIGN KEY (caption_asset_id) REFERENCES assets (id) ON DELETE SET NULL,
 

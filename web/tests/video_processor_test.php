@@ -34,8 +34,20 @@ if (!function_exists('site_setting')) {
     function site_setting(string $key, string $fallback = ''): string { return $fallback; }
 }
 
+// Use a writable temp area so these tests work on Windows and Unix-like hosts.
+$ptmdTempDir = rtrim((string) sys_get_temp_dir(), DIRECTORY_SEPARATOR);
+if ($ptmdTempDir === '' || !is_dir($ptmdTempDir)) {
+    $ptmdTempDir = __DIR__ . '/tmp';
+    if (!is_dir($ptmdTempDir)) {
+        mkdir($ptmdTempDir, 0755, true);
+    }
+}
+
 // Fake DOCUMENT_ROOT so path resolution in vp_is_safe_path works headlessly
-$_SERVER['DOCUMENT_ROOT'] = '/tmp/ptmd_test_docroot';
+$_SERVER['DOCUMENT_ROOT'] = $ptmdTempDir . '/ptmd_test_docroot';
+if (!is_dir($_SERVER['DOCUMENT_ROOT'])) {
+    mkdir($_SERVER['DOCUMENT_ROOT'], 0755, true);
+}
 
 require_once __DIR__ . '/../inc/video_processor.php';
 
@@ -154,9 +166,9 @@ ptmd_assert_true(
 
 // ── burn_caption_to_video (input-not-found path) ──────────────────────────────
 $captionResult = burn_caption_to_video(
-    '/tmp/nonexistent_video_ptmd_test.mp4',
+    $ptmdTempDir . '/nonexistent_video_ptmd_test.mp4',
     'Hello world caption',
-    '/tmp/ptmd_caption_out.mp4'
+    $ptmdTempDir . '/ptmd_caption_out.mp4'
 );
 ptmd_assert_same(
     $captionResult['ok'],
@@ -170,9 +182,9 @@ ptmd_assert_true(
 
 // ── apply_multi_layer_composition (input-not-found path) ─────────────────────
 $compositionResult = apply_multi_layer_composition(
-    '/tmp/nonexistent_video_ptmd_test.mp4',
+    $ptmdTempDir . '/nonexistent_video_ptmd_test.mp4',
     [['path' => '/uploads/logo.png', 'position' => 'bottom-right', 'scale' => 30, 'opacity' => 1.0]],
-    '/tmp/ptmd_composition_out.mp4'
+    $ptmdTempDir . '/ptmd_composition_out.mp4'
 );
 ptmd_assert_same(
     $compositionResult['ok'],
@@ -182,9 +194,9 @@ ptmd_assert_same(
 
 // ── apply_multi_layer_composition (empty layers) ─────────────────────────────
 $emptyLayersResult = apply_multi_layer_composition(
-    '/tmp/nonexistent_video_ptmd_test.mp4',
+    $ptmdTempDir . '/nonexistent_video_ptmd_test.mp4',
     [],
-    '/tmp/ptmd_empty_layers_out.mp4'
+    $ptmdTempDir . '/ptmd_empty_layers_out.mp4'
 );
 ptmd_assert_same(
     $emptyLayersResult['ok'],
@@ -194,13 +206,13 @@ ptmd_assert_same(
 
 // ── apply_multi_layer_composition (unsafe layer path) ────────────────────────
 // Use a real file for the video input stub check — create a temp placeholder
-$fakeVideo = '/tmp/ptmd_fake_video_' . getmypid() . '.mp4';
+$fakeVideo = $ptmdTempDir . '/ptmd_fake_video_' . getmypid() . '.mp4';
 file_put_contents($fakeVideo, '');
 
 $unsafeLayerResult = apply_multi_layer_composition(
     $fakeVideo,
     [['path' => '/etc/passwd', 'position' => 'center', 'scale' => 30, 'opacity' => 1.0]],
-    '/tmp/ptmd_unsafe_layer_out.mp4'
+    $ptmdTempDir . '/ptmd_unsafe_layer_out.mp4'
 );
 ptmd_assert_same(
     $unsafeLayerResult['ok'],

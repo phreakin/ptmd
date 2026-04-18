@@ -5,23 +5,33 @@
 
 require_once __DIR__ . '/../inc/bootstrap.php';
 
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
+if (
+    in_array(strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')), ['GET', 'HEAD'], true)
+    && $requestPath !== route_admin('login')
+) {
+    header('Location: ' . route_admin('login'), true, 301);
+    exit;
+}
+
 // Already logged in → go to dashboard
 if (is_logged_in()) {
-    redirect('/admin/dashboard.php');
+    redirect(ptmd_safe_admin_return_path((string) ($_GET['return'] ?? '')));
 }
 
 if (is_post()) {
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $csrf     = $_POST['csrf_token'] ?? null;
+    $returnTo = ptmd_safe_admin_return_path((string) ($_POST['return'] ?? ($_GET['return'] ?? '')));
 
     if (!verify_csrf($csrf)) {
-        redirect('/admin/login.php', 'Invalid form submission. Please try again.', 'danger');
+        redirect(route_admin_login($returnTo), 'Invalid form submission. Please try again.', 'danger');
     }
 
     $pdo = get_db();
     if (!$pdo) {
-        redirect('/admin/login.php', 'Database connection unavailable.', 'danger');
+        redirect(route_admin_login($returnTo), 'Database connection unavailable.', 'danger');
     }
 
     $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = :username LIMIT 1');
@@ -31,11 +41,11 @@ if (is_post()) {
     if ($user && password_verify($password, $user['password_hash'])) {
         session_regenerate_id(true);
         $_SESSION['admin_user_id'] = (int) $user['id'];
-        redirect('/admin/dashboard.php', 'Welcome back.', 'success');
+        redirect($returnTo, 'Welcome back.', 'success');
     }
 
     // Intentionally vague error
-    redirect('/admin/login.php', 'Invalid credentials.', 'danger');
+    redirect(route_admin_login($returnTo), 'Invalid credentials.', 'danger');
 }
 
 $flash     = pull_flash();
@@ -74,8 +84,9 @@ $pageTitle = 'Admin Login | Paper Trail MD';
 
     <div class="ptmd-panel p-xl">
         <h1 class="h5 mb-4">Sign In</h1>
-        <form method="post" action="/admin/login.php" novalidate>
+        <form method="post" action="<?php ee(route_admin('login')); ?>" novalidate>
             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
+            <input type="hidden" name="return" value="<?php ee(ptmd_safe_admin_return_path((string) ($_GET['return'] ?? ''))); ?>">
             <div class="mb-3">
                 <label class="form-label" for="login_username">Username</label>
                 <input
@@ -105,7 +116,7 @@ $pageTitle = 'Admin Login | Paper Trail MD';
     </div>
 
     <p class="text-center ptmd-muted small mt-4">
-        <a href="/index.php">← Back to public site</a>
+        <a href="<?php ee(route_home()); ?>">← Back to public site</a>
     </p>
 
 </div>

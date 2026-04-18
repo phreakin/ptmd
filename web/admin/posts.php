@@ -3,12 +3,14 @@
  * PTMD Admin — Social Post Queue
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
-$pageHeading  = 'Social Post Queue';
+$pageHeading  = 'Dispatch';
 $pageSubheading = 'Manage and track all scheduled social media posts.';
-$pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
-              . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
+$pageActions  = '<a href="' . e(route_admin('monitor')) . '" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Intelligence</a>';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -52,7 +54,7 @@ function clip_asset_path(array $clip): string
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/posts.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('posts'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'update_status';
@@ -73,7 +75,7 @@ if ($pdo && is_post()) {
         $siteCheck->execute(['key' => ptmd_platform_to_site_key($platform)]);
         $siteRow = $siteCheck->fetch();
         if ($siteRow !== false && (int) $siteRow['is_active'] !== 1) {
-            redirect('/admin/posts.php', 'This platform is currently inactive.', 'warning');
+            redirect(route_admin('posts'), 'This platform is currently inactive.', 'warning');
         }
 
         $prefStmt = $pdo->prepare(
@@ -86,7 +88,7 @@ if ($pdo && is_post()) {
         $pref = $prefStmt->fetch();
 
         if ($pref && (int) $pref['is_enabled'] !== 1) {
-            redirect('/admin/posts.php', 'This platform is disabled in posting preferences.', 'warning');
+            redirect(route_admin('posts'), 'This platform is disabled in posting preferences.', 'warning');
         }
 
         if ($contentType === '' && !empty($pref['default_content_type'])) {
@@ -115,7 +117,7 @@ if ($pdo && is_post()) {
             'sched'    => $scheduledFor,
             'status'   => $status,
         ]);
-        redirect('/admin/posts.php', 'Post queued.', 'success');
+        redirect(route_admin('posts'), 'Post queued.', 'success');
     }
 
     if ($postAction === 'update_status') {
@@ -127,7 +129,7 @@ if ($pdo && is_post()) {
             $pdo->prepare(
                 'UPDATE social_post_queue SET status = :status, updated_at = NOW() WHERE id = :id'
             )->execute(['status' => $newStatus, 'id' => $queueId]);
-            redirect('/admin/posts.php', 'Status updated.', 'success');
+            redirect(route_admin('posts'), 'Status updated.', 'success');
         }
     }
 
@@ -135,7 +137,7 @@ if ($pdo && is_post()) {
         $delId = (int) ($_POST['id'] ?? 0);
         if ($delId > 0) {
             $pdo->prepare('DELETE FROM social_post_queue WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/posts.php', 'Queue item deleted.', 'success');
+            redirect(route_admin('posts'), 'Queue item deleted.', 'success');
         }
     }
 
@@ -170,7 +172,7 @@ if ($pdo && is_post()) {
                 'enabled'  => !empty($pref['is_enabled']) ? 1 : 0,
             ]);
         }
-        redirect('/admin/posts.php', 'Platform preferences saved.', 'success');
+        redirect(route_admin('posts'), 'Platform preferences saved.', 'success');
     }
 
     if ($postAction === 'publish_now') {
@@ -183,7 +185,7 @@ if ($pdo && is_post()) {
                 $result = dispatch_social_post($item);
                 $msg = $result['ok'] ? 'Post dispatched successfully.' : 'Dispatch failed: ' . ($result['error'] ?? 'unknown error');
                 $type = $result['ok'] ? 'success' : 'warning';
-                redirect('/admin/posts.php', $msg, $type);
+                redirect(route_admin('posts'), $msg, $type);
             }
         }
     }
@@ -217,7 +219,7 @@ if ($pdo && is_post()) {
                     'res'      => json_encode(['ok' => true, 'message' => 'Marked removed by admin'], JSON_UNESCAPED_UNICODE),
                 ]);
 
-                redirect('/admin/posts.php', 'Post removed for this platform.', 'success');
+                redirect(route_admin('posts'), 'Post removed for this platform.', 'success');
             }
         }
     }
@@ -252,7 +254,7 @@ if ($pdo && is_post()) {
                     $result = dispatch_social_post($newItem);
                     $msg = $result['ok'] ? 'Reupload dispatched successfully.' : 'Reupload failed: ' . ($result['error'] ?? 'unknown error');
                     $type = $result['ok'] ? 'success' : 'warning';
-                    redirect('/admin/posts.php', $msg, $type);
+                    redirect(route_admin('posts'), $msg, $type);
                 }
             }
         }
@@ -294,7 +296,7 @@ $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
 $selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
 $selectedClipAsset = safe_upload_rel_path($selectedClip ? clip_asset_path($selectedClip) : '');
 
-$pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
+$pageActions = '<a href="' . e(route_admin('social-schedule')) . '" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
 </a>';
 ?>
@@ -305,7 +307,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-sliders me-2 ptmd-text-teal"></i>Platform Posting Preferences
     </h2>
-    <form method="post" action="/admin/posts.php">
+    <form method="post" action="<?php echo e(route_admin('posts')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="save_preferences">
         <div class="table-responsive">
@@ -385,7 +387,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-calendar-plus me-2 ptmd-text-teal"></i>Add to Queue
     </h2>
-    <form method="post" action="/admin/posts.php">
+    <form method="post" action="<?php echo e(route_admin('posts')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
@@ -479,7 +481,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                 <?php echo $item['scheduled_for'] ? e(date('M j, Y g:ia', strtotime($item['scheduled_for']))) : '—'; ?>
                             </td>
                             <td>
-                                <form method="post" action="/admin/posts.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="update_status">
                                     <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -498,7 +500,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="publish_now">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -506,7 +508,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-rocket"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="reupload">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -514,7 +516,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-upload"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="remove_site_post">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -525,7 +527,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-link-slash"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">

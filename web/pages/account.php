@@ -1,21 +1,21 @@
 <?php
 /**
- * PTMD — Viewer account / dashboard page
+ * PTMD - Viewer account / dashboard page
  *
  * Requires a viewer session; redirects to login if absent.
- * Displays saved favorites in episode-card grid.
+ * Displays saved favorites in a case-card grid.
  */
 
 if (!is_viewer_logged_in()) {
-    redirect('/index.php?page=login&return=account');
+    redirect(route_login(route_account()));
 }
 
-$viewer    = current_viewer();
-$viewerId  = (int) ($_SESSION['viewer_id'] ?? 0);
+$viewer = current_viewer();
+$viewerId = (int) ($_SESSION['viewer_id'] ?? 0);
 
-// Fetch favorited episodes
-$pdo        = get_db();
-$favorites  = [];
+// Uses legacy episodes tables for now; deeper schema cleanup is deferred.
+$pdo = get_db();
+$favorites = [];
 
 if ($pdo && $viewerId > 0) {
     $stmt = $pdo->prepare(
@@ -32,12 +32,11 @@ if ($pdo && $viewerId > 0) {
 $displayName = ($viewer && $viewer['display_name'] !== null && $viewer['display_name'] !== '')
     ? $viewer['display_name']
     : ($viewer['username'] ?? 'Viewer');
-$username    = $viewer['username'] ?? '';
+$username = $viewer['username'] ?? '';
 ?>
 
 <section class="container py-5">
 
-    <!-- Header row -->
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-4 mb-5" data-animate>
         <div>
             <span class="ptmd-badge-teal mb-3 d-inline-block">
@@ -49,8 +48,7 @@ $username    = $viewer['username'] ?? '';
             <?php endif; ?>
         </div>
 
-        <!-- Logout button -->
-        <form method="post" action="/index.php?page=logout">
+        <form method="post" action="<?php ee(route_logout()); ?>">
             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
             <button type="submit" class="btn btn-ptmd-ghost btn-sm">
                 <i class="fa-solid fa-right-from-bracket me-1"></i>Sign Out
@@ -58,12 +56,11 @@ $username    = $viewer['username'] ?? '';
         </form>
     </div>
 
-    <!-- Saved episodes -->
     <div class="mb-4" data-animate>
         <h2 class="h5 mb-1">
-            <i class="fa-solid fa-heart me-2" style="color:var(--ptmd-teal)"></i>Saved Episodes
+            <i class="fa-solid fa-heart me-2" style="color:var(--ptmd-teal)"></i>Saved Cases
         </h2>
-        <p class="ptmd-muted small">Episodes you've marked as favorites.</p>
+        <p class="ptmd-muted small">Cases you've marked as favorites.</p>
     </div>
 
     <div class="row g-4">
@@ -71,12 +68,8 @@ $username    = $viewer['username'] ?? '';
             <div class="col-12" data-animate>
                 <div class="ptmd-panel p-lg ptmd-text-muted">
                     <i class="fa-regular fa-heart me-2"></i>
-<<<<<<< HEAD
                     No saved cases yet.
-=======
-                    No saved episodes yet.
->>>>>>> 8d1ffc660c62b1a7a2a8c6632767004f6683a206
-                    <a href="/index.php?page=cases" class="ms-1">Browse cases</a> and tap the
+                    <a href="<?php ee(route_cases()); ?>" class="ms-1">Browse cases</a> and tap the
                     <i class="fa-solid fa-heart ms-1 me-1" style="color:var(--ptmd-teal)"></i> to save them here.
                 </div>
             </div>
@@ -96,7 +89,6 @@ $username    = $viewer['username'] ?? '';
                             <div class="ptmd-ep-play">
                                 <span><i class="fa-solid fa-play"></i></span>
                             </div>
-                            <!-- Remove from favorites -->
                             <button
                                 class="ptmd-favorite-btn is-favorited position-absolute"
                                 style="top:0.5rem;right:0.5rem"
@@ -109,7 +101,6 @@ $username    = $viewer['username'] ?? '';
                             </button>
                         </div>
                     <?php else: ?>
-                        <!-- No thumbnail — still show favorite button -->
                         <div class="position-relative" style="height:0">
                             <button
                                 class="ptmd-favorite-btn is-favorited position-absolute"
@@ -137,7 +128,7 @@ $username    = $viewer['username'] ?? '';
                         </p>
                         <a
                             class="btn btn-ptmd-outline btn-sm align-self-start"
-                            href="/index.php?page=case&amp;slug=<?php ee($ep['slug']); ?>"
+                            href="<?php ee(route_case((string) $ep['slug'])); ?>"
                         >
                             Watch + Read <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>

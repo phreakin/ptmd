@@ -59,7 +59,7 @@ $cases = get_latest_cases(24);
                         </p>
                         <a
                             class="btn btn-ptmd-outline btn-sm align-self-start"
-                            href="/index.php?page=case&amp;slug=<?php ee($ep['slug']); ?>"
+                            href="<?php ee(route_case((string) $ep['slug'])); ?>"
                         >
                             Watch + Read <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
