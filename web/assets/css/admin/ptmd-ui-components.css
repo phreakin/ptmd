@@ -148,6 +148,38 @@
     box-shadow: var(--ptmd-shadow-elev-1);
 }
 
+/* ── View-mode switching ─────────────────────────────────────────────────── */
+
+/* Card mode: override the horizontal grid to a single stacked column */
+[data-view-mode="card"] .ptmd-list-hybrid-item {
+    grid-template-columns: 1fr;
+    gap: var(--ptmd-space-2);
+    align-items: start;
+}
+
+/* Card mode: display button row at the end */
+[data-view-mode="card"] .ptmd-list-hybrid-item > .btn {
+    justify-self: start;
+    margin-top: var(--ptmd-space-1);
+}
+
+/* Table mode: restore side-by-side layout explicitly (default, but explicit for toggle clarity) */
+[data-view-mode="table"] .ptmd-list-hybrid-item {
+    grid-template-columns: minmax(200px, 1.7fr) repeat(3, minmax(90px, 1fr)) auto;
+    align-items: center;
+}
+
+/* Tab button reflects current view selection */
+.ptmd-tabs [aria-pressed="true"] {
+    color: var(--ptmd-text-primary);
+    background: color-mix(in srgb, var(--ptmd-accent-forensic-soft) 55%, rgba(255,255,255,.06));
+}
+
+.ptmd-tabs [aria-pressed="false"] {
+    color: var(--ptmd-text-muted);
+    background: transparent;
+}
+
 .ptmd-drawer {
     position: fixed;
     inset: 0 0 0 auto;
