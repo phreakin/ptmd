@@ -41,6 +41,7 @@ if ($pdo) {
 }
 ?>
 
+<div class="ptmd-screen-dashboard">
 <!-- Stat cards -->
 <div class="row g-4 mb-5">
     <div class="col-6 col-lg-3">
@@ -200,4 +201,5 @@ if ($pdo) {
 
 </div>
 
+</div>
 <?php include __DIR__ . '/_admin_footer.php'; ?>
