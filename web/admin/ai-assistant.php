@@ -41,6 +41,7 @@ if ($pdo) {
     </div>
 <?php endif; ?>
 
+<div class="ptmd-screen-ai-bot">
 <!-- Copilot layout: sessions sidebar + main chat -->
 <div class="ptmd-copilot-layout">
 
@@ -145,6 +146,7 @@ if ($pdo) {
         </div>
 
     </section>
+</div>
 </div>
 
 <!-- Inject CSRF for JS -->

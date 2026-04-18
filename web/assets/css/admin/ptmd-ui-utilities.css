@@ -1,0 +1,13 @@
+.ptmd-glow-forensic { box-shadow: var(--ptmd-glow-forensic); }
+.ptmd-glow-evidence { box-shadow: var(--ptmd-glow-evidence); }
+.ptmd-glow-gold { box-shadow: var(--ptmd-glow-gold); }
+.ptmd-text-evidence { color: var(--ptmd-accent-evidence) !important; }
+.ptmd-text-forensic { color: var(--ptmd-accent-forensic) !important; }
+.ptmd-text-gold { color: var(--ptmd-accent-gold) !important; }
+.ptmd-surface-alert { background: var(--ptmd-surface-glass-alert) !important; }
+.ptmd-border-focus { border-color: var(--ptmd-border-focus) !important; }
+.ptmd-stack-sm { display: grid; gap: var(--ptmd-space-2); }
+.ptmd-stack-md { display: grid; gap: var(--ptmd-space-4); }
+.ptmd-stack-lg { display: grid; gap: var(--ptmd-space-6); }
+.ptmd-overline { font-size: .68rem; text-transform: uppercase; letter-spacing: .14em; color: var(--ptmd-text-dim); }
+.ptmd-empty-state { border: 1px dashed var(--ptmd-border-default); border-radius: var(--ptmd-radius-lg); padding: var(--ptmd-space-8); text-align: center; color: var(--ptmd-text-muted); }

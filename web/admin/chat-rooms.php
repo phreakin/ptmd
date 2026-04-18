@@ -35,6 +35,12 @@ if ($pdo && is_post()) {
         $isLive          = isset($_POST['is_live'])          ? 1 : 0;
         $slowMode        = max(0, (int) ($_POST['slow_mode_seconds'] ?? 0));
         $membersOnly     = isset($_POST['members_only'])     ? 1 : 0;
+        $reactionPolicy  = trim((string) ($_POST['reaction_policy'] ?? 'all'));
+        $triviaEnabled   = isset($_POST['trivia_enabled'])   ? 1 : 0;
+        $donationsEnabled = isset($_POST['donations_enabled']) ? 1 : 0;
+
+        $validPolicies = ['all', 'registered', 'disabled'];
+        if (!in_array($reactionPolicy, $validPolicies, true)) $reactionPolicy = 'all';
 
         if ($name === '' || $slug === '') {
             set_flash('Name and slug are required.', 'danger');
@@ -47,8 +53,8 @@ if ($pdo && is_post()) {
 
         if ($action === 'create') {
             $stmt = $pdo->prepare(
-                'INSERT INTO chat_rooms (slug, name, description, case_id, is_live, slow_mode_seconds, members_only, is_archived, created_at, updated_at)
-                 VALUES (:slug, :name, :desc, :case_id, :is_live, :slow, :mo, 0, NOW(), NOW())'
+                'INSERT INTO chat_rooms (slug, name, description, case_id, is_live, slow_mode_seconds, members_only, reaction_policy, trivia_enabled, donations_enabled, is_archived, created_at, updated_at)
+                 VALUES (:slug, :name, :desc, :case_id, :is_live, :slow, :mo, :rp, :te, :de, 0, NOW(), NOW())'
             );
             $stmt->execute([
                 'slug'    => $slug,
@@ -58,12 +64,16 @@ if ($pdo && is_post()) {
                 'is_live' => $isLive,
                 'slow'    => $slowMode,
                 'mo'      => $membersOnly,
+                'rp'      => $reactionPolicy,
+                'te'      => $triviaEnabled,
+                'de'      => $donationsEnabled,
             ]);
             redirect('/admin/chat-rooms.php', 'Room created.', 'success');
         } else {
             $stmt = $pdo->prepare(
                 'UPDATE chat_rooms SET slug=:slug, name=:name, description=:desc, case_id=:case_id,
-                 is_live=:is_live, slow_mode_seconds=:slow, members_only=:mo, updated_at=NOW()
+                 is_live=:is_live, slow_mode_seconds=:slow, members_only=:mo,
+                 reaction_policy=:rp, trivia_enabled=:te, donations_enabled=:de, updated_at=NOW()
                  WHERE id=:id'
             );
             $stmt->execute([
@@ -74,6 +84,9 @@ if ($pdo && is_post()) {
                 'is_live' => $isLive,
                 'slow'    => $slowMode,
                 'mo'      => $membersOnly,
+                'rp'      => $reactionPolicy,
+                'te'      => $triviaEnabled,
+                'de'      => $donationsEnabled,
                 'id'      => $id,
             ]);
             redirect('/admin/chat-rooms.php', 'Room updated.', 'success');
@@ -172,6 +185,24 @@ include __DIR__ . '/_admin_head.php';
                         <?php echo !empty($editRoom['members_only']) ? 'checked' : ''; ?>>
                     <label class="form-check-label" for="room_mo">Members Only</label>
                 </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="room_trivia" name="trivia_enabled" value="1"
+                        <?php echo !empty($editRoom['trivia_enabled']) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="room_trivia">Trivia</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="room_donations" name="donations_enabled" value="1"
+                        <?php echo ($editRoom === null || !empty($editRoom['donations_enabled'])) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="room_donations">Donations</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="room_react_policy">Reaction Policy</label>
+                <select class="form-select" id="room_react_policy" name="reaction_policy">
+                    <option value="all"        <?php echo ($editRoom['reaction_policy'] ?? 'all') === 'all'        ? 'selected' : ''; ?>>All users</option>
+                    <option value="registered" <?php echo ($editRoom['reaction_policy'] ?? '')    === 'registered' ? 'selected' : ''; ?>>Registered only</option>
+                    <option value="disabled"   <?php echo ($editRoom['reaction_policy'] ?? '')    === 'disabled'   ? 'selected' : ''; ?>>Disabled</option>
+                </select>
             </div>
         </div>
 

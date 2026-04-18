@@ -22,6 +22,8 @@ if (!is_post()) {
     $roomSlug = trim(strip_tags((string) ($_GET['room'] ?? 'case-chat')));
     $since    = max(0, (int) ($_GET['since'] ?? 0));
     $limit    = min(100, max(10, (int) ($_GET['limit'] ?? 60)));
+    $isMod = is_chat_logged_in() && is_chat_moderator();
+    $hiddenClause = $isMod ? '' : 'AND m.hidden_at IS NULL';
 
     // Resolve room
     $roomStmt = $pdo->prepare('SELECT * FROM chat_rooms WHERE slug = :slug AND is_archived = 0 LIMIT 1');
@@ -47,11 +49,13 @@ if (!is_post()) {
             m.id, m.username, m.message, m.status, m.emojis_json, m.created_at,
             m.chat_user_id, m.parent_id,
             m.is_pinned, m.is_highlighted, m.highlight_color, m.highlight_amount,
+            m.hidden_at, m.hide_reason,
             cu.display_name, cu.avatar_color, cu.role AS user_role, cu.badge_label
         FROM  chat_messages m
         LEFT  JOIN chat_users cu ON cu.id = m.chat_user_id
         WHERE m.status = 'approved'
           AND m.deleted_at IS NULL
+          {$hiddenClause}
           {$sinceClause}
           {$roomClause}
         ORDER BY m.created_at ASC, m.id ASC
@@ -76,6 +80,7 @@ if (!is_post()) {
         $row['reactions']      = $rcStmt->fetchAll(PDO::FETCH_KEY_PAIR);
         $row['is_pinned']      = (bool) $row['is_pinned'];
         $row['is_highlighted'] = (bool) $row['is_highlighted'];
+        $row['is_hidden']      = !empty($row['hidden_at']);
     }
     unset($row);
 
@@ -108,6 +113,9 @@ if (!is_post()) {
             'is_live'           => (bool) $room['is_live'],
             'slow_mode_seconds' => (int)  $room['slow_mode_seconds'],
             'members_only'      => (bool) $room['members_only'],
+            'reaction_policy'   => $room['reaction_policy'] ?? 'all',
+            'trivia_enabled'    => (bool) ($room['trivia_enabled'] ?? false),
+            'donations_enabled' => (bool) ($room['donations_enabled'] ?? true),
         ] : null,
     ]);
     exit;
@@ -187,6 +195,20 @@ if ($room && (int) $room['slow_mode_seconds'] > 0) {
     if ($lmAt && (time() - strtotime((string) $lmAt)) < $slowSec) {
         $wait = $slowSec - (time() - strtotime((string) $lmAt));
         echo json_encode(['ok' => false, 'error' => "Slow mode: wait {$wait} more second(s).", 'slow_mode' => true, 'wait' => $wait]);
+        exit;
+    }
+}
+
+// Duplicate message guard: same user, same message text, within 30 seconds
+if ($chatUserId) {
+    $dupStmt = $pdo->prepare(
+        'SELECT id FROM chat_messages
+         WHERE chat_user_id = :uid AND message = :msg AND created_at > (NOW() - INTERVAL 30 SECOND)
+         LIMIT 1'
+    );
+    $dupStmt->execute(['uid' => $chatUserId, 'msg' => $message]);
+    if ($dupStmt->fetch()) {
+        echo json_encode(['ok' => false, 'error' => 'Duplicate message — please wait a moment before resending.']);
         exit;
     }
 }

@@ -29,6 +29,7 @@ Apply them in the order listed below, skipping any you have already run:
 | `migration_assets.sql` | `assets`, `asset_usage_logs` |
 | `migration_clips_blueprints.sql` | `clip_blueprints` |
 | `migration_ai_assistant.sql` | `ai_assistant_sessions`, `ai_assistant_messages` |
+| `migration_chat_v2.sql` | `hidden_at/hidden_by/hide_reason` on chat_messages; `strike_count/trust_level/last_strike_at` on chat_users; `reaction_policy/trivia_enabled/donations_enabled` on chat_rooms; new tables `chat_trivia_questions`, `chat_trivia_sessions`, `chat_trivia_answers`, `chat_donations`; donation site_settings |
 
 Example for a single migration:
 

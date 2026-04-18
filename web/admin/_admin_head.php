@@ -26,11 +26,14 @@ $navItems = [
     ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
     ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
+    ['href' => '/admin/monitor.php',         'label' => 'Monitor',         'icon' => 'fa-chart-line',     'id' => 'monitor'],
     ['href' => '/admin/content-workflow.php','label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
     ['href' => '/admin/posting-sites.php',   'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
+    ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
     ['href' => '/admin/chat-rooms.php',      'label' => 'Chat Rooms',      'icon' => 'fa-door-open',       'id' => 'chat-rooms'],
-    ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
+    ['href' => '/admin/chat-users.php',      'label' => 'Chat Users',      'icon' => 'fa-users',           'id' => 'chat-users'],
+    ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',            'id' => 'settings'],
     ['href' => '/admin/site-tests.php',      'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
 ];
 ?>
@@ -45,6 +48,13 @@ $navItems = [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@latest/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-tokens.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-base.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-glass.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-components.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-utilities.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-motion.css">
+    <link rel="stylesheet" href="/assets/css/admin/ptmd-ui-screens.css">
 </head>
 <body>
 <div class="ptmd-admin-shell">
@@ -68,6 +78,12 @@ $navItems = [
             </span>
         </a>
     </div>
+
+    <a href="#" class="ptmd-topbar-command d-none d-lg-inline-flex" data-ptmd-command-open aria-label="Open command palette">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Search cases, queue, assets, settings</span>
+        <kbd>⌘K</kbd>
+    </a>
 
     <div class="d-flex align-items-center gap-3">
         <a href="/index.php" target="_blank" rel="noopener"
@@ -113,7 +129,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 7, 6) as $item): ?>
+            <?php foreach (array_slice($navItems, 7, 8) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -129,7 +145,7 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <?php foreach (array_slice($navItems, 13) as $item): ?>
+            <?php foreach (array_slice($navItems, 15) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -150,7 +166,7 @@ $navItems = [
 </aside>
 
 <!-- ── Main content ────────────────────────────────────────────────────────── -->
-<main class="ptmd-admin-content">
+<main class="ptmd-admin-content ptmd-page-shell">
 
     <?php if ($flash): ?>
         <div class="alert ptmd-alert alert-<?php ee($flash['type']); ?> alert-dismissible fade show mb-4" role="alert">

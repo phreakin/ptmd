@@ -196,9 +196,16 @@ function fmtDateTime(str) {
     // ── Mod context menu ──────────────────────────────────────────────────────
     function modMenuHtml(msg) {
         if (!isMod) return '';
-        const uid  = msg.chat_user_id || 0;
-        const pin  = msg.is_pinned ? 'Unpin' : 'Pin';
-        const pact = msg.is_pinned ? 'unpin' : 'pin';
+        const uid    = msg.chat_user_id || 0;
+        const pin    = msg.is_pinned ? 'Unpin' : 'Pin';
+        const pact   = msg.is_pinned ? 'unpin' : 'pin';
+        const hideItem = msg.is_hidden
+            ? `<li><button class="dropdown-item" type="button" data-mod-action="unhide" data-msg-id="${msg.id}">
+                   <i class="fa-solid fa-eye me-2" style="color:var(--ptmd-teal)"></i>Unhide
+               </button></li>`
+            : `<li><button class="dropdown-item" type="button" data-mod-action="hide" data-msg-id="${msg.id}">
+                   <i class="fa-solid fa-eye-slash me-2" style="color:var(--ptmd-warning)"></i>Hide
+               </button></li>`;
         const userItems = uid
             ? `<li><hr class="dropdown-divider"></li>
                <li><button class="dropdown-item" type="button" data-mod-action="mute_user" data-target-user-id="${uid}">
@@ -215,6 +222,7 @@ function fmtDateTime(str) {
                 <li><button class="dropdown-item" type="button" data-mod-action="${pact}" data-msg-id="${msg.id}">
                     <i class="fa-solid fa-thumbtack me-2"></i>${pin}
                 </button></li>
+                ${hideItem}
                 <li><button class="dropdown-item" type="button" data-mod-action="delete" data-msg-id="${msg.id}">
                     <i class="fa-solid fa-trash me-2" style="color:var(--ptmd-error)"></i>Delete
                 </button></li>${userItems}
@@ -228,6 +236,7 @@ function fmtDateTime(str) {
         el.className = 'ptmd-chat-bubble';
         if (msg.is_highlighted) el.classList.add('ptmd-chat-bubble--highlighted');
         if (msg.highlight_color) el.style.setProperty('--highlight-color', msg.highlight_color);
+        if (msg.is_hidden) el.classList.add('ptmd-chat-bubble--hidden');
         el.dataset.msgId = msg.id;
 
         const name  = escHtml(msg.display_name || msg.username);
@@ -249,6 +258,10 @@ function fmtDateTime(str) {
                         title="Reply"><i class="fa-solid fa-reply"></i></button>`
             : '';
 
+        const hiddenBadge = msg.is_hidden
+            ? `<span class="ptmd-chat-hidden-badge"><i class="fa-solid fa-eye-slash"></i> Hidden — visible to mods only</span>`
+            : '';
+
         el.innerHTML = `${supBanner}
             <div class="d-flex gap-3 align-items-start">
                 ${avatarHtml(msg.display_name || msg.username, color)}
@@ -258,6 +271,7 @@ function fmtDateTime(str) {
                         <span class="bubble-username">${name}</span>
                         ${roleBadgeHtml(msg.user_role, msg.badge_label)}
                         <span class="bubble-time">${fmtDateTime(msg.created_at)}</span>
+                        ${hiddenBadge}
                     </div>
                     <div class="bubble-text">${escHtml(msg.message)}</div>
                     <div class="bubble-actions d-flex align-items-center gap-1 mt-2 flex-wrap">
@@ -392,14 +406,61 @@ function fmtDateTime(str) {
     const emojiBtn    = document.getElementById('caseChatEmojiBtn');
     const emojiPicker = document.getElementById('caseChatEmojiPicker');
     const msgInput    = document.getElementById('caseChatMessageInput');
-    if (emojiBtn && emojiPicker) {
-        emojiBtn.addEventListener('click', e => { e.stopPropagation(); emojiPicker.classList.toggle('d-none'); });
-        document.addEventListener('click', e => {
-            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.classList.add('d-none');
+    let emojiData     = null; // cached categories
+
+    async function loadEmojiData() {
+        if (emojiData) return emojiData;
+        try {
+            const res  = await fetch('/api/chat_emojis.php', { credentials: 'same-origin' });
+            const data = await res.json();
+            emojiData  = data.categories ?? {};
+        } catch {
+            emojiData = {
+                'Reactions': ['😀','😂','😭','😤','😱','🤔','🥲','😎','🤦','😅'],
+                'Vibes':     ['🔥','💯','❤️','✅','⚠️','💀','👀','🎉','👏','🙏'],
+                'Case Work': ['📄','🔍','⚖️','🔒','📰','🕵️','🗂️','✍️','📋','📊'],
+            };
+        }
+        return emojiData;
+    }
+
+    function renderEmojiPicker(categories, activeTab) {
+        const tabsEl = document.getElementById('caseChatEmojiTabs');
+        const gridEl = document.getElementById('caseChatEmojiGrid');
+        if (!tabsEl || !gridEl) return;
+        const tabNames = Object.keys(categories);
+        activeTab = activeTab || tabNames[0] || '';
+
+        tabsEl.innerHTML = tabNames.map(tab =>
+            `<button class="ptmd-emoji-tab${tab === activeTab ? ' active' : ''}" type="button" data-tab="${escHtml(tab)}">${escHtml(tab)}</button>`
+        ).join('');
+
+        const emojis = categories[activeTab] ?? [];
+        gridEl.innerHTML = emojis.map(em =>
+            `<button type="button" class="ptmd-emoji-btn" aria-label="${em}">${em}</button>`
+        ).join('');
+
+        tabsEl.querySelectorAll('.ptmd-emoji-tab').forEach(btn => {
+            btn.addEventListener('click', () => renderEmojiPicker(categories, btn.dataset.tab));
         });
-        emojiPicker.addEventListener('click', e => {
+        gridEl.addEventListener('click', e => {
             const btn = e.target.closest('.ptmd-emoji-btn');
             if (btn && msgInput) { msgInput.value += btn.textContent; msgInput.focus(); }
+        });
+    }
+
+    if (emojiBtn && emojiPicker) {
+        emojiBtn.addEventListener('click', async e => {
+            e.stopPropagation();
+            const isOpen = !emojiPicker.classList.contains('d-none');
+            emojiPicker.classList.toggle('d-none');
+            if (!isOpen) {
+                const cats = await loadEmojiData();
+                renderEmojiPicker(cats, null);
+            }
+        });
+        document.addEventListener('click', e => {
+            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.classList.add('d-none');
         });
     }
 
@@ -535,6 +596,26 @@ function fmtDateTime(str) {
                     if (action === 'delete' && msgId) {
                         messagesEl.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
                     }
+                    if (action === 'hide' && msgId) {
+                        const bubble = messagesEl.querySelector(`[data-msg-id="${msgId}"]`);
+                        if (bubble) {
+                            bubble.classList.add('ptmd-chat-bubble--hidden');
+                            const meta = bubble.querySelector('.bubble-meta');
+                            if (meta && !meta.querySelector('.ptmd-chat-hidden-badge')) {
+                                const badge = document.createElement('span');
+                                badge.className = 'ptmd-chat-hidden-badge';
+                                badge.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Hidden — visible to mods only';
+                                meta.appendChild(badge);
+                            }
+                        }
+                    }
+                    if (action === 'unhide' && msgId) {
+                        const bubble = messagesEl.querySelector(`[data-msg-id="${msgId}"]`);
+                        if (bubble) {
+                            bubble.classList.remove('ptmd-chat-bubble--hidden');
+                            bubble.querySelector('.ptmd-chat-hidden-badge')?.remove();
+                        }
+                    }
                     if (action === 'pin' || action === 'unpin') await loadMessages(true);
                 } else {
                     Toast.error(data.error ?? 'Action failed.');
@@ -547,6 +628,234 @@ function fmtDateTime(str) {
     loadMessages(true);
     polling = setInterval(() => loadMessages(false), 15000);
     window.addEventListener('unload', () => clearInterval(polling));
+
+    // ── SSE client ─────────────────────────────────────────────────────────────
+    function initSSE() {
+        if (!window.EventSource) return null;
+        const sseEndpoint = shellEl.dataset.sseEndpoint ?? '';
+        if (!sseEndpoint) return null;
+
+        const url = `${sseEndpoint}?room=${encodeURIComponent(roomSlug)}&since=${lastId}`;
+        const es  = new EventSource(url, { withCredentials: true });
+
+        es.addEventListener('messages', e => {
+            try {
+                const data = JSON.parse(e.data);
+                const msgs = data.messages ?? [];
+                const newMsgs = msgs.filter(m => Number(m.id) > lastId);
+                newMsgs.forEach(m => messagesEl.appendChild(renderBubble(m)));
+                if (msgs.length > 0) {
+                    lastId = Math.max(...msgs.map(m => Number(m.id)));
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+            } catch {}
+        });
+
+        es.addEventListener('reconnect', () => { es.close(); setTimeout(initSSE, 2000); });
+        es.onerror = () => { es.close(); }; // fall back to polling silently
+
+        return es;
+    }
+
+    if (shellEl.dataset.sseEndpoint) {
+        const es = initSSE();
+        // When SSE is active, reduce polling frequency to 30s fallback
+        if (es) {
+            clearInterval(polling);
+            polling = setInterval(() => loadMessages(false), 30000);
+        }
+    }
+
+    // ── Trivia widget ───────────────────────────────────────────────────────────
+    function initTriviaWidget() {
+        const triviaEl   = document.getElementById('triviaWidget');
+        const triviaEndpoint = shellEl.dataset.triviaEndpoint ?? '';
+        if (!triviaEl || !triviaEndpoint) return;
+
+        let triviaInterval = null;
+        let currentSessionId = null;
+        let countdownTimer   = null;
+
+        async function fetchTrivia() {
+            try {
+                const res  = await fetch(`${triviaEndpoint}?room=${encodeURIComponent(roomSlug)}`, { credentials: 'same-origin' });
+                const data = await res.json();
+                if (!data.ok) return;
+                if (!data.trivia_enabled && !data.session) {
+                    triviaEl.classList.add('d-none');
+                    return;
+                }
+                triviaEl.classList.remove('d-none');
+                renderTrivia(data.session);
+            } catch {}
+        }
+
+        function renderTrivia(session) {
+            if (!session) {
+                const isModUser = shellEl.dataset.isMod === '1';
+                triviaEl.innerHTML = `
+                    <div class="ptmd-trivia-header">
+                        <i class="fa-solid fa-brain" style="color:var(--ptmd-teal)"></i>
+                        <strong style="font-size:var(--text-sm)">Trivia</strong>
+                    </div>
+                    <div class="ptmd-trivia-body">
+                        <p class="ptmd-muted small mb-0">No trivia active.</p>
+                        ${isModUser ? `<button class="btn btn-ptmd-teal btn-sm mt-3" id="triviaStartBtn">
+                            <i class="fa-solid fa-play me-1"></i>Start Trivia
+                        </button>` : ''}
+                    </div>`;
+                document.getElementById('triviaStartBtn')?.addEventListener('click', startTrivia);
+                return;
+            }
+
+            currentSessionId = session.id;
+            const closes    = new Date(session.closes_at.replace(' ', 'T') + 'Z');
+            const answered  = session.my_answer;
+
+            triviaEl.innerHTML = `
+                <div class="ptmd-trivia-header">
+                    <i class="fa-solid fa-brain" style="color:var(--ptmd-teal)"></i>
+                    <strong style="font-size:var(--text-sm)">Trivia</strong>
+                    <span class="ptmd-muted small ms-auto">${escHtml(session.category ?? '')} · ${escHtml(session.difficulty ?? '')}</span>
+                </div>
+                <div class="ptmd-trivia-body">
+                    <div class="ptmd-trivia-question">${escHtml(session.question)}</div>
+                    <div class="ptmd-trivia-answers" id="triviaAnswers">
+                        ${['a','b','c','d'].map(k => {
+                            const text = session['answer_' + k];
+                            if (!text) return '';
+                            let cls = '';
+                            if (answered) {
+                                if (answered.answer === k) cls = answered.is_correct ? 'correct' : 'incorrect selected';
+                                else cls = '';
+                            }
+                            return `<button class="ptmd-trivia-answer-btn ${cls}" type="button"
+                                        data-answer="${k}" ${answered ? 'disabled' : ''}>
+                                <span class="answer-key">${k}</span>
+                                ${escHtml(text)}
+                            </button>`;
+                        }).join('')}
+                    </div>
+                    <div class="ptmd-trivia-timer" id="triviaTimer"></div>
+                    <div class="ptmd-muted" style="font-size:var(--text-xs);text-align:center;margin-top:4px">${escHtml(String(session.answer_count ?? 0))} answered</div>
+                </div>`;
+
+            // Countdown
+            clearInterval(countdownTimer);
+            function updateCountdown() {
+                const timerEl = document.getElementById('triviaTimer');
+                if (!timerEl) return;
+                const secsLeft = Math.max(0, Math.round((closes - Date.now()) / 1000));
+                timerEl.textContent = secsLeft > 0 ? `⏱ ${secsLeft}s remaining` : 'Time\'s up!';
+                if (secsLeft <= 0) clearInterval(countdownTimer);
+            }
+            updateCountdown();
+            countdownTimer = setInterval(updateCountdown, 1000);
+
+            // Answer click
+            document.getElementById('triviaAnswers')?.addEventListener('click', async e => {
+                const btn = e.target.closest('.ptmd-trivia-answer-btn');
+                if (!btn || btn.disabled) return;
+                const answer    = btn.dataset.answer;
+                const csrfInput = formEl?.querySelector('[name=csrf_token]');
+                if (!csrfInput) return;
+
+                document.querySelectorAll('.ptmd-trivia-answer-btn').forEach(b => b.disabled = true);
+
+                const fd = new FormData();
+                fd.set('csrf_token', csrfInput.value);
+                fd.set('action',     'answer');
+                fd.set('room',       roomSlug);
+                fd.set('session_id', String(currentSessionId));
+                fd.set('answer',     answer);
+
+                try {
+                    const r    = await fetch(triviaEndpoint, { method: 'POST', credentials: 'same-origin', body: fd });
+                    const data = await r.json();
+                    if (data.ok) {
+                        btn.classList.add(data.is_correct ? 'correct' : 'incorrect');
+                        Toast[data.is_correct ? 'success' : 'warning'](data.is_correct ? 'Correct! 🎉' : 'Wrong answer.');
+                    } else {
+                        Toast.error(data.error ?? 'Could not submit.');
+                    }
+                } catch {
+                    Toast.error('Network error.');
+                }
+            });
+        }
+
+        async function startTrivia() {
+            const csrfInput = formEl?.querySelector('[name=csrf_token]');
+            if (!csrfInput) return;
+            const fd = new FormData();
+            fd.set('csrf_token', csrfInput.value);
+            fd.set('action',     'start');
+            fd.set('room',       roomSlug);
+            try {
+                const r    = await fetch(triviaEndpoint, { method: 'POST', credentials: 'same-origin', body: fd });
+                const data = await r.json();
+                if (data.ok) { await fetchTrivia(); }
+                else Toast.error(data.error ?? 'Failed to start trivia.');
+            } catch { Toast.error('Network error.'); }
+        }
+
+        fetchTrivia();
+        triviaInterval = setInterval(fetchTrivia, 10000);
+        window.addEventListener('unload', () => clearInterval(triviaInterval));
+    }
+
+    // ── Donation panel ──────────────────────────────────────────────────────────
+    function initDonationPanel() {
+        const donationEl    = document.getElementById('donationPanel');
+        const donateEndpoint = shellEl.dataset.donateEndpoint ?? '';
+        if (!donationEl || !donateEndpoint) return;
+
+        fetch(`${donateEndpoint}?room=${encodeURIComponent(roomSlug)}`, { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok || !data.donations_enabled) return;
+                const links = data.links ?? {};
+                if (!Object.keys(links).length) return;
+
+                donationEl.classList.remove('d-none');
+
+                const brandIcons = { paypal: '💳', venmo: '💙', cashapp: '💚' };
+                const brandLabels = { paypal: 'PayPal', venmo: 'Venmo', cashapp: 'Cash App' };
+
+                let html = `<h2 class="h6 mb-3 ptmd-text-teal"><i class="fa-solid fa-heart me-2"></i>Support the Investigation</h2>`;
+                if (data.message) html += `<p class="ptmd-muted small mb-3">${escHtml(data.message)}</p>`;
+                if (data.goal)    html += `<p class="ptmd-muted" style="font-size:var(--text-xs);margin-bottom:var(--space-3)">${escHtml(data.goal)}</p>`;
+
+                for (const [platform, url] of Object.entries(links)) {
+                    html += `<button class="ptmd-donation-btn ptmd-donation-btn--${escHtml(platform)}" type="button"
+                                     data-platform="${escHtml(platform)}" data-url="${escHtml(url)}">
+                        ${brandIcons[platform] ?? '💰'} ${brandLabels[platform] ?? platform}
+                    </button>`;
+                }
+                donationEl.innerHTML = html;
+
+                donationEl.addEventListener('click', async e => {
+                    const btn = e.target.closest('[data-platform]');
+                    if (!btn) return;
+                    const platform = btn.dataset.platform;
+                    const url      = btn.dataset.url;
+                    const csrfInput = formEl?.querySelector('[name=csrf_token]');
+
+                    if (csrfInput) {
+                        const fd = new FormData();
+                        fd.set('csrf_token', csrfInput.value);
+                        fd.set('platform',   platform);
+                        fd.set('room',       roomSlug);
+                        fetch(donateEndpoint, { method: 'POST', credentials: 'same-origin', body: fd }).catch(() => {});
+                    }
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                });
+            })
+            .catch(() => {});
+    }
+
+    initTriviaWidget();
+    initDonationPanel();
 })();
 
 // ─── Generic confirm-delete via SweetAlert2 ───────────────────────────────────

@@ -1,0 +1,47 @@
+.ptmd-screen-dashboard .ptmd-card-stat,
+.ptmd-screen-analytics .ptmd-card-stat,
+.ptmd-screen-queue .ptmd-card-stat {
+    min-height: 156px;
+    justify-content: space-between;
+}
+
+.ptmd-analytics-panel {
+    border: 1px solid var(--ptmd-border-soft);
+    border-radius: var(--ptmd-radius-lg);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--ptmd-accent-forensic-soft) 20%, var(--ptmd-surface-glass)) 0%, rgba(10,12,21,.72) 100%);
+    box-shadow: var(--ptmd-shadow-layered);
+}
+
+.ptmd-chart-shell {
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-forensic) 22%, var(--ptmd-border-soft));
+    background: linear-gradient(180deg, rgba(8, 12, 20, .6) 0%, rgba(8, 12, 20, .22) 100%);
+    border-radius: var(--ptmd-radius-md);
+    min-height: 220px;
+    padding: var(--ptmd-space-4);
+}
+
+.ptmd-hook-lab-card {
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-gold) 35%, var(--ptmd-border-soft));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--ptmd-accent-gold) 10%, transparent), rgba(9,12,20,.72));
+}
+
+.ptmd-case-detail-rail {
+    border-left: 1px solid var(--ptmd-border-soft);
+    padding-left: var(--ptmd-space-4);
+}
+
+.ptmd-queue-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--ptmd-space-4);
+}
+
+.ptmd-queue-column {
+    border: 1px solid var(--ptmd-border-soft);
+    border-radius: var(--ptmd-radius-lg);
+    background: color-mix(in srgb, var(--ptmd-bg-1) 66%, transparent);
+    padding: var(--ptmd-space-3);
+    display: grid;
+    gap: var(--ptmd-space-3);
+    min-height: 300px;
+}

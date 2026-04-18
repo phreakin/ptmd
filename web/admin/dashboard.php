@@ -41,6 +41,7 @@ if ($pdo) {
 }
 ?>
 
+<div class="ptmd-screen-dashboard">
 <!-- Stat cards -->
 <div class="row g-4 mb-5">
     <div class="col-6 col-lg-3">
@@ -104,6 +105,9 @@ if ($pdo) {
                 </a>
                 <a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
                     <i class="fa-solid fa-calendar me-2"></i>Schedule Post
+                </a>
+                <a href="/admin/monitor.php" class="btn btn-ptmd-outline">
+                    <i class="fa-solid fa-chart-line me-2"></i>Monitor
                 </a>
             </div>
         </div>
@@ -197,4 +201,5 @@ if ($pdo) {
 
 </div>
 
+</div>
 <?php include __DIR__ . '/_admin_footer.php'; ?>

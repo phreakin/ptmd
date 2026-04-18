@@ -7,6 +7,8 @@ $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
 $pageHeading  = 'Social Post Queue';
 $pageSubheading = 'Manage and track all scheduled social media posts.';
+$pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -297,6 +299,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
 </a>';
 ?>
 
+<div class="ptmd-screen-queue">
 <!-- Platform preferences -->
 <div class="ptmd-panel p-xl mb-4">
     <h2 class="h6 mb-4">
@@ -543,6 +546,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     <?php else: ?>
         <p class="ptmd-muted small">Queue is empty.</p>
     <?php endif; ?>
+</div>
 </div>
 
 <?php include __DIR__ . '/_admin_footer.php'; ?>

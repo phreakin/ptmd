@@ -202,6 +202,152 @@ SELECT
     NOW()
 FROM cases e WHERE e.slug = 'city-hall-after-dark' LIMIT 1;
 
+-- ============================================================
+-- Blueprint seed data  (run after schema.sql)
+-- ============================================================
+
+-- Video blueprints
+INSERT INTO video_blueprints (title, slug, blueprint_type, status, objective, structure_json, brand_notes, target_duration_sec, created_at, updated_at)
+VALUES
+(
+    'Standard Documentary',
+    'standard-documentary',
+    'documentary',
+    'active',
+    'Deliver a well-sourced, compelling case video that builds subscriber trust and drives shares.',
+    JSON_ARRAY(
+        JSON_OBJECT('order', 1, 'label', 'Cold Open',         'notes', '60–90 sec hook: most shocking or funny moment'),
+        JSON_OBJECT('order', 2, 'label', 'Context Setup',     'notes', '2–3 min background, cast of characters'),
+        JSON_OBJECT('order', 3, 'label', 'Evidence Walkthrough', 'notes', 'Methodical, source-cited breakdown'),
+        JSON_OBJECT('order', 4, 'label', 'Pattern / Reveal',  'notes', 'Connect the dots, show the system'),
+        JSON_OBJECT('order', 5, 'label', 'Implication',       'notes', 'Why it matters, who benefits'),
+        JSON_OBJECT('order', 6, 'label', 'Close + CTA',       'notes', 'Subscribe / share / comment prompt')
+    ),
+    'Dry wit, precise sourcing, no speculation. PTMD voice = investigative but not angry. Use lower-thirds for sources.',
+    1200,
+    NOW(), NOW()
+),
+(
+    'Teaser Cut',
+    'teaser-cut',
+    'teaser',
+    'active',
+    'Tease the full case without giving away the conclusion. Drive traffic to long-form video.',
+    JSON_ARRAY(
+        JSON_OBJECT('order', 1, 'label', 'Hook Moment',   'notes', 'Most jaw-dropping 5–10 seconds'),
+        JSON_OBJECT('order', 2, 'label', 'Setup',         'notes', 'One sentence of context'),
+        JSON_OBJECT('order', 3, 'label', 'Cliffhanger',   'notes', 'Cut before the answer — leave them wanting more'),
+        JSON_OBJECT('order', 4, 'label', 'CTA',           'notes', 'Full case link in description / bio')
+    ),
+    'Fast-paced edit, no dead air. Brand watermark at bottom-right. End card with PTMD logo.',
+    180,
+    NOW(), NOW()
+)
+ON DUPLICATE KEY UPDATE
+    objective          = VALUES(objective),
+    structure_json     = VALUES(structure_json),
+    brand_notes        = VALUES(brand_notes),
+    target_duration_sec = VALUES(target_duration_sec),
+    updated_at         = NOW();
+
+-- Clip blueprints
+INSERT INTO clip_blueprints (title, slug, clip_type, status, target_duration_sec, aspect_ratio, platform_targets, structure_json, brand_notes, created_at, updated_at)
+VALUES
+(
+    '30-Second Teaser',
+    '30-second-teaser',
+    'teaser',
+    'active',
+    30,
+    '9:16',
+    JSON_ARRAY('youtube_shorts', 'tiktok', 'instagram_reels'),
+    JSON_ARRAY(
+        JSON_OBJECT('order', 1, 'label', 'Hook',     'max_sec', 5,  'notes', 'Verbal or visual punch — no intro'),
+        JSON_OBJECT('order', 2, 'label', 'Body',     'max_sec', 20, 'notes', 'One key piece of evidence, no conclusion'),
+        JSON_OBJECT('order', 3, 'label', 'CTA',      'max_sec', 5,  'notes', 'Link in bio / subscribe')
+    ),
+    'Vertical 9:16. Captions burned-in or via platform. PTMD watermark visible.',
+    NOW(), NOW()
+),
+(
+    '45-Second Reveal Clip',
+    '45-second-reveal-clip',
+    'reveal',
+    'active',
+    45,
+    '9:16',
+    JSON_ARRAY('youtube_shorts', 'tiktok', 'instagram_reels', 'facebook_reels'),
+    JSON_ARRAY(
+        JSON_OBJECT('order', 1, 'label', 'Setup',    'max_sec', 10, 'notes', 'Pose the question'),
+        JSON_OBJECT('order', 2, 'label', 'Evidence', 'max_sec', 25, 'notes', 'One key doc or stat on screen'),
+        JSON_OBJECT('order', 3, 'label', 'Reveal',   'max_sec', 5,  'notes', 'Slow-burn delivery of the answer'),
+        JSON_OBJECT('order', 4, 'label', 'CTA',      'max_sec', 5,  'notes', 'Full case drops [day]')
+    ),
+    'Vertical 9:16. B-roll or document zooms only — no talking-head required.',
+    NOW(), NOW()
+)
+ON DUPLICATE KEY UPDATE
+    clip_type          = VALUES(clip_type),
+    target_duration_sec = VALUES(target_duration_sec),
+    aspect_ratio       = VALUES(aspect_ratio),
+    platform_targets   = VALUES(platform_targets),
+    structure_json     = VALUES(structure_json),
+    brand_notes        = VALUES(brand_notes),
+    updated_at         = NOW();
+
+-- Posting blueprints (TikTok + YouTube Shorts)
+INSERT INTO posting_blueprints (title, slug, site_key, content_type, status, caption_template, required_hashtags, cta_pattern, config_json, created_at, updated_at)
+SELECT v.title, v.slug, v.site_key, v.content_type, v.status, v.caption_template, v.required_hashtags, v.cta_pattern, v.config_json, NOW(), NOW()
+FROM (
+    SELECT
+        'TikTok Teaser Post'       AS title,
+        'tiktok-teaser-post'       AS slug,
+        'tiktok'                   AS site_key,
+        'teaser'                   AS content_type,
+        'active'                   AS status,
+        '🔍 {title}\n\n{body}\n\n{hashtags}'  AS caption_template,
+        '#tiktok #investigation #papertrailmd' AS required_hashtags,
+        'Follow for the full case 👇'          AS cta_pattern,
+        CAST(JSON_OBJECT('char_limit', 2200, 'min_duration_sec', 5, 'max_duration_sec', 60) AS JSON) AS config_json
+    UNION ALL
+    SELECT
+        'YouTube Shorts Post',
+        'youtube-shorts-post',
+        'youtube_shorts',
+        'teaser',
+        'active',
+        '▶️ {title}\n\n{body}\n\nFull case in the description 👇\n\n{hashtags}',
+        '#Shorts #investigation #documentary',
+        'Subscribe + full case link below',
+        CAST(JSON_OBJECT('char_limit', 5000, 'min_duration_sec', 15, 'max_duration_sec', 60) AS JSON)
+) AS v
+ON DUPLICATE KEY UPDATE
+    content_type      = VALUES(content_type),
+    caption_template  = VALUES(caption_template),
+    required_hashtags = VALUES(required_hashtags),
+    cta_pattern       = VALUES(cta_pattern),
+    config_json       = VALUES(config_json),
+    updated_at        = NOW();
+
+-- Blueprint schedule rules (linked to the two posting blueprints above)
+INSERT INTO blueprint_schedule_rules (posting_blueprint_id, site_key, day_of_week, post_time, timezone, priority, min_gap_hours, max_per_day, is_active, created_at, updated_at)
+SELECT pb.id, pb.site_key, r.day_of_week, r.post_time, 'America/Phoenix', r.priority, r.min_gap_hours, r.max_per_day, 1, NOW(), NOW()
+FROM posting_blueprints pb
+JOIN (
+    SELECT 'tiktok-teaser-post'    AS slug, 'Saturday' AS day_of_week, '18:00:00' AS post_time, 1 AS priority, 4 AS min_gap_hours, 1 AS max_per_day
+    UNION ALL
+    SELECT 'tiktok-teaser-post',            'Tuesday',                 '15:00:00',               2,              4,                1
+    UNION ALL
+    SELECT 'youtube-shorts-post',           'Friday',                  '17:00:00',               1,              4,                1
+    UNION ALL
+    SELECT 'youtube-shorts-post',           'Sunday',                  '19:00:00',               2,              4,                1
+) AS r ON r.slug = pb.slug
+WHERE pb.status = 'active'
+ON DUPLICATE KEY UPDATE
+    post_time    = VALUES(post_time),
+    priority     = VALUES(priority),
+    updated_at   = NOW();
+
 -- Default chat room
 INSERT INTO chat_rooms (slug, name, description, is_live, slow_mode_seconds, members_only, is_archived, created_at, updated_at)
 VALUES ('case-chat', 'Case Chat', 'The main audience dispatch feed. Drop your case notes, questions, and reactions.', 0, 0, 0, 0, NOW(), NOW())
