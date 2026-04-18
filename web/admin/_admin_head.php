@@ -31,6 +31,7 @@ $navItems = [
     ['href' => '/admin/blueprints.php',      'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
     ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
     ['href' => '/admin/chat-rooms.php',      'label' => 'Chat Rooms',      'icon' => 'fa-door-open',       'id' => 'chat-rooms'],
+    ['href' => '/admin/chat-users.php',      'label' => 'Chat Users',      'icon' => 'fa-users',           'id' => 'chat-users'],
     ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
     ['href' => '/admin/site-tests.php',      'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
 ];

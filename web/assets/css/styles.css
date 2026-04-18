@@ -860,6 +860,263 @@
         background: var(--ptmd-surface-1);
     }
 
+    /* ── Chat Avatar ─────────────────────────────────────────── */
+    .ptmd-chat-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-pill);
+        background: var(--avatar-color, var(--ptmd-teal));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--text-sm);
+        font-weight: 700;
+        color: var(--ptmd-black);
+        flex-shrink: 0;
+        user-select: none;
+    }
+
+    /* ── Chat Auth Bar ───────────────────────────────────────── */
+    .ptmd-chat-auth-bar {
+        background: var(--ptmd-surface-2);
+        border: 1px solid var(--ptmd-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+    }
+
+    /* ── Chat Role Badges ────────────────────────────────────── */
+    .ptmd-chat-role-badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.6;
+    }
+
+    .ptmd-chat-role-badge--registered {
+        background: rgba(46,196,182,0.12);
+        color: var(--ptmd-teal);
+        border: 1px solid rgba(46,196,182,0.3);
+    }
+    .ptmd-chat-role-badge--moderator,
+    .ptmd-chat-role-badge--mod {
+        background: rgba(37,99,235,0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(37,99,235,0.35);
+    }
+    .ptmd-chat-role-badge--admin {
+        background: rgba(255,214,10,0.12);
+        color: var(--ptmd-yellow);
+        border: 1px solid rgba(255,214,10,0.3);
+    }
+    .ptmd-chat-role-badge--super-admin {
+        background: rgba(193,18,31,0.12);
+        color: #ff4d5a;
+        border: 1px solid rgba(193,18,31,0.35);
+    }
+
+    /* ── Pinned Message Bar ──────────────────────────────────── */
+    .ptmd-chat-pinned {
+        padding: var(--space-3) var(--space-4);
+        background: rgba(255,214,10,0.06);
+        border-bottom: 1px solid rgba(255,214,10,0.2);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    .ptmd-chat-pinned-item {
+        font-size: var(--text-xs);
+        color: var(--ptmd-muted-strong);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── Reply Context Strip ─────────────────────────────────── */
+    .ptmd-chat-reply-ctx {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        background: rgba(46,196,182,0.06);
+        border: 1px solid rgba(46,196,182,0.2);
+        border-radius: var(--radius-md);
+        font-size: var(--text-xs);
+        color: var(--ptmd-muted-strong);
+        margin-bottom: var(--space-2);
+    }
+
+    /* ── Slow Mode Bar ───────────────────────────────────────── */
+    .ptmd-chat-slow-mode {
+        font-size: var(--text-xs);
+        color: var(--ptmd-warning, #F97316);
+        font-weight: 600;
+        padding: 2px 8px;
+        background: rgba(249,115,22,0.1);
+        border: 1px solid rgba(249,115,22,0.25);
+        border-radius: var(--radius-pill);
+    }
+
+    /* ── Emoji Picker ────────────────────────────────────────── */
+    .ptmd-emoji-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: var(--space-3);
+        background: var(--ptmd-surface-2);
+        border: 1px solid var(--ptmd-border);
+        border-radius: var(--radius-lg);
+        margin-top: var(--space-2);
+        max-width: 340px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        position: relative;
+        z-index: 50;
+    }
+
+    .ptmd-emoji-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        padding: 4px 6px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+        line-height: 1;
+
+        &:hover, &:focus-visible {
+            background: var(--ptmd-surface-3, rgba(255,255,255,0.05));
+            border-color: var(--ptmd-border-strong);
+            outline: none;
+        }
+    }
+
+    /* ── Super Chat / Highlighted Banner ─────────────────────── */
+    .ptmd-chat-bubble--highlighted {
+        border: 1px solid var(--highlight-color, #FFD60A);
+        border-radius: var(--radius-lg);
+    }
+
+    .ptmd-chat-super-banner {
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        font-size: var(--text-xs);
+        font-weight: 700;
+        margin-bottom: var(--space-2);
+    }
+
+    /* ── Reactions Row ───────────────────────────────────────── */
+    .ptmd-chat-reactions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .ptmd-chat-reaction {
+        background: var(--ptmd-surface-2);
+        border: 1px solid var(--ptmd-border);
+        border-radius: var(--radius-pill);
+        padding: 2px 8px;
+        font-size: var(--text-xs);
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--ptmd-muted-strong);
+
+        & .reaction-count {
+            font-weight: 700;
+            color: var(--ptmd-white);
+        }
+
+        &:hover, &:focus-visible {
+            border-color: var(--ptmd-teal);
+            background: rgba(46,196,182,0.08);
+            outline: none;
+        }
+    }
+
+    .ptmd-chat-reaction--add {
+        background: transparent;
+        border: 1px dashed var(--ptmd-border-strong);
+        color: var(--ptmd-muted);
+        font-size: var(--text-sm);
+        padding: 2px 7px;
+
+        &:hover, &:focus-visible {
+            border-style: solid;
+            border-color: var(--ptmd-teal);
+            color: var(--ptmd-teal);
+        }
+    }
+
+    /* ── Moderator Menu ──────────────────────────────────────── */
+    .ptmd-chat-mod-menu {
+        display: inline-block;
+    }
+
+    .ptmd-chat-mod-btn {
+        padding: 2px 6px;
+        font-size: var(--text-xs);
+        color: var(--ptmd-muted);
+        opacity: 0.7;
+        transition: opacity var(--duration-fast) var(--ease-out);
+
+        &:hover, &:focus-visible {
+            opacity: 1;
+            color: var(--ptmd-muted-strong);
+        }
+    }
+
+    /* ── Reply reference (inside bubble) ─────────────────────── */
+    .ptmd-chat-reply-ref {
+        font-size: var(--text-xs);
+        color: var(--ptmd-muted);
+        padding: 2px 8px;
+        background: rgba(255,255,255,0.04);
+        border-left: 2px solid var(--ptmd-teal);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        margin-bottom: var(--space-1);
+    }
+
+    /* ── Reply button (inside bubble actions) ─────────────────── */
+    .ptmd-chat-reply-btn {
+        font-size: var(--text-xs);
+        color: var(--ptmd-muted);
+        opacity: 0.6;
+        transition: opacity var(--duration-fast) var(--ease-out);
+
+        &:hover, &:focus-visible {
+            opacity: 1;
+            color: var(--ptmd-teal);
+        }
+    }
+
+    /* ── Bubble actions row ───────────────────────────────────── */
+    .bubble-actions {
+        min-height: 28px;
+    }
+
+    /* ── bubble-meta / bubble-body improvements ──────────────── */
+    .ptmd-chat-bubble {
+        & .bubble-meta {
+            font-size: var(--text-xs);
+        }
+        & .bubble-username {
+            font-weight: 700;
+            color: var(--ptmd-teal);
+        }
+        & .bubble-time {
+            color: var(--ptmd-muted);
+        }
+    }
+
     /* ── Admin Sidebar ───────────────────────────────────────── */
     .ptmd-admin-sidebar {
         background: rgba(11,12,16,0.95);
