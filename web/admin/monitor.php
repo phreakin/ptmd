@@ -120,6 +120,7 @@ function monitor_status_class(string $status): string
 }
 ?>
 
+<div class="ptmd-screen-analytics">
 <!-- ── Health cards ──────────────────────────────────────────────────────────── -->
 <div class="row g-4 mb-5">
 
@@ -641,4 +642,5 @@ document.getElementById(\'runSyncBtn\')?.addEventListener(\'click\', async funct
 </script>';
 ?>
 
+</div>
 <?php include __DIR__ . '/_admin_footer.php'; ?>

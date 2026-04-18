@@ -72,6 +72,7 @@ if ($pdo) {
     </div>
 <?php endif; ?>
 
+<div class="ptmd-screen-hook-lab">
 <!-- Tool cards grid -->
 <div class="row g-4 mb-5">
 
@@ -407,6 +408,7 @@ if ($pdo) {
     <?php else: ?>
         <p class="ptmd-muted small">No AI generations yet. Use the tools above to get started.</p>
     <?php endif; ?>
+</div>
 </div>
 
 <!-- Inject CSRF for JS -->

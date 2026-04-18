@@ -183,6 +183,9 @@ if ($editId > 0 && $pdo) {
     }
 }
 
+?>
+<div class="ptmd-screen-cases">
+<?php
 // ── List view ─────────────────────────────────────────────────────────────────
 if ($action === 'list'):
     $cases = $pdo ? $pdo->query('SELECT * FROM cases ORDER BY updated_at DESC')->fetchAll() : [];
@@ -452,4 +455,5 @@ if ($action !== 'list' && $apiKeySet) {
 }
 ?>
 
+</div>
 <?php include __DIR__ . '/_admin_footer.php'; ?>

@@ -1,0 +1,32 @@
+.ptmd-anim-lift {
+    transition: transform var(--ptmd-motion-base) var(--ptmd-ease-standard), box-shadow var(--ptmd-motion-base) var(--ptmd-ease-standard);
+}
+
+.ptmd-anim-lift:hover {
+    transform: translateY(-2px);
+}
+
+.ptmd-anim-fade {
+    animation: ptmd-fade var(--ptmd-motion-slow) var(--ptmd-ease-emphasis) both;
+}
+
+@keyframes ptmd-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ptmd-modal-in {
+    from { opacity: 0; transform: translateY(14px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ptmd-modal.is-open .ptmd-modal__panel { animation: ptmd-modal-in var(--ptmd-motion-slow) var(--ptmd-ease-emphasis) both; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+}
