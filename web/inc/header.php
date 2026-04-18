@@ -44,12 +44,7 @@ $flash = pull_flash();
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/index.php?page=cases">
-<<<<<<< HEAD
-                            <i class="fas fa-folder-open fa-sm me-1"></i>Open Cases
-                        </a>
-=======
                             <i class="fa-solid fa-folder-open fa-sm me-1"></i>Cases
->>>>>>> 7612f8e264ddff6956e17730e72947f555a8d95f
                         </a>
                     </li>
                     <li class="nav-item">
