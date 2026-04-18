@@ -10,6 +10,7 @@ $pageSubheading = 'Manage and track all scheduled social media posts.';
 
 include __DIR__ . '/_admin_head.php';
 
+require_once __DIR__ . '/../inc/social_platform_rules.php';
 require_once __DIR__ . '/../inc/social_services.php';
 
 $pdo = get_db();
@@ -261,7 +262,7 @@ $queue = $pdo ? $pdo->query(
 
 $episodes  = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-$platforms = ['YouTube','YouTube Shorts','TikTok','Instagram Reels','Facebook Reels','X'];
+$platforms = array_keys(PTMD_PLATFORMS);
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];

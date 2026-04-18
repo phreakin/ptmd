@@ -14,6 +14,8 @@ $pageSubheading = 'Scheduled social posts by date. Colour-coded by status.';
 include __DIR__ . '/_admin_head.php';
 
 require_once __DIR__ . '/../inc/scheduler.php';
+require_once __DIR__ . '/../inc/social_platform_rules.php';
+require_once __DIR__ . '/../inc/social_account_health.php';
 
 $pdo = get_db();
 
@@ -163,10 +165,13 @@ $schedules = $pdo
     ? $pdo->query('SELECT * FROM social_post_schedules WHERE is_active = 1 ORDER BY day_of_week, post_time')->fetchAll()
     : [];
 
-$platforms = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
+$platforms = array_keys(PTMD_PLATFORMS);
 $episodes  = $pdo
     ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll()
     : [];
+
+// ── Phase 6: Load account health alert summary ────────────────────────────────
+$alertSummary = $pdo ? ptmd_get_alert_summary($pdo) : null;
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
@@ -193,6 +198,35 @@ $pageActions = '<a href="/admin/posts.php" class="btn btn-ptmd-outline btn-sm">
     <i class="fa-solid fa-clock me-1"></i>Schedules
 </a>';
 ?>
+
+<?php if ($alertSummary && $alertSummary['has_alerts']): ?>
+<!-- ── Phase 6: Account health alert banner ──────────────────────────────────── -->
+<div class="alert d-flex align-items-center gap-3 mb-4"
+     style="background:rgba(220,60,60,.12);border:1px solid rgba(220,60,60,.35);border-radius:8px;padding:.75rem 1rem">
+    <i class="fa-solid fa-triangle-exclamation" style="color:var(--ptmd-warning,#ffc107);font-size:1.1rem"></i>
+    <div class="flex-grow-1" style="font-size:var(--text-sm)">
+        <strong>Platform Account Alerts:</strong>
+        <?php if ($alertSummary['expired'] > 0): ?>
+            <span class="badge bg-danger ms-1"><?php ee((string) $alertSummary['expired']); ?> Expired</span>
+        <?php endif; ?>
+        <?php if ($alertSummary['expiring_soon'] > 0): ?>
+            <span class="badge bg-warning text-dark ms-1"><?php ee((string) $alertSummary['expiring_soon']); ?> Expiring Soon</span>
+        <?php endif; ?>
+        <?php if ($alertSummary['unconfigured'] > 0): ?>
+            <span class="badge bg-secondary ms-1"><?php ee((string) $alertSummary['unconfigured']); ?> Unconfigured</span>
+        <?php endif; ?>
+        <?php if ($alertSummary['failing_platforms'] > 0): ?>
+            <span class="badge bg-danger ms-1"><?php ee((string) $alertSummary['failing_platforms']); ?> Platform(s) Failing</span>
+        <?php endif; ?>
+        <?php if ($alertSummary['queue_failed'] > 0): ?>
+            <span class="badge bg-danger ms-1"><?php ee((string) $alertSummary['queue_failed']); ?> Failed Posts</span>
+        <?php endif; ?>
+    </div>
+    <a href="/admin/social-accounts.php" class="btn btn-sm btn-ptmd-outline" style="white-space:nowrap">
+        <i class="fa-solid fa-plug me-1"></i>Manage Accounts
+    </a>
+</div>
+<?php endif; ?>
 
 <!-- ── Inline calendar styles ──────────────────────────────────────────────── -->
 <style>
