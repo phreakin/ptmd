@@ -252,3 +252,11 @@ document.querySelectorAll('.copilot-starter-chip').forEach(chip => {
         sendMessage(chip.dataset.starter);
     });
 });
+
+// ── Event: analyst launcher cards ─────────────────────────────────────────────
+document.querySelectorAll('.analyst-launcher-card').forEach(card => {
+    card.addEventListener('click', () => {
+        startNewConvo();
+        sendMessage(card.dataset.prompt);
+    });
+});

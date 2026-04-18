@@ -9,7 +9,7 @@ $flash = pull_flash();
         <div class="container ptmd-container">
 
             <!-- Brand lockup -->
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/index.php">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="<?php ee(route_home()); ?>">
                 <img
                     src="/assets/brand/logos/ptmd_lockup.png"
                     alt="<?php ee(site_setting('site_name', 'Paper Trail MD')); ?>"
@@ -38,29 +38,29 @@ $flash = pull_flash();
             <div class="collapse navbar-collapse" id="ptmdNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
                     <li class="ptmd-nav-item nav-item">
-                        <a class="nav-link" href="/index.php">
-                            <i class="fas fa-house fa-sm me-1"></i>Home
+                        <a class="nav-link" href="<?php ee(route_home()); ?>">
+                            <i class="fa-solid fa-house fa-sm me-1"></i>Home
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=cases">
-                            <i class="fas fa-folder-open fa-sm me-1"></i>Open Cases
+                        <a class="nav-link" href="<?php ee(route_cases()); ?>">
+                            <i class="fa-solid fa-folder-open fa-sm me-1"></i>Open Cases
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/index.php?page=series">
+                        <a class="nav-link" href="<?php ee(route_series()); ?>">
                             <i class="fa-solid fa-layer-group fa-sm me-1"></i>Series
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center gap-2" href="/index.php?page=case-chat">
+                        <a class="nav-link d-flex align-items-center gap-2" href="<?php ee(route_chat()); ?>">
                             <i class="fa-solid fa-comments fa-sm"></i>Case Chat
                             <span class="ptmd-live-dot ms-1" aria-hidden="true"></span>
                             <span class="visually-hidden">Live</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link ptmd-nav-live d-flex align-items-center gap-2" href="/index.php?page=case-chat">
+                        <a class="nav-link ptmd-nav-live d-flex align-items-center gap-2" href="<?php ee(route_chat()); ?>">
                             <i class="fa-solid fa-tower-broadcast fa-sm"></i>Live
                             <span class="ptmd-live-dot" aria-hidden="true"></span>
                         </a>
@@ -84,13 +84,13 @@ $flash = pull_flash();
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end ptmd-viewer-dropdown">
                                     <li>
-                                        <a class="dropdown-item" href="/index.php?page=account">
-                                            <i class="fa-solid fa-heart fa-sm me-2" style="color:var(--ptmd-teal)"></i>Saved Episodes
+                                        <a class="dropdown-item" href="<?php ee(route_account()); ?>">
+                                            <i class="fa-solid fa-heart fa-sm me-2" style="color:var(--ptmd-teal)"></i>Saved Cases
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form method="post" action="/index.php?page=logout" class="d-inline">
+                                        <form method="post" action="<?php ee(route_logout()); ?>" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                             <button type="submit" class="dropdown-item">
                                                 <i class="fa-solid fa-right-from-bracket fa-sm me-2"></i>Sign Out
@@ -100,7 +100,7 @@ $flash = pull_flash();
                                     <?php if ($navAdminLoggedIn): ?>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <a class="dropdown-item ptmd-muted" href="/admin/dashboard.php">
+                                            <a class="dropdown-item ptmd-muted" href="<?php ee(route_admin('dashboard')); ?>">
                                                 <i class="fa-solid fa-lock fa-sm me-2"></i>Admin
                                             </a>
                                         </li>
@@ -109,10 +109,10 @@ $flash = pull_flash();
                             </div>
                         <?php else: ?>
                             <!-- Not logged in -->
-                            <a class="btn btn-ptmd-teal btn-sm me-2" href="/index.php?page=login">
+                            <a class="btn btn-ptmd-teal btn-sm me-2" href="<?php ee(route_login()); ?>">
                                 <i class="fa-solid fa-right-to-bracket fa-sm me-1"></i>Sign In
                             </a>
-                            <a class="btn btn-ptmd-ghost btn-sm" href="/admin/login.php" style="font-size:var(--text-xs);opacity:0.7">
+                            <a class="btn btn-ptmd-ghost btn-sm" href="<?php ee(route_admin('login')); ?>" style="font-size:var(--text-xs);opacity:0.7">
                                 <i class="fa-solid fa-lock fa-sm me-1"></i>Admin
                             </a>
                         <?php endif; ?>

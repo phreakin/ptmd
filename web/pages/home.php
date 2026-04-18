@@ -8,10 +8,10 @@ $featuredcase = get_featured_case();
 $latestcases  = get_latest_cases(6);
 
 $moduleFiles = [
-    'hero'     => __DIR__ . '/home-modules/hero.php',
-    'featured' => __DIR__ . '/home-modules/featured.php',
-    'latest'   => __DIR__ . '/home-modules/latest.php',
-    'social'   => __DIR__ . '/home-modules/social.php',
+    'hero'     => __DIR__ . '/inc/home/hero.php',
+    'featured' => __DIR__ . '/inc/home/featured.php',
+    'latest'   => __DIR__ . '/inc/home/latest.php',
+    'social'   => __DIR__ . '/inc/home/social.php',
 ];
 $defaultModules = array_keys($moduleFiles);
 $modules = $defaultModules;

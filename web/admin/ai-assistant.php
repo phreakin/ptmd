@@ -110,13 +110,66 @@ if ($pdo) {
                     <i class="fa-solid fa-robot"></i>
                 </div>
                 <h2 class="h5 mb-2">The Analyst is ready.</h2>
-                <p class="ptmd-muted small mb-0">
-                    Ask for hook variants, queue triage plans, case summaries, or platform-specific publish copy.
+                <p class="ptmd-muted small mb-4">
+                    Ask me anything — or start with a task below.
                 </p>
-                <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
-                    <span class="ptmd-chip"><i class="fa-solid fa-list-check"></i>Queue Triage</span>
-                    <span class="ptmd-chip"><i class="fa-solid fa-chart-line"></i>Trend Read</span>
-                    <span class="ptmd-chip"><i class="fa-solid fa-lightbulb"></i>Hook Lab</span>
+
+                <!-- Template launcher cards -->
+                <div class="analyst-launcher-grid">
+                    <?php
+                    $launcherCards = [
+                        [
+                            'icon'   => 'fa-triangle-exclamation',
+                            'title'  => 'What Needs Attention',
+                            'desc'   => 'Scan for failed posts, pending cases, stale queue items, or system warnings.',
+                            'prompt' => 'Scan the admin for anything that needs attention right now: failed social posts, pending cases without descriptions, stale queue items, missing settings, or any system warnings.',
+                        ],
+                        [
+                            'icon'   => 'fa-chart-bar',
+                            'title'  => 'Summarize This Page',
+                            'desc'   => 'Get a snapshot of current site activity, cases, and key metrics.',
+                            'prompt' => 'Give me a clear summary of the current admin state: active cases, recent site activity, publishing queue status, and the most important metrics at a glance.',
+                        ],
+                        [
+                            'icon'   => 'fa-share-nodes',
+                            'title'  => 'Review Dispatch',
+                            'desc'   => 'Check recent social posts — successes, failures, and platform coverage.',
+                            'prompt' => 'Review the recent social dispatch logs. Which posts were sent successfully, which failed, and which platforms or cases have gaps in coverage?',
+                        ],
+                        [
+                            'icon'   => 'fa-magnifying-glass',
+                            'title'  => 'Analyze This Case',
+                            'desc'   => 'Deep-dive on the latest case: title, description, and social coverage.',
+                            'prompt' => 'Pull up the most recently published case and give me a full analysis: title quality, description completeness, social post coverage, and your top recommendations for improvement.',
+                        ],
+                        [
+                            'icon'   => 'fa-film',
+                            'title'  => 'Hook Review',
+                            'desc'   => 'Rate recent hooks and titles for engagement and brand fit.',
+                            'prompt' => 'Review the recent content hooks and video titles. Which are the strongest from a viewer engagement perspective? What patterns make them work, and what could be improved?',
+                        ],
+                        [
+                            'icon'   => 'fa-gauge',
+                            'title'  => 'System Bottlenecks',
+                            'desc'   => 'Identify workflow blockers, slow queues, and pipeline gaps.',
+                            'prompt' => 'Identify any current system bottlenecks or workflow inefficiencies: slow queues, incomplete settings, blocked pipelines, missing integrations, or anything slowing content production.',
+                        ],
+                    ];
+                    ?>
+                    <?php foreach ($launcherCards as $card): ?>
+                        <button
+                            class="analyst-launcher-card"
+                            data-prompt="<?php ee($card['prompt']); ?>"
+                            type="button"
+                            <?php if (!$apiKeySet) echo 'disabled'; ?>
+                        >
+                            <div class="analyst-launcher-card__icon">
+                                <i class="fa-solid <?php ee($card['icon']); ?>"></i>
+                            </div>
+                            <div class="analyst-launcher-card__title"><?php ee($card['title']); ?></div>
+                            <div class="analyst-launcher-card__desc"><?php ee($card['desc']); ?></div>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
