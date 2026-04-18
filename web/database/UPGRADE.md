@@ -25,6 +25,7 @@ Apply them in the order listed below, skipping any you have already run:
 | File | Adds |
 |------|------|
 | `migration_posting_sites.sql` | `posting_sites`, `site_posting_options`; backfills platform data |
+| `migration_yt_medical_blueprint.sql` | Seeds `video_blueprints` (Medical System Failure documentary) and `posting_blueprints` (YouTube full-documentary launch) with a Sunday 10 AM schedule rule |
 | `migration_content_workflow.sql` | `content_workflows`, `content_workflow_assets`, `content_workflow_posts`; seeds `automation_worker_token` |
 | `migration_assets.sql` | `assets`, `asset_usage_logs` |
 | `migration_clips_blueprints.sql` | `clip_blueprints` |
