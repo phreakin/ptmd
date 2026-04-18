@@ -31,26 +31,28 @@ if ($pageShellClass !== '') {
 }
 
 $navItems = [
-    ['href' => route_admin('dashboard'),        'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
-    ['href' => route_admin('site-editor'),      'label' => 'Site Editor',     'icon' => 'fa-sliders',        'id' => 'site-editor'],
-    ['href' => route_admin('cases'),            'label' => 'Cases',           'icon' => 'fa-film',           'id' => 'cases'],
-    ['href' => route_admin('video-processor'),  'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
-    ['href' => route_admin('overlay-tool'),     'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
-    ['href' => route_admin('edit-jobs'),        'label' => 'Edit Jobs',       'icon' => 'fa-film-simple',    'id' => 'edit-jobs'],
-    ['href' => route_admin('media'),            'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
-    ['href' => route_admin('ai-tools'),         'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
-    ['href' => route_admin('ai-assistant'),     'label' => 'The Analyst',     'icon' => 'fa-robot',          'id' => 'ai-assistant'],
-    ['href' => route_admin('posts'),            'label' => 'Dispatch',        'icon' => 'fa-calendar-check', 'id' => 'posts'],
-    ['href' => route_admin('social-schedule'),  'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
-    ['href' => route_admin('monitor'),          'label' => 'Intelligence',    'icon' => 'fa-chart-line',     'id' => 'monitor'],
-    ['href' => route_admin('content-workflow'), 'label' => 'Content Workflow','icon' => 'fa-gears',          'id' => 'content-workflow'],
-    ['href' => route_admin('posting-sites'),    'label' => 'Posting Sites',   'icon' => 'fa-share-nodes',    'id' => 'posting-sites'],
-    ['href' => route_admin('blueprints'),       'label' => 'Blueprints',      'icon' => 'fa-layer-group',    'id' => 'blueprints'],
-    ['href' => route_admin('chat'),             'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
-    ['href' => route_admin('chat-rooms'),       'label' => 'Chat Rooms',      'icon' => 'fa-door-open',      'id' => 'chat-rooms'],
-    ['href' => route_admin('chat-users'),       'label' => 'Chat Users',      'icon' => 'fa-users',          'id' => 'chat-users'],
-    ['href' => route_admin('settings'),         'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
-    ['href' => route_admin('site-tests'),       'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
+    ['href' => route_admin('dashboard'),        'label' => 'Dashboard',        'icon' => 'fa-gauge',             'id' => 'dashboard'],
+    ['href' => route_admin('site-editor'),      'label' => 'Site Editor',      'icon' => 'fa-sliders',           'id' => 'site-editor'],
+    ['href' => route_admin('cases'),            'label' => 'Cases',            'icon' => 'fa-film',              'id' => 'cases'],
+    ['href' => route_admin('video-processor'),  'label' => 'Video Processor',  'icon' => 'fa-scissors',          'id' => 'video-processor'],
+    ['href' => route_admin('overlay-tool'),     'label' => 'Overlay Tool',     'icon' => 'fa-layer-group',       'id' => 'overlay-tool'],
+    ['href' => route_admin('edit-jobs'),        'label' => 'Edit Jobs',        'icon' => 'fa-film-simple',       'id' => 'edit-jobs'],
+    ['href' => route_admin('media'),            'label' => 'Media Library',    'icon' => 'fa-photo-film',        'id' => 'media'],
+    ['href' => route_admin('ai-tools'),         'label' => 'AI Content',       'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
+    ['href' => route_admin('ai-assistant'),     'label' => 'The Analyst',      'icon' => 'fa-robot',             'id' => 'ai-assistant'],
+    ['href' => route_admin('posts'),            'label' => 'Dispatch',         'icon' => 'fa-calendar-check',    'id' => 'posts'],
+    ['href' => route_admin('social-schedule'),  'label' => 'Post Schedule',    'icon' => 'fa-clock',             'id' => 'social-schedule'],
+    ['href' => route_admin('social-calendar'),  'label' => 'Social Calendar',  'icon' => 'fa-calendar-days',     'id' => 'social-calendar'],
+    ['href' => route_admin('social-accounts'),  'label' => 'Social Accounts',  'icon' => 'fa-plug-circle-check', 'id' => 'social-accounts'],
+    ['href' => route_admin('monitor'),          'label' => 'Intelligence',     'icon' => 'fa-chart-line',        'id' => 'monitor'],
+    ['href' => route_admin('content-workflow'), 'label' => 'Content Workflow', 'icon' => 'fa-gears',             'id' => 'content-workflow'],
+    ['href' => route_admin('posting-sites'),    'label' => 'Posting Sites',    'icon' => 'fa-share-nodes',       'id' => 'posting-sites'],
+    ['href' => route_admin('blueprints'),       'label' => 'Blueprints',       'icon' => 'fa-layer-group',       'id' => 'blueprints'],
+    ['href' => route_admin('chat'),             'label' => 'Case Chat',        'icon' => 'fa-comments',          'id' => 'chat'],
+    ['href' => route_admin('chat-rooms'),       'label' => 'Chat Rooms',       'icon' => 'fa-door-open',         'id' => 'chat-rooms'],
+    ['href' => route_admin('chat-users'),       'label' => 'Chat Users',       'icon' => 'fa-users',             'id' => 'chat-users'],
+    ['href' => route_admin('settings'),         'label' => 'Settings',         'icon' => 'fa-gear',              'id' => 'settings'],
+    ['href' => route_admin('site-tests'),       'label' => 'Site Tests',       'icon' => 'fa-flask-vial',        'id' => 'site-tests'],
 ];
 ?>
 <!DOCTYPE html>
@@ -144,7 +146,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 7, 8) as $item): ?>
+            <?php foreach (array_slice($navItems, 7, 10) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -160,7 +162,7 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <?php foreach (array_slice($navItems, 15) as $item): ?>
+            <?php foreach (array_slice($navItems, 17) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"

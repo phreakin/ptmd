@@ -15,17 +15,10 @@ require_once __DIR__ . '/../inc/bootstrap.php';
 
 $pageTitle      = 'Monitor | PTMD Admin';
 $activePage     = 'monitor';
-<<<<<<< HEAD
 $pageHeading    = 'Monitor';
 $pageSubheading = 'Pipeline health, social post performance, and site engagement analytics.';
 $pageActions    = '<a href="' . e(route_admin('posts')) . '" class="btn btn-ptmd-outline btn-sm">'
                 . '<i class="fa-solid fa-calendar-check me-2"></i>Dispatch</a>';
-=======
-$pageHeading    = 'Analytics View';
-$pageSubheading = 'Operational intelligence for pipeline health, social performance, and site behavior.';
-$pageActions    = '<a href="/admin/posts.php" class="btn btn-ptmd-outline btn-sm">'
-                . '<i class="fa-solid fa-calendar-check me-2"></i>Social Queue</a>';
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
 
 include __DIR__ . '/_admin_head.php';
 

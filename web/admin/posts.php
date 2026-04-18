@@ -7,20 +7,14 @@ require_once __DIR__ . '/../inc/bootstrap.php';
 
 $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
-<<<<<<< HEAD
 $pageHeading  = 'Dispatch';
-$pageSubheading = 'Manage and track all scheduled social media posts.';
+$pageSubheading = 'Visual dispatch control for queued, scheduled, posted, and blocked social assets.';
 $pageActions  = '<a href="' . e(route_admin('monitor')) . '" class="btn btn-ptmd-outline btn-sm">'
               . '<i class="fa-solid fa-chart-line me-2"></i>Intelligence</a>';
-=======
-$pageHeading  = 'Social Queue';
-$pageSubheading = 'Visual dispatch control for queued, scheduled, posted, and blocked social assets.';
-$pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
-              . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
 
 include __DIR__ . '/_admin_head.php';
 
+require_once __DIR__ . '/../inc/social_platform_rules.php';
 require_once __DIR__ . '/../inc/social_services.php';
 
 $pdo = get_db();
@@ -282,12 +276,11 @@ $queue = $pdo ? $pdo->query(
 
 $cases  = $pdo ? $pdo->query('SELECT id, title FROM cases ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-
-// Load active platforms from DB; fall back to hardcoded list for graceful degradation
+// Load active platforms from DB; fall back to PTMD_PLATFORMS for graceful degradation
 $activeSites = get_posting_sites(true);
 $platforms   = $activeSites
     ? array_column($activeSites, 'display_name')
-    : ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
+    : array_keys(PTMD_PLATFORMS);
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];
@@ -303,9 +296,6 @@ $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
 $selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
 $selectedClipAsset = safe_upload_rel_path($selectedClip ? clip_asset_path($selectedClip) : '');
 
-<<<<<<< HEAD
-$pageActions = '<a href="' . e(route_admin('social-schedule')) . '" class="btn btn-ptmd-outline">
-=======
 $queueCounts = ['draft' => 0, 'queued' => 0, 'scheduled' => 0, 'posted' => 0, 'failed' => 0, 'canceled' => 0];
 foreach ($queue as $qItem) {
     $statusKey = (string) ($qItem['status'] ?? 'draft');
@@ -314,8 +304,7 @@ foreach ($queue as $qItem) {
     }
 }
 
-$pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
+$pageActions = '<a href="' . e(route_admin('social-schedule')) . '" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
 </a>';
 ?>

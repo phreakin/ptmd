@@ -77,18 +77,12 @@ foreach ($recentEps as $caseItem) {
             <div class="stat-icon" style="background:rgba(46,196,182,0.15)">
                 <i class="fa-solid fa-film ptmd-text-teal"></i>
             </div>
-<<<<<<< HEAD
             <div class="stat-value ptmd-text-teal">
                 <?php ee((string) $stats['cases']); ?>
             </div>
             <div class="stat-label">
                 Published Cases
             </div>
-=======
-            <div class="stat-value ptmd-text-teal"><?php ee((string) $stats['cases']); ?></div>
-            <div class="stat-label">Published cases</div>
-            <span class="ptmd-chip"><i class="fa-solid fa-circle-check"></i>Performing</span>
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
         </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -107,14 +101,9 @@ foreach ($recentEps as $caseItem) {
                 <i class="fas fa-comments" style="color:#ff4d5a"></i>
             </div>
             <div class="stat-value" style="color:#ff4d5a"><?php ee((string) $stats['chat']); ?></div>
-<<<<<<< HEAD
             <div class="stat-label">
                 <span class="ptmd-status ptmd-status-approved" style="font-size:var(--text-xs)">Approved</span>
             </div>
-=======
-            <div class="stat-label">Case Chat Live</div>
-            <span class="ptmd-chip"><i class="fa-solid fa-bolt"></i>Active</span>
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
         </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -195,11 +184,7 @@ foreach ($recentEps as $caseItem) {
                 <a href="<?php ee(route_admin('ai-tools')); ?>" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
                     <i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Content Studio
                 </a>
-<<<<<<< HEAD
                 <a href="<?php ee(route_admin('ai-assistant')); ?>" class="btn btn-ptmd-outline" style="border-color:rgba(46,196,182,0.4);color:var(--ptmd-teal)">
-=======
-                <a href="/admin/ai-assistant.php" class="btn btn-ptmd-outline" style="border-color:rgba(46,196,182,0.4);color:var(--ptmd-teal)">
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
                     <i class="fa-solid fa-robot me-2"></i>The Analyst
                 </a>
                 <a href="<?php ee(route_admin('social-schedule')); ?>" class="btn btn-ptmd-outline">
@@ -226,7 +211,6 @@ foreach ($recentEps as $caseItem) {
                 </a>
             </div>
             <?php if ($recentEps): ?>
-<<<<<<< HEAD
                 <table class="ptmd-table w-100">
                     <thead>
                         <tr>
@@ -256,23 +240,6 @@ foreach ($recentEps as $caseItem) {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-=======
-                <div class="ptmd-list-hybrid">
-                    <?php foreach ($recentEps as $ep): ?>
-                        <article class="ptmd-list-hybrid-item">
-                            <div>
-                                <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="ptmd-text-muted fw-600">
-                                    <?php ee($ep['title']); ?>
-                                </a>
-                                <div class="small ptmd-muted">Updated recently</div>
-                            </div>
-                            <span class="ptmd-status ptmd-status-<?php ee($ep['status']); ?>"><?php ee($ep['status']); ?></span>
-                            <span class="ptmd-chip"><i class="fa-solid fa-clock"></i><?php echo $ep['published_at'] ? e(date('M j', strtotime($ep['published_at']))) : 'Draft'; ?></span>
-                            <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="btn btn-ptmd-ghost btn-sm">Inspect</a>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
             <?php else: ?>
                 <p class="ptmd-muted small">No cases yet.</p>
             <?php endif; ?>

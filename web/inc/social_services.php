@@ -25,19 +25,31 @@
  * @var array<string, callable>
  */
 const PTMD_SITE_DISPATCH_REGISTRY = [
-    'youtube'          => 'post_to_youtube',
-    'youtube_shorts'   => 'post_to_youtube_shorts',
-    'tiktok'           => 'post_to_tiktok',
-    'instagram_reels'  => 'post_to_instagram_reels',
-    'facebook_reels'   => 'post_to_facebook_reels',
-    'x'                => 'post_to_x',
+    'youtube'             => 'post_to_youtube',
+    'youtube_shorts'      => 'post_to_youtube_shorts',
+    'tiktok'              => 'post_to_tiktok',
+    'instagram_reels'     => 'post_to_instagram_reels',
+    'facebook_reels'      => 'post_to_facebook_reels',
+    'snapchat_spotlight'  => 'post_to_snapchat_spotlight',
+    'x'                   => 'post_to_x',
+    'pinterest_idea_pins' => 'post_to_pinterest_idea_pins',
 ];
 
 function dispatch_social_post(array $queueItem): array
 {
+    $dispatchStart = hrtime(true); // nanoseconds
+    $correlationId = sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
+
     $platform = (string) ($queueItem['platform'] ?? '');
     // Normalise display name or pre-formatted site_key to registry key
-    $siteKey  = strtolower(str_replace(' ', '_', trim($platform)));
+    $siteKey  = strtolower(str_replace([' ', '-'], '_', trim($platform)));
 
     $handler = PTMD_SITE_DISPATCH_REGISTRY[$siteKey] ?? null;
 
@@ -47,13 +59,17 @@ function dispatch_social_post(array $queueItem): array
         $result = $handler($queueItem);
     }
 
+    $latencyMs    = (int) round((hrtime(true) - $dispatchStart) / 1_000_000);
+    $retryAttempt = max(0, (int) ($queueItem['retry_count'] ?? 0));
+
     // Write log entry
     $pdo = get_db();
     if ($pdo) {
         $stmt = $pdo->prepare(
             'INSERT INTO social_post_logs
-             (queue_id, platform, request_payload_json, response_payload_json, status, created_at)
-             VALUES (:queue_id, :platform, :req, :res, :status, NOW())'
+             (queue_id, platform, request_payload_json, response_payload_json,
+              status, latency_ms, correlation_id, retry_attempt, created_at)
+             VALUES (:queue_id, :platform, :req, :res, :status, :latency, :corr, :retry, NOW())'
         );
         $stmt->execute([
             'queue_id' => (int) $queueItem['id'],
@@ -61,23 +77,43 @@ function dispatch_social_post(array $queueItem): array
             'req'      => json_encode(['queue_item' => $queueItem], JSON_UNESCAPED_UNICODE),
             'res'      => json_encode($result,                       JSON_UNESCAPED_UNICODE),
             'status'   => $result['ok'] ? 'posted' : 'failed',
+            'latency'  => $latencyMs,
+            'corr'     => $correlationId,
+            'retry'    => $retryAttempt,
         ]);
 
-        // Update queue item status
-        $newStatus = $result['ok'] ? 'posted' : 'failed';
+        // Classify the error for the queue row
+        $newStatus  = $result['ok'] ? 'posted' : 'failed';
+        $errorClass = null;
+        if (!$result['ok']) {
+            $err = strtolower($result['error'] ?? '');
+            $errorClass = match (true) {
+                str_contains($err, 'rate') || str_contains($err, '429')                                     => 'rate_limit',
+                str_contains($err, 'auth') || str_contains($err, '401') || str_contains($err, '403')        => 'auth',
+                str_contains($err, 'timeout') || str_contains($err, 'network') || str_contains($err, 'curl') => 'network',
+                str_contains($err, 'validat') || str_contains($err, 'format')                               => 'validation',
+                default                                                                                       => 'unknown',
+            };
+        }
+
         $stmt2 = $pdo->prepare(
             'UPDATE social_post_queue
              SET status = :status, external_post_id = :ext_id,
-                 last_error = :err, updated_at = NOW()
+                 last_error = :err, error_class = :error_class,
+                 updated_at = NOW()
              WHERE id = :id'
         );
         $stmt2->execute([
-            'status' => $newStatus,
-            'ext_id' => $result['external_post_id'] ?? null,
-            'err'    => $result['error'] ?? null,
-            'id'     => (int) $queueItem['id'],
+            'status'      => $newStatus,
+            'ext_id'      => $result['external_post_id'] ?? null,
+            'err'         => $result['error'] ?? null,
+            'error_class' => $errorClass,
+            'id'          => (int) $queueItem['id'],
         ]);
     }
+
+    $result['correlation_id'] = $correlationId;
+    $result['latency_ms']     = $latencyMs;
 
     return $result;
 }
@@ -209,5 +245,49 @@ function post_to_x(array $item): array
         'ok'               => false,
         'external_post_id' => null,
         'error'            => 'TODO: X (Twitter) API v2 integration not configured.',
+    ];
+}
+
+// ---------------------------------------------------------------------------
+// Snapchat Spotlight
+// ---------------------------------------------------------------------------
+
+function post_to_snapchat_spotlight(array $item): array
+{
+    // TODO: Snapchat Content Submission API
+    // Docs: https://developers.snap.com/api/content-submission
+    // Steps:
+    //   1. POST /v1/media/upload  with the video asset
+    //   2. POST /v1/stories  with media_id + title + caption + call_to_action
+    // Credentials: client_id, client_secret, refresh_token (OAuth 2.0)
+
+    error_log('[PTMD Social] Snapchat Spotlight post queued but API not wired. Queue ID: ' . $item['id']);
+
+    return [
+        'ok'               => false,
+        'external_post_id' => null,
+        'error'            => 'TODO: Snapchat Spotlight API integration not configured.',
+    ];
+}
+
+// ---------------------------------------------------------------------------
+// Pinterest Idea Pins (via Pinterest API v5)
+// ---------------------------------------------------------------------------
+
+function post_to_pinterest_idea_pins(array $item): array
+{
+    // TODO: Pinterest API v5 — Idea Pin creation
+    // Docs: https://developers.pinterest.com/docs/api/v5/#tag/pins
+    // Steps:
+    //   1. POST /v5/pins  with board_id, media.source_type=video_id, title, description
+    //   2. Upload video via the media upload endpoint first to obtain a media_id
+    // Credentials: app_id, app_secret, access_token, board_id
+
+    error_log('[PTMD Social] Pinterest Idea Pins post queued but API not wired. Queue ID: ' . $item['id']);
+
+    return [
+        'ok'               => false,
+        'external_post_id' => null,
+        'error'            => 'TODO: Pinterest Idea Pins API integration not configured.',
     ];
 }

@@ -214,7 +214,6 @@ if ($action === 'list'):
 
     <div class="ptmd-panel p-lg">
         <?php if ($cases): ?>
-<<<<<<< HEAD
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
@@ -286,43 +285,6 @@ if ($action === 'list'):
                 </tbody>
             </table>
         </div>
-=======
-            <div class="ptmd-list-hybrid">
-                <?php foreach ($cases as $ep): ?>
-                    <article class="ptmd-list-hybrid-item">
-                        <div class="d-flex align-items-center gap-3">
-                            <?php if ($ep['thumbnail_image']): ?>
-                                <img
-                                    src="<?php ee($ep['thumbnail_image']); ?>"
-                                    alt=""
-                                    style="width:56px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--ptmd-border)"
-                                    loading="lazy"
-                                >
-                            <?php else: ?>
-                                <span class="ptmd-chip"><i class="fa-solid fa-image"></i>No thumb</span>
-                            <?php endif; ?>
-                            <div>
-                                <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="fw-600 ptmd-text-muted"><?php ee($ep['title']); ?></a>
-                                <div class="small ptmd-muted"><?php ee($ep['duration'] ?: 'No duration'); ?></div>
-                            </div>
-                        </div>
-                        <span class="ptmd-status ptmd-status-<?php ee($ep['status']); ?>"><?php ee($ep['status']); ?></span>
-                        <span class="ptmd-chip"><i class="fa-solid fa-timer"></i><?php ee($ep['duration'] ?: '—'); ?></span>
-                        <span class="ptmd-chip"><i class="fa-solid fa-calendar-days"></i><?php echo $ep['published_at'] ? e(date('M j, Y', strtotime($ep['published_at']))) : 'Unpublished'; ?></span>
-                        <div class="d-flex gap-2">
-                            <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Edit"><i class="fa-solid fa-pen"></i></a>
-                            <a href="/index.php?page=case&slug=<?php ee($ep['slug']); ?>" target="_blank" rel="noopener" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View public"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                            <form method="post" action="/admin/cases.php" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
-                                <input type="hidden" name="_action" value="delete">
-                                <input type="hidden" name="id" value="<?php ee((string) $ep['id']); ?>">
-                                <button class="btn btn-ptmd-ghost btn-sm" type="submit" style="color:var(--ptmd-error)" data-confirm="Delete &quot;<?php ee($ep['title']); ?>&quot;? This cannot be undone." data-tippy-content="Delete"><i class="fa-solid fa-trash"></i></button>
-                            </form>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
         <?php else: ?>
             <p class="ptmd-muted">No cases yet. <a href="<?php ee(route_admin('cases', ['action' => 'new'])); ?>">Create your first case</a>.</p>
         <?php endif; ?>

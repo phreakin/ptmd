@@ -36,6 +36,14 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, label, grou
 ('default_overlay_path', '/assets/brand/overlays/ptmd_overlay_lower_third.png',   'string', 'Default Overlay',      'brand',    NOW()),
 ('ffmpeg_path',          'ffmpeg',                                                  'string', 'FFmpeg Binary',        'system',   NOW()),
 ('ffprobe_path',         'ffprobe',                                                 'string', 'FFprobe Binary',       'system',   NOW()),
+('scheduler_secret',     '',                                                        'secret', 'Scheduler Secret Token',        'system', NOW()),
+('scheduler_enabled',    '1',                                                       'bool',   'Enable Automated Scheduler',   'system', NOW()),
+('scheduler_max_retries','3',                                                       'int',    'Scheduler Max Retry Attempts', 'system', NOW()),
+('scheduler_retry_interval','15',                                                   'int',    'Scheduler Retry Interval (min)','system',NOW()),
+('scheduler_horizon_days','30',                                                     'int',    'Queue Generation Horizon (days)','system',NOW()),
+('scheduler_lock_expires','',                                                       'string', 'Scheduler Lock (auto-managed)', 'system', NOW()),
+('scheduler_ip_allowlist','',                                                       'string', 'Scheduler IP Allowlist (comma)','system', NOW()),
+('scheduler_content_auto','0',                                                      'bool',   'Auto-fill Captions from Platform Prefs','system',NOW()),
 ('automation_worker_token', 'change-me-worker-token',                               'secret', 'Automation Worker Token','system',  NOW())
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW();
 

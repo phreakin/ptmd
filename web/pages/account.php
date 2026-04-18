@@ -69,11 +69,7 @@ $username = $viewer['username'] ?? '';
                 <div class="ptmd-panel p-lg ptmd-text-muted">
                     <i class="fa-regular fa-heart me-2"></i>
                     No saved cases yet.
-<<<<<<< HEAD
                     <a href="<?php ee(route_cases()); ?>" class="ms-1">Browse cases</a> and tap the
-=======
-                    <a href="/index.php?page=cases" class="ms-1">Browse cases</a> and tap the
->>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
                     <i class="fa-solid fa-heart ms-1 me-1" style="color:var(--ptmd-teal)"></i> to save them here.
                 </div>
             </div>
