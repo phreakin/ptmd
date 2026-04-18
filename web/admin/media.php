@@ -5,8 +5,8 @@
 
 $pageTitle    = 'Media Library | PTMD Admin';
 $activePage   = 'media';
-$pageHeading  = 'Media Library';
-$pageSubheading = 'Manage all brand assets: overlays, thumbnails, logos, watermarks, and more.';
+$pageHeading  = 'Asset Manager';
+$pageSubheading = 'Visual inventory control for overlays, clips, thumbnails, logos, and publishing assets.';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -91,7 +91,32 @@ if ($mediaItems) {
 } else {
     $mediaItems = [];
 }
+
+$categoryCounts = array_fill_keys($categories, 0);
+foreach ($mediaItems as $mediaItem) {
+    $cat = (string) ($mediaItem['category'] ?? 'other');
+    if (isset($categoryCounts[$cat])) {
+        $categoryCounts[$cat]++;
+    }
+}
+$totalAssets = count($mediaItems);
 ?>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-photo-film ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) $totalAssets); ?></div><div class="stat-label">Visible Assets</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-clapperboard ptmd-text-yellow"></i></div><div class="stat-value ptmd-text-yellow"><?php ee((string) ($categoryCounts['clip'] ?? 0)); ?></div><div class="stat-label">Clips</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-image" style="color:#c084fc"></i></div><div class="stat-value" style="color:#c084fc"><?php ee((string) ($categoryCounts['thumbnail'] ?? 0)); ?></div><div class="stat-label">Thumbnails</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-layer-group" style="color:#ff4d5a"></i></div><div class="stat-value" style="color:#ff4d5a"><?php ee((string) ($categoryCounts['overlay'] ?? 0)); ?></div><div class="stat-label">Overlays</div></div></div>
+</div>
+
+<div class="ptmd-panel p-lg mb-4">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="ptmd-chip"><i class="fa-solid fa-water"></i>Watermarks: <?php ee((string) ($categoryCounts['watermark'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-certificate"></i>Logos: <?php ee((string) ($categoryCounts['logo'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-play"></i>Intro: <?php ee((string) ($categoryCounts['intro'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-box-open"></i>Other: <?php ee((string) ($categoryCounts['other'] ?? 0)); ?></span>
+    </div>
+</div>
 
 <!-- Upload form -->
 <div class="ptmd-panel p-xl mb-4">

@@ -15,7 +15,7 @@ $pageTitle  = $pageTitle  ?? 'Admin | Paper Trail MD';
 $activePage = $activePage ?? '';
 
 $navItems = [
-    ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
+    ['href' => '/admin/dashboard.php',       'label' => 'Control Room',    'icon' => 'fa-gauge',          'id' => 'dashboard'],
     ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-sliders',       'id' => 'site-editor'],
     ['href' => '/admin/cases.php',        'label' => 'cases',        'icon' => 'fa-film',           'id' => 'cases'],
     ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
@@ -23,7 +23,7 @@ $navItems = [
     ['href' => '/admin/edit-jobs.php',       'label' => 'Edit Jobs',       'icon' => 'fa-film-simple',    'id' => 'edit-jobs'],
     ['href' => '/admin/media.php',           'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
     ['href' => '/admin/ai-tools.php',        'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
-    ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
+    ['href' => '/admin/ai-assistant.php',    'label' => 'The Analyst',     'icon' => 'fa-robot',          'id' => 'ai-assistant'],
     ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
     ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
     ['href' => '/admin/monitor.php',         'label' => 'Monitor',         'icon' => 'fa-chart-line',     'id' => 'monitor'],
@@ -74,7 +74,7 @@ $navItems = [
                 onerror="this.style.display='none'"
             >
             <span class="fw-700 d-none d-md-inline" style="font-size:var(--text-sm);font-family:'Plus Jakarta Sans',sans-serif">
-                PTMD Admin
+                PTMD Control Room
             </span>
         </a>
     </div>

@@ -8,7 +8,7 @@
 $pageTitle      = 'UI Foundation | PTMD Admin';
 $activePage     = 'dashboard';
 $pageHeading    = 'UI Foundation Showcase';
-$pageSubheading = 'Reference implementations for dashboard, case list, hook lab, AI drawer, analytics, and shell primitives.';
+$pageSubheading = 'Reference implementations for Control Room, case board, Hook Lab, The Analyst, analytics, and shell primitives.';
 
 include __DIR__ . '/_admin_head.php';
 ?>
@@ -21,7 +21,7 @@ include __DIR__ . '/_admin_head.php';
 
     <div class="d-flex gap-2">
         <button class="btn btn-ptmd-outline" type="button" data-drawer-target="#ptmdAiBotDrawer">
-            <i class="fa-solid fa-robot me-2"></i>Open AI Bot Drawer
+            <i class="fa-solid fa-robot me-2"></i>Open The Analyst Drawer
         </button>
         <button class="btn btn-ptmd-outline" type="button" data-modal-target="#ptmdGlobalModal">
             <i class="fa-solid fa-window-restore me-2"></i>Open Global Modal

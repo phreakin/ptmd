@@ -1,16 +1,16 @@
 <?php
 /**
- * PTMD Admin — AI Copilot
+ * PTMD Admin — The Analyst
  *
  * A conversational admin assistant powered by OpenAI.
  * Helps with cases, social publishing, media, moderation,
  * content drafting, and any other site admin task.
  */
 
-$pageTitle      = 'AI Copilot | PTMD Admin';
+$pageTitle      = 'The Analyst | PTMD Admin';
 $activePage     = 'ai-assistant';
-$pageHeading    = 'AI Copilot';
-$pageSubheading = 'Your conversational admin assistant — ask anything about managing the site.';
+$pageHeading    = 'The Analyst';
+$pageSubheading = 'Premium intelligence panel for case strategy, queue optimization, and rapid drafting.';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -37,7 +37,7 @@ if ($pdo) {
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
         <strong>OpenAI API key not configured.</strong>
         Go to <a href="/admin/settings.php">Settings</a> and set the
-        <strong>OpenAI API Key</strong> to enable AI Copilot.
+        <strong>OpenAI API Key</strong> to enable The Analyst.
     </div>
 <?php endif; ?>
 
@@ -48,7 +48,7 @@ if ($pdo) {
     <!-- ── Session sidebar ─────────────────────────────────────────────── -->
     <aside class="ptmd-copilot-sessions">
         <div class="copilot-sessions-header">
-            <span class="copilot-sessions-title">Conversations</span>
+            <span class="copilot-sessions-title">Intel Sessions</span>
             <button class="btn btn-ptmd-teal btn-sm" id="newConvoBtn" title="Start a new conversation">
                 <i class="fa-solid fa-plus"></i>
             </button>
@@ -69,6 +69,12 @@ if ($pdo) {
             <?php else: ?>
                 <p class="copilot-sessions-empty">No conversations yet.</p>
             <?php endif; ?>
+        </div>
+
+        <div class="ptmd-insight-card mb-3">
+            <div class="ptmd-kicker">Live Insight</div>
+            <div class="fw-600 mb-2">What should happen next</div>
+            <div class="ptmd-muted small">Use The Analyst to prioritize blocked queue items, generate hooks, and sequence social follow-ups.</div>
         </div>
 
         <!-- Starter prompts -->
@@ -103,10 +109,15 @@ if ($pdo) {
                 <div class="copilot-welcome-icon">
                     <i class="fa-solid fa-robot"></i>
                 </div>
-                <h2 class="h5 mb-2">How can I help you today?</h2>
+                <h2 class="h5 mb-2">The Analyst is ready.</h2>
                 <p class="ptmd-muted small mb-0">
-                    Ask me anything — case ideas, social captions, how to use admin features, or site stats.
+                    Ask for hook variants, queue triage plans, case summaries, or platform-specific publish copy.
                 </p>
+                <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                    <span class="ptmd-chip"><i class="fa-solid fa-list-check"></i>Queue Triage</span>
+                    <span class="ptmd-chip"><i class="fa-solid fa-chart-line"></i>Trend Read</span>
+                    <span class="ptmd-chip"><i class="fa-solid fa-lightbulb"></i>Hook Lab</span>
+                </div>
             </div>
         </div>
 
@@ -115,7 +126,7 @@ if ($pdo) {
             <div class="typing-dots">
                 <span></span><span></span><span></span>
             </div>
-            <span class="ptmd-muted" style="font-size:var(--text-xs)">Copilot is thinking…</span>
+            <span class="ptmd-muted" style="font-size:var(--text-xs)">The Analyst is thinking…</span>
         </div>
 
         <!-- Input bar -->
@@ -127,7 +138,7 @@ if ($pdo) {
                     id="copilotInput"
                     name="message"
                     rows="1"
-                    placeholder="Ask the Copilot anything…"
+                    placeholder="Ask The Analyst anything…"
                     <?php if (!$apiKeySet) echo 'disabled'; ?>
                 ></textarea>
                 <button
