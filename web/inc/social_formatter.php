@@ -45,11 +45,21 @@ function format_caption_for_platform(
         return $caption;
     }
 
-    // Merge caption + hashtags
+    // Merge caption + hashtags (skip any tag already in the caption)
     $merged = trim($caption);
     $normalizedTags = normalize_hashtags(trim($hashtags));
     if ($normalizedTags !== '') {
-        $merged = rtrim($merged) . ' ' . $normalizedTags;
+        $tagTokens  = preg_split('/\s+/', $normalizedTags, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $captionLower = strtolower($merged);
+        $tagsToAppend = [];
+        foreach ($tagTokens as $tag) {
+            if (!str_contains($captionLower, strtolower((string) $tag))) {
+                $tagsToAppend[] = $tag;
+            }
+        }
+        if (!empty($tagsToAppend)) {
+            $merged = rtrim($merged) . ' ' . implode(' ', $tagsToAppend);
+        }
     }
 
     // Add required platform tags

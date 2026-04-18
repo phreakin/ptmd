@@ -13,6 +13,8 @@ $pageSubheading = 'Recurring posting windows by platform. These drive the social
 
 include __DIR__ . '/_admin_head.php';
 
+require_once __DIR__ . '/../inc/social_platform_rules.php';
+
 $pdo = get_db();
 
 if ($pdo && is_post()) {
@@ -68,7 +70,7 @@ $schedules = $pdo
            ->fetchAll()
     : [];
 
-$platforms = ['YouTube', 'YouTube Shorts', 'TikTok', 'Instagram Reels', 'Facebook Reels', 'X'];
+$platforms = PTMD_PLATFORMS;
 $days      = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 ?>
 

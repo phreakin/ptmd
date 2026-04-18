@@ -112,27 +112,33 @@ WHERE e.slug = 'the-permit-maze';
 
 -- Default social posting cadence (PTMD recommended schedule — Phoenix time)
 INSERT INTO social_post_schedules (platform, content_type, day_of_week, post_time, timezone, is_active, created_at, updated_at) VALUES
-('YouTube Shorts',   'teaser',              'Friday',    '17:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('TikTok',           'teaser',              'Saturday',  '18:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('Instagram Reels',  'teaser',              'Saturday',  '18:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('YouTube',          'full documentary',    'Sunday',    '10:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('X',                'launch post',         'Sunday',    '12:30:00', 'America/Phoenix', 1, NOW(), NOW()),
-('YouTube Shorts',   'follow-up',           'Sunday',    '19:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('Instagram Reels',  'clip',                'Monday',    '14:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('TikTok',           'clip',                'Tuesday',   '15:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('Facebook Reels',   'clip',                'Wednesday', '13:00:00', 'America/Phoenix', 1, NOW(), NOW()),
-('X',                'follow-up clip',      'Thursday',  '12:30:00', 'America/Phoenix', 1, NOW(), NOW());
+('YouTube Shorts',      'teaser',              'Friday',    '17:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('TikTok',              'teaser',              'Saturday',  '18:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Instagram Reels',     'teaser',              'Saturday',  '18:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('YouTube',             'full documentary',    'Sunday',    '10:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('X',                   'launch post',         'Sunday',    '12:30:00', 'America/Phoenix', 1, NOW(), NOW()),
+('YouTube Shorts',      'follow-up',           'Sunday',    '19:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Instagram Reels',     'clip',                'Monday',    '14:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('TikTok',              'clip',                'Tuesday',   '15:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Facebook Reels',      'clip',                'Wednesday', '13:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('X',                   'follow-up clip',      'Thursday',  '12:30:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Snapchat Spotlight',  'teaser',              'Saturday',  '19:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Snapchat Spotlight',  'clip',                'Wednesday', '14:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Pinterest Idea Pins', 'teaser',              'Sunday',    '11:00:00', 'America/Phoenix', 1, NOW(), NOW()),
+('Pinterest Idea Pins', 'clip',                'Tuesday',   '16:00:00', 'America/Phoenix', 1, NOW(), NOW());
 
 -- Default platform-level posting preferences
 INSERT INTO social_platform_preferences
     (platform, default_content_type, default_caption_prefix, default_hashtags, default_status, is_enabled, created_at, updated_at)
 VALUES
-    ('YouTube',         'full documentary', 'New episode from Paper Trail MD.', '#investigation #documentary', 'queued', 1, NOW(), NOW()),
-    ('YouTube Shorts',  'teaser',           'Short cut from Paper Trail MD.',    '#shorts #investigation',      'queued', 1, NOW(), NOW()),
-    ('TikTok',          'teaser',           'Fresh PTMD clip just dropped.',      '#tiktok #investigation',      'queued', 1, NOW(), NOW()),
-    ('Instagram Reels', 'teaser',           'New reel from Paper Trail MD.',      '#reels #investigation',       'queued', 1, NOW(), NOW()),
-    ('Facebook Reels',  'clip',             'Watch this Paper Trail MD clip.',    '#reels #news',                'queued', 1, NOW(), NOW()),
-    ('X',               'launch post',      'New post from Paper Trail MD.',      '#news #journalism',           'queued', 1, NOW(), NOW())
+    ('YouTube',             'full documentary', 'New episode from Paper Trail MD.',  '#investigation #documentary', 'queued', 1, NOW(), NOW()),
+    ('YouTube Shorts',      'teaser',           'Short cut from Paper Trail MD.',    '#shorts #investigation',      'queued', 1, NOW(), NOW()),
+    ('TikTok',              'teaser',           'Fresh PTMD clip just dropped.',     '#tiktok #investigation',      'queued', 1, NOW(), NOW()),
+    ('Instagram Reels',     'teaser',           'New reel from Paper Trail MD.',     '#reels #investigation',       'queued', 1, NOW(), NOW()),
+    ('Facebook Reels',      'clip',             'Watch this Paper Trail MD clip.',   '#reels #news',                'queued', 1, NOW(), NOW()),
+    ('Snapchat Spotlight',  'teaser',           'PTMD clip on Snapchat Spotlight.',  '#spotlight #investigation',   'queued', 1, NOW(), NOW()),
+    ('X',                   'launch post',      'New post from Paper Trail MD.',     '#news #journalism',           'queued', 1, NOW(), NOW()),
+    ('Pinterest Idea Pins', 'teaser',           'New Idea Pin from Paper Trail MD.', '#investigation #news',        'queued', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     default_content_type   = VALUES(default_content_type),
     default_caption_prefix = VALUES(default_caption_prefix),

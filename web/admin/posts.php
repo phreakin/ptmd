@@ -11,6 +11,7 @@ $pageSubheading = 'Manage and track all scheduled social media posts.';
 include __DIR__ . '/_admin_head.php';
 
 require_once __DIR__ . '/../inc/social_services.php';
+require_once __DIR__ . '/../inc/social_platform_rules.php';
 
 $pdo = get_db();
 
@@ -89,6 +90,16 @@ if ($pdo && is_post()) {
         $status = (!empty($pref['default_status']) && in_array($pref['default_status'], ['draft','queued','scheduled'], true))
             ? (string) $pref['default_status']
             : 'queued';
+
+        // Preflight validation
+        $preflight = preflight_check_queue_item([
+            'platform'     => $platform,
+            'caption'      => $caption,
+            'content_type' => $contentType,
+        ]);
+        if (!$preflight['ok']) {
+            redirect('/admin/posts.php', 'Preflight failed: ' . implode(' ', $preflight['errors']), 'danger');
+        }
 
         $pdo->prepare(
             'INSERT INTO social_post_queue (episode_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
@@ -250,7 +261,9 @@ if ($pdo && is_post()) {
 $queue = $pdo ? $pdo->query(
     'SELECT
          q.id, q.episode_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
-         q.scheduled_for, q.status, q.external_post_id, q.last_error, q.created_at, q.updated_at,
+         q.scheduled_for, q.status, q.external_post_id, q.last_error,
+         q.retry_count, q.error_class, q.retry_after,
+         q.created_at, q.updated_at,
          e.title AS episode_title,
          vc.label AS clip_label, vc.output_path AS clip_output_path, vc.source_path AS clip_source_path
      FROM social_post_queue q
@@ -259,9 +272,22 @@ $queue = $pdo ? $pdo->query(
      ORDER BY q.scheduled_for ASC'
 )->fetchAll() : [];
 
+// Observability filter views
+$queueFilter = trim((string) ($_GET['filter'] ?? ''));
+$queueFiltered = match ($queueFilter) {
+    'failed'            => array_filter($queue, static fn($r) => $r['status'] === 'failed'),
+    'next_24h'          => array_filter($queue, static fn($r) => in_array($r['status'], ['queued','scheduled'], true)
+                               && !empty($r['scheduled_for'])
+                               && strtotime($r['scheduled_for']) <= time() + 86400),
+    'retries_exhausted' => array_filter($queue, static fn($r) => $r['status'] === 'failed'
+                               && (int) ($r['retry_count'] ?? 0) >= PTMD_MAX_RETRIES),
+    default             => $queue,
+};
+$queueFiltered = array_values($queueFiltered);
+
 $episodes  = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-$platforms = ['YouTube','YouTube Shorts','TikTok','Instagram Reels','Facebook Reels','X'];
+$platforms = PTMD_PLATFORMS;
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];
@@ -430,17 +456,25 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     </form>
 </div>
 
-<!-- Queue table -->
+<!-- Queue filter bar + table -->
 <div class="ptmd-panel p-lg">
-    <h2 class="h6 mb-4">Queue</h2>
-    <?php if ($queue): ?>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <h2 class="h6 mb-0">Queue</h2>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/admin/posts.php" class="btn btn-sm <?php echo $queueFilter === '' ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">All</a>
+            <a href="/admin/posts.php?filter=failed" class="btn btn-sm <?php echo $queueFilter === 'failed' ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">Failed</a>
+            <a href="/admin/posts.php?filter=next_24h" class="btn btn-sm <?php echo $queueFilter === 'next_24h' ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">Next 24h</a>
+            <a href="/admin/posts.php?filter=retries_exhausted" class="btn btn-sm <?php echo $queueFilter === 'retries_exhausted' ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">Retries Exhausted</a>
+        </div>
+    </div>
+    <?php if ($queueFiltered): ?>
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
-                    <tr><th>Platform</th><th>Video</th><th>Episode</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Platform</th><th>Video</th><th>Episode</th><th>Scheduled</th><th>Status</th><th>Retries</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($queue as $item): ?>
+                    <?php foreach ($queueFiltered as $item): ?>
                         <tr>
                             <td class="fw-500"><?php ee($item['platform']); ?></td>
                             <td class="ptmd-muted small">
@@ -477,6 +511,26 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                         <?php endforeach; ?>
                                     </select>
                                 </form>
+                                <?php if (!empty($item['last_error'])): ?>
+                                    <div style="font-size:var(--text-xs);color:var(--ptmd-error)" class="mt-1"
+                                         data-tippy-content="<?php ee($item['last_error']); ?>">
+                                        <i class="fa-solid fa-circle-exclamation me-1"></i><?php ee($item['error_class'] ?? 'error'); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td class="ptmd-muted" style="font-size:var(--text-xs)">
+                                <?php
+                                $retryCount = (int) ($item['retry_count'] ?? 0);
+                                $isExhausted = $retryCount >= PTMD_MAX_RETRIES;
+                                ?>
+                                <span style="color:<?php echo $isExhausted ? 'var(--ptmd-error)' : 'inherit'; ?>">
+                                    <?php ee((string) $retryCount); ?>/<?php ee((string) PTMD_MAX_RETRIES); ?>
+                                </span>
+                                <?php if (!empty($item['retry_after'])): ?>
+                                    <div style="font-size:var(--text-xs);opacity:.7">
+                                        retry <?php echo e(date('M j g:ia', strtotime($item['retry_after']))); ?>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
@@ -526,7 +580,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
             </table>
         </div>
     <?php else: ?>
-        <p class="ptmd-muted small">Queue is empty.</p>
+        <p class="ptmd-muted small"><?php echo $queueFilter !== '' ? 'No items match this filter.' : 'Queue is empty.'; ?></p>
     <?php endif; ?>
 </div>
 

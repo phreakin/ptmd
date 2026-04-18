@@ -156,11 +156,15 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     status           ENUM('draft','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',
     external_post_id VARCHAR(255)   NULL,
     last_error       TEXT           NULL,
+    retry_count      INT UNSIGNED   NOT NULL DEFAULT 0,
+    error_class      VARCHAR(20)    NULL,   -- transient | rate_limit | auth | policy | unknown
+    retry_after      DATETIME       NULL,   -- earliest next attempt for retryable failures
     created_at       DATETIME       NOT NULL,
     updated_at       DATETIME       NOT NULL,
     CONSTRAINT fk_spq_episode FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE SET NULL,
     INDEX idx_clip_platform (clip_id, platform),
-    INDEX idx_status_scheduled (status, scheduled_for)
+    INDEX idx_status_scheduled (status, scheduled_for),
+    INDEX idx_retry (status, retry_after)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -173,8 +177,12 @@ CREATE TABLE IF NOT EXISTS social_post_logs (
     request_payload_json  JSON          NULL,
     response_payload_json JSON          NULL,
     status                VARCHAR(50)   NOT NULL,
+    latency_ms            INT UNSIGNED  NULL,             -- adapter round-trip time
+    correlation_id        VARCHAR(60)   NULL,             -- tracing ID (e.g. ptmd-q42-a3f9c1)
+    retry_attempt         INT UNSIGNED  NOT NULL DEFAULT 0, -- 0 = first attempt
     created_at            DATETIME      NOT NULL,
-    CONSTRAINT fk_spl_queue FOREIGN KEY (queue_id) REFERENCES social_post_queue(id) ON DELETE CASCADE
+    CONSTRAINT fk_spl_queue FOREIGN KEY (queue_id) REFERENCES social_post_queue(id) ON DELETE CASCADE,
+    INDEX idx_spl_correlation (correlation_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
