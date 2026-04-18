@@ -14,12 +14,12 @@ $shareUrl   = 'https://' . site_setting('site_domain', 'papertrailmd.com')
 
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb" style="font-size:var(--text-sm)">
+        <ol class="breadcrumb">
             <li class="breadcrumb-item">
                 <a href="/index.php">Home</a>
             </li>
             <li class="breadcrumb-item">
-                <a href="/index.php?page=cases">cases</a>
+                <a href="/index.php?page=cases">Cases</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 <?php ee($current_case['title']); ?>

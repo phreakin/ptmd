@@ -6,7 +6,7 @@ $flash = pull_flash();
 ?>
 <header class="ptmd-header sticky-top">
     <nav class="navbar navbar-expand-lg ptmd-navbar">
-        <div class="container">
+        <div class="container ptmd-container">
 
             <!-- Brand lockup -->
             <a class="navbar-brand d-flex align-items-center gap-2" href="/index.php">
@@ -31,20 +31,20 @@ $flash = pull_flash();
                 aria-expanded="false"
                 aria-label="Toggle navigation"
             >
-                <i class="fa-solid fa-bars"></i>
+                <i class="fas fa-bars"></i>
             </button>
 
             <!-- Nav links -->
             <div class="collapse navbar-collapse" id="ptmdNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
-                    <li class="nav-item">
+                    <li class="ptmd-nav-item nav-item">
                         <a class="nav-link" href="/index.php">
-                            <i class="fa-solid fa-house fa-sm me-1"></i>Home
+                            <i class="fas fa-house fa-sm me-1"></i>Home
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/index.php?page=cases">
-                            <i class="fa-solid fa-folder-open fa-sm me-1"></i>Cases
+                            <i class="fas fa-folder-open fa-sm me-1"></i>Open Cases
                         </a>
                     </li>
                     <li class="nav-item">
