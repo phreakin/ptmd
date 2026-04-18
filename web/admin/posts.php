@@ -5,8 +5,8 @@
 
 $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
-$pageHeading  = 'Social Post Queue';
-$pageSubheading = 'Manage and track all scheduled social media posts.';
+$pageHeading  = 'Social Queue';
+$pageSubheading = 'Visual dispatch control for queued, scheduled, posted, and blocked social assets.';
 $pageActions  = '<a href="/admin/monitor.php" class="btn btn-ptmd-outline btn-sm">'
               . '<i class="fa-solid fa-chart-line me-2"></i>Monitor</a>';
 
@@ -294,12 +294,65 @@ $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
 $selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
 $selectedClipAsset = safe_upload_rel_path($selectedClip ? clip_asset_path($selectedClip) : '');
 
+$queueCounts = ['draft' => 0, 'queued' => 0, 'scheduled' => 0, 'posted' => 0, 'failed' => 0, 'canceled' => 0];
+foreach ($queue as $qItem) {
+    $statusKey = (string) ($qItem['status'] ?? 'draft');
+    if (isset($queueCounts[$statusKey])) {
+        $queueCounts[$statusKey]++;
+    }
+}
+
 $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
 </a>';
 ?>
 
 <div class="ptmd-screen-queue">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value"><?php ee((string) count($queue)); ?></div><div class="stat-label">Total</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-yellow"><?php ee((string) $queueCounts['queued']); ?></div><div class="stat-label">Queued</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-teal"><?php ee((string) $queueCounts['scheduled']); ?></div><div class="stat-label">Scheduled</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-teal"><?php ee((string) $queueCounts['posted']); ?></div><div class="stat-label">Posted</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value" style="color:#ff4d5a"><?php ee((string) $queueCounts['failed']); ?></div><div class="stat-label">Blocked</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value"><?php ee((string) $queueCounts['draft']); ?></div><div class="stat-label">Draft</div></div></div>
+</div>
+
+<div class="ptmd-panel p-lg mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 mb-0"><i class="fa-solid fa-bars-progress me-2 ptmd-text-teal"></i>Status Board</h2>
+        <span class="ptmd-chip">What needs attention now</span>
+    </div>
+    <div class="ptmd-queue-board">
+        <?php foreach (['queued' => 'Queued', 'scheduled' => 'Scheduled', 'posted' => 'Posted', 'failed' => 'Blocked'] as $key => $label): ?>
+            <div class="ptmd-queue-column">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-600"><?php ee($label); ?></span>
+                    <span class="ptmd-chip"><?php ee((string) $queueCounts[$key]); ?></span>
+                </div>
+                <?php
+                $shown = 0;
+                foreach ($queue as $item):
+                    if (($item['status'] ?? '') !== $key || $shown >= 3) {
+                        continue;
+                    }
+                    $shown++;
+                ?>
+                    <article class="ptmd-queue-mini-card">
+                        <div class="fw-600 small"><?php ee($item['platform']); ?></div>
+                        <div class="ptmd-muted" style="font-size:var(--text-xs)"><?php ee($item['case_title'] ?? ($item['clip_label'] ?? 'Manual')); ?></div>
+                        <div class="ptmd-muted" style="font-size:var(--text-xs)">
+                            <?php echo $item['scheduled_for'] ? e(date('M j, g:ia', strtotime($item['scheduled_for']))) : 'No schedule'; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+                <?php if ($shown === 0): ?>
+                    <div class="ptmd-muted small">No items</div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <!-- Platform preferences -->
 <div class="ptmd-panel p-xl mb-4">
     <h2 class="h6 mb-4">

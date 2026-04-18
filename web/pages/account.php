@@ -71,11 +71,7 @@ $username    = $viewer['username'] ?? '';
             <div class="col-12" data-animate>
                 <div class="ptmd-panel p-lg ptmd-text-muted">
                     <i class="fa-regular fa-heart me-2"></i>
-<<<<<<< HEAD
                     No saved cases yet.
-=======
-                    No saved episodes yet.
->>>>>>> 8d1ffc660c62b1a7a2a8c6632767004f6683a206
                     <a href="/index.php?page=cases" class="ms-1">Browse cases</a> and tap the
                     <i class="fa-solid fa-heart ms-1 me-1" style="color:var(--ptmd-teal)"></i> to save them here.
                 </div>

@@ -15,10 +15,10 @@
  * The OpenAI API key is stored in site_settings as 'openai_api_key'.
  */
 
-$pageTitle    = 'AI Content Studio | PTMD Admin';
+$pageTitle    = 'Hook Lab | PTMD Admin';
 $activePage   = 'ai-tools';
-$pageHeading  = 'AI Content Studio';
-$pageSubheading = 'Generate ideas, titles, keywords, and captions powered by OpenAI.';
+$pageHeading  = 'Hook Lab';
+$pageSubheading = 'Cinematic AI content lab for hooks, titles, descriptions, and social launch copy.';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -73,6 +73,13 @@ if ($pdo) {
 <?php endif; ?>
 
 <div class="ptmd-screen-hook-lab">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-lightbulb ptmd-text-yellow"></i></div><div class="stat-value ptmd-text-yellow"><?php ee((string) count($storedIdeas)); ?></div><div class="stat-label">Stored Ideas</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-clock-rotate-left ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) count($history)); ?></div><div class="stat-label">Generations Logged</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-film" style="color:#c084fc"></i></div><div class="stat-value" style="color:#c084fc"><?php ee((string) count($cases)); ?></div><div class="stat-label">Case Contexts</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-bolt ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php echo $apiKeySet ? 'Live' : 'Off'; ?></div><div class="stat-label">AI Engine</div></div></div>
+</div>
+
 <!-- Tool cards grid -->
 <div class="row g-4 mb-5">
 
@@ -81,7 +88,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-lightbulb"></i></div>
             <h2 class="h5 mb-2">Video Idea Generator</h2>
-            <p class="ptmd-muted small mb-4">Generate future documentary topic ideas based on the PTMD brand voice.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Brand Voice</span><span class="ptmd-chip">Topic Discovery</span></div>
             <div class="mb-3">
                 <label class="form-label" for="ideas_theme">Optional theme or keyword</label>
                 <input class="form-control" id="ideas_theme" placeholder="e.g. housing policy, social media manipulation…">
@@ -124,7 +131,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-heading"></i></div>
             <h2 class="h5 mb-2">Title Generator</h2>
-            <p class="ptmd-muted small mb-4">Get compelling, click-worthy case titles matched to the PTMD style.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Headline Focus</span><span class="ptmd-chip">CTR Tilt</span></div>
             <div class="mb-3">
                 <label class="form-label" for="title_topic">What's the case about?</label>
                 <textarea class="form-control" id="title_topic" rows="3"
@@ -156,7 +163,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-tags"></i></div>
             <h2 class="h5 mb-2">Keyword &amp; Tag Generator</h2>
-            <p class="ptmd-muted small mb-4">SEO keywords, hashtags, and YouTube tags to maximise discoverability.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Discoverability</span><span class="ptmd-chip">Platform Tags</span></div>
             <div class="mb-3">
                 <label class="form-label" for="kw_topic">case topic or title</label>
                 <input class="form-control" id="kw_topic" placeholder="Topic, title, or short description…">
@@ -187,7 +194,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-align-left"></i></div>
             <h2 class="h5 mb-2">Description Generator</h2>
-            <p class="ptmd-muted small mb-4">Full YouTube / video platform description with hooks, links, and hashtags.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Long-form Copy</span><span class="ptmd-chip">SEO Context</span></div>
             <div class="mb-3">
                 <label class="form-label" for="desc_case">case</label>
                 <select class="form-select" id="desc_case">
@@ -219,7 +226,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-brands fa-instagram"></i></div>
             <h2 class="h5 mb-2">Social Caption Generator</h2>
-            <p class="ptmd-muted small mb-4">Platform-specific captions for YouTube Shorts, TikTok, Instagram, X, and Facebook.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Multi-platform</span><span class="ptmd-chip">Short-form</span></div>
             <div class="mb-3">
                 <label class="form-label" for="cap_case">case</label>
                 <select class="form-select" id="cap_case">
@@ -257,7 +264,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-image"></i></div>
             <h2 class="h5 mb-2">Thumbnail Concept</h2>
-            <p class="ptmd-muted small mb-4">Detailed visual direction and text overlay suggestions for case thumbnails.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Visual Direction</span><span class="ptmd-chip">Overlay Copy</span></div>
             <div class="mb-3">
                 <label class="form-label" for="thumb_case">case</label>
                 <select class="form-select" id="thumb_case">

@@ -6,6 +6,12 @@
         </div>
         <span class="ptmd-chip"><i class="fa-solid fa-timeline"></i> Last refresh 2m ago</span>
     </div>
+    <div class="row g-3">
+        <div class="col-6 col-lg-3"><article class="glass-card ptmd-card-stat p-3"><div class="ptmd-kicker">Attention</div><div class="ptmd-card-metric-value" style="color:#ff4d5a">2</div><span class="ptmd-chip">Blocked</span></article></div>
+        <div class="col-6 col-lg-3"><article class="glass-card ptmd-card-stat p-3"><div class="ptmd-kicker">Performing</div><div class="ptmd-card-metric-value ptmd-text-teal">11</div><span class="ptmd-chip">Posted</span></article></div>
+        <div class="col-6 col-lg-3"><article class="glass-card ptmd-card-stat p-3"><div class="ptmd-kicker">New</div><div class="ptmd-card-metric-value ptmd-text-gold">4</div><span class="ptmd-chip">Fresh Cases</span></article></div>
+        <div class="col-6 col-lg-3"><article class="glass-card ptmd-card-stat p-3"><div class="ptmd-kicker">Next</div><div class="ptmd-card-metric-value">3</div><span class="ptmd-chip">Pending Actions</span></article></div>
+    </div>
     <div class="row g-4">
         <div class="col-xl-8">
             <article class="ptmd-analytics-panel p-4 ptmd-stack-md">
