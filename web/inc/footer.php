@@ -124,8 +124,8 @@ $siteName = site_setting('site_name', 'Paper Trail MD');
 (function () {
     'use strict';
 
-    // Episode ID is passed from the PHP context (null on non-episode pages)
-    var episodeId = <?php echo isset($currentEpisode['id']) ? (int) $currentEpisode['id'] : 'null'; ?>;
+    // Case ID is passed from the PHP context (null on non-case pages)
+    var episodeId = <?php echo isset($current_case['id']) ? (int) $current_case['id'] : 'null'; ?>;
 
     /**
      * Send an event to the track_event API.

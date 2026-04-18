@@ -8,7 +8,7 @@
 $pageTitle      = 'UI Foundation | PTMD Admin';
 $activePage     = 'dashboard';
 $pageHeading    = 'UI Foundation Showcase';
-$pageSubheading = 'Reference implementations for dashboard, case list, hook lab, AI drawer, analytics, and shell primitives.';
+$pageSubheading = 'Reference implementations for dashboard, case list/detail, hook lab, AI drawer, social queue, analytics, asset manager, and shell primitives.';
 
 include __DIR__ . '/_admin_head.php';
 ?>
@@ -16,8 +16,11 @@ include __DIR__ . '/_admin_head.php';
 <div class="ptmd-stack-lg">
     <?php include __DIR__ . '/partials/ui/dashboard-overview.php'; ?>
     <?php include __DIR__ . '/partials/ui/case-list.php'; ?>
+    <?php include __DIR__ . '/partials/ui/case-detail.php'; ?>
     <?php include __DIR__ . '/partials/ui/hook-lab.php'; ?>
+    <?php include __DIR__ . '/partials/ui/social-queue.php'; ?>
     <?php include __DIR__ . '/partials/ui/analytics-panels.php'; ?>
+    <?php include __DIR__ . '/partials/ui/asset-manager.php'; ?>
 
     <div class="d-flex gap-2">
         <button class="btn btn-ptmd-outline" type="button" data-drawer-target="#ptmdAiBotDrawer">
