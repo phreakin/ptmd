@@ -3,6 +3,8 @@
  * PTMD Admin — Site Tests
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle      = 'Site Tests | PTMD Admin';
 $activePage     = 'site-tests';
 $pageHeading    = 'Site End-to-End Tests';
@@ -15,7 +17,7 @@ $results = null;
 
 if (is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/site-tests.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('site-tests'), 'Invalid CSRF token.', 'danger');
     }
 
     $results = run_ptmd_e2e_tests();
@@ -28,7 +30,7 @@ if (is_post()) {
             <h2 class="h5 mb-1">Run PTMD E2E Suite</h2>
             <p class="ptmd-muted small mb-0">This runs HTTP checks against this live environment using your current admin session.</p>
         </div>
-        <form method="post" action="/admin/site-tests.php">
+        <form method="post" action="<?php echo e(route_admin('site-tests')); ?>">
             <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
             <button class="btn btn-ptmd-primary" type="submit">
                 <i class="fa-solid fa-flask-vial me-2"></i>Run Tests

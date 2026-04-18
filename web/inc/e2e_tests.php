@@ -97,6 +97,31 @@ function ptmd_e2e_record(array &$group, string $name, bool $ok, string $message,
     ];
 }
 
+function ptmd_e2e_location_path(?string $location): string
+{
+    if (!is_string($location) || $location === '') {
+        return '';
+    }
+
+    $path = parse_url($location, PHP_URL_PATH);
+    return is_string($path) ? $path : '';
+}
+
+function ptmd_e2e_location_query(?string $location): array
+{
+    if (!is_string($location) || $location === '') {
+        return [];
+    }
+
+    $query = parse_url($location, PHP_URL_QUERY);
+    if (!is_string($query) || $query === '') {
+        return [];
+    }
+
+    parse_str($query, $params);
+    return is_array($params) ? $params : [];
+}
+
 function run_ptmd_e2e_tests(): array
 {
     $started = microtime(true);
@@ -119,16 +144,15 @@ function run_ptmd_e2e_tests(): array
 
     // Public routes
     $public = [];
-    $publicRoutes = [
-        '/index.php' => 200,
-        '/index.php?page=episodes' => 200,
-        '/index.php?page=about' => 200,
-        '/index.php?page=contact' => 200,
-        '/index.php?page=case-chat' => 200,
-        '/index.php?page=missing-page' => 404,
+    $canonicalPublicRoutes = [
+        route_home() => 200,
+        route_cases() => 200,
+        route_chat() => 200,
+        route_login() => 200,
+        route_register() => 200,
     ];
 
-    foreach ($publicRoutes as $route => $expectedStatus) {
+    foreach ($canonicalPublicRoutes as $route => $expectedStatus) {
         $res = ptmd_e2e_request($baseUrl, $route);
         $ok = $res['ok'] && (($res['status'] ?? 0) === $expectedStatus);
         ptmd_e2e_record(
@@ -140,20 +164,83 @@ function run_ptmd_e2e_tests(): array
         );
     }
 
-    $episodeSlug = '';
+    $accountRes = ptmd_e2e_request($baseUrl, route_account());
+    $accountLocation = (string) ($accountRes['location'] ?? '');
+    $accountLocationPath = ptmd_e2e_location_path($accountLocation);
+    $accountLocationQuery = ptmd_e2e_location_query($accountLocation);
+    $accountOk = $accountRes['ok']
+        && (($accountRes['status'] ?? 0) === 302)
+        && $accountLocationPath === route_login()
+        && (($accountLocationQuery['return'] ?? '') === route_account());
+    ptmd_e2e_record(
+        $public,
+        'GET ' . route_account() . ' (anonymous)',
+        $accountOk,
+        $accountOk ? 'Redirected to login' : 'Account auth redirect failed',
+        ['actual_status' => $accountRes['status'] ?? null, 'location' => $accountLocation]
+    );
+
+    $legacyPublicRedirects = [
+        '/index.php' => route_home(),
+        '/index.php?page=home' => route_home(),
+        '/index.php?page=cases' => route_cases(),
+        '/index.php?page=case-chat' => route_chat(),
+        '/index.php?page=login' => route_login(),
+        '/index.php?page=register' => route_register(),
+        '/index.php?page=account' => route_account(),
+        '/series' => route_cases(),
+        '/case-chat' => route_chat(),
+    ];
+
+    foreach ($legacyPublicRedirects as $route => $expectedLocation) {
+        $res = ptmd_e2e_request($baseUrl, $route);
+        $actualLocationPath = ptmd_e2e_location_path((string) ($res['location'] ?? ''));
+        $ok = $res['ok']
+            && (($res['status'] ?? 0) === 301)
+            && $actualLocationPath === $expectedLocation;
+        ptmd_e2e_record(
+            $public,
+            "GET {$route} (legacy redirect)",
+            $ok,
+            $ok ? 'Permanent redirect to canonical route' : 'Legacy redirect failed',
+            [
+                'expected_status' => 301,
+                'expected_location' => $expectedLocation,
+                'actual_status' => $res['status'] ?? null,
+                'location' => $res['location'] ?? null,
+                'error' => $res['error'] ?? null,
+            ]
+        );
+    }
+
+    $caseslug = '';
     $pdo = get_db();
     if ($pdo) {
-        $slugStmt = $pdo->prepare('SELECT slug FROM episodes WHERE status = :status ORDER BY published_at DESC LIMIT 1');
+        $slugStmt = $pdo->prepare('SELECT slug FROM cases WHERE status = :status ORDER BY published_at DESC LIMIT 1');
         $slugStmt->execute(['status' => 'published']);
-        $episodeSlug = (string) $slugStmt->fetchColumn();
+        $caseslug = (string) $slugStmt->fetchColumn();
     }
-    if ($episodeSlug !== '') {
-        $epPath = '/index.php?page=episode&slug=' . rawurlencode($episodeSlug);
-        $res = ptmd_e2e_request($baseUrl, $epPath);
-        $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
-        ptmd_e2e_record($public, "GET {$epPath}", $ok, $ok ? 'Episode page loaded' : 'Episode page failed', ['actual_status' => $res['status'] ?? null]);
+    if ($caseslug !== '') {
+        $casePath = route_case($caseslug);
+        $caseRes = ptmd_e2e_request($baseUrl, $casePath);
+        $caseOk = $caseRes['ok'] && (($caseRes['status'] ?? 0) === 200);
+        ptmd_e2e_record($public, "GET {$casePath}", $caseOk, $caseOk ? 'case page loaded' : 'case page failed', ['actual_status' => $caseRes['status'] ?? null]);
+
+        $legacyCasePath = '/index.php?page=case&slug=' . rawurlencode($caseslug);
+        $legacyCaseRes = ptmd_e2e_request($baseUrl, $legacyCasePath);
+        $legacyCaseLocationPath = ptmd_e2e_location_path((string) ($legacyCaseRes['location'] ?? ''));
+        $legacyCaseOk = $legacyCaseRes['ok']
+            && (($legacyCaseRes['status'] ?? 0) === 301)
+            && $legacyCaseLocationPath === $casePath;
+        ptmd_e2e_record(
+            $public,
+            "GET {$legacyCasePath} (legacy redirect)",
+            $legacyCaseOk,
+            $legacyCaseOk ? 'Case redirect canonicalized' : 'Legacy case redirect failed',
+            ['actual_status' => $legacyCaseRes['status'] ?? null, 'location' => $legacyCaseRes['location'] ?? null]
+        );
     } else {
-        ptmd_e2e_record($public, 'Episode detail route', true, 'Skipped: no published episode found');
+        ptmd_e2e_record($public, 'case detail route', true, 'Skipped: no published case found');
     }
     $groups[] = ['name' => 'Public Site', 'tests' => $public];
 
@@ -166,15 +253,49 @@ function run_ptmd_e2e_tests(): array
         $sessionIsValid ? 'Admin session is active' : 'Admin session is missing or invalid'
     );
 
-    $login = ptmd_e2e_request($baseUrl, '/admin/login.php');
+    $login = ptmd_e2e_request($baseUrl, route_admin('login'));
     $loginOk = $login['ok'] && (($login['status'] ?? 0) === 200);
-    ptmd_e2e_record($auth, 'GET /admin/login.php (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
+    ptmd_e2e_record($auth, 'GET ' . route_admin('login') . ' (anonymous)', $loginOk, $loginOk ? 'Login page loaded' : 'Login page failed', ['actual_status' => $login['status'] ?? null]);
 
-    $anonDashboard = ptmd_e2e_request($baseUrl, '/admin/dashboard.php');
-    $anonLocation = (string) ($anonDashboard['location'] ?? '');
-    $redirectsToLogin = str_contains($anonLocation, '/admin/login.php');
-    $anonDashOk = $anonDashboard['ok'] && (($anonDashboard['status'] ?? 0) === 302) && $redirectsToLogin;
-    ptmd_e2e_record($auth, 'GET /admin/dashboard.php (anonymous)', $anonDashOk, $anonDashOk ? 'Redirected to login' : 'Auth redirect failed', ['actual_status' => $anonDashboard['status'] ?? null, 'location' => $anonDashboard['location'] ?? null]);
+    $legacyAdminLogin = ptmd_e2e_request($baseUrl, '/admin/login.php');
+    $legacyAdminLoginPath = ptmd_e2e_location_path((string) ($legacyAdminLogin['location'] ?? ''));
+    $legacyAdminLoginOk = $legacyAdminLogin['ok']
+        && (($legacyAdminLogin['status'] ?? 0) === 301)
+        && $legacyAdminLoginPath === route_admin('login');
+    ptmd_e2e_record(
+        $auth,
+        'GET /admin/login.php (legacy redirect)',
+        $legacyAdminLoginOk,
+        $legacyAdminLoginOk ? 'Permanent redirect to clean admin login' : 'Legacy admin login redirect failed',
+        ['actual_status' => $legacyAdminLogin['status'] ?? null, 'location' => $legacyAdminLogin['location'] ?? null]
+    );
+
+    $anonymousAdminRoutes = [
+        route_admin('dashboard'),
+        route_admin('control-room'),
+        route_admin('cases'),
+        route_admin('ai-assistant'),
+        route_admin('posts'),
+        route_admin('monitor'),
+    ];
+
+    foreach ($anonymousAdminRoutes as $route) {
+        $res = ptmd_e2e_request($baseUrl, $route);
+        $location = (string) ($res['location'] ?? '');
+        $locationPath = ptmd_e2e_location_path($location);
+        $locationQuery = ptmd_e2e_location_query($location);
+        $ok = $res['ok']
+            && (($res['status'] ?? 0) === 302)
+            && $locationPath === route_admin('login')
+            && (($locationQuery['return'] ?? '') === $route);
+        ptmd_e2e_record(
+            $auth,
+            "GET {$route} (anonymous)",
+            $ok,
+            $ok ? 'Redirected to clean admin login' : 'Admin auth redirect failed',
+            ['actual_status' => $res['status'] ?? null, 'location' => $location]
+        );
+    }
 
     $adminFiles = glob(__DIR__ . '/../admin/*.php') ?: [];
     // Exclude partials and auth endpoints that are not standard in-session page views.
@@ -185,9 +306,14 @@ function run_ptmd_e2e_tests(): array
     sort($adminFiles);
 
     if ($sessionIsValid) {
+        $seenPaths = [];
         foreach ($adminFiles as $file) {
             $name = basename($file);
-            $path = '/admin/' . $name;
+            $path = ptmd_admin_route_from_script($name);
+            if (!is_string($path) || $path === '' || isset($seenPaths[$path])) {
+                continue;
+            }
+            $seenPaths[$path] = true;
             $res = ptmd_e2e_request($baseUrl, $path, 'GET', [], $authCookie);
             $ok = $res['ok'] && (($res['status'] ?? 0) === 200);
             ptmd_e2e_record($auth, "GET {$path} (admin session)", $ok, $ok ? 'Admin page loaded' : 'Admin page failed', ['actual_status' => $res['status'] ?? null, 'error' => $res['error'] ?? null]);
@@ -262,6 +388,15 @@ function run_ptmd_e2e_tests(): array
         && (($chatTooLong['json']['ok'] ?? true) === false);
     ptmd_e2e_record($api, 'POST /api/chat_messages.php (message too long)', $chatTooLongOk, $chatTooLongOk ? 'Validation rejects overlong chat messages' : 'Overlong chat validation failed', ['actual_status' => $chatTooLong['status'] ?? null]);
 
+    // Viewer toggle_favorite endpoint — anonymous → 405 on GET, 401 on POST
+    $favAnon = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php');
+    $favAnonOk = $favAnon['ok'] && (($favAnon['status'] ?? 0) === 405);
+    ptmd_e2e_record($api, 'GET /api/toggle_favorite.php (anonymous, wrong method)', $favAnonOk, $favAnonOk ? 'Method guard returns 405' : 'toggle_favorite method guard failed', ['actual_status' => $favAnon['status'] ?? null]);
+
+    $favAnonPost = ptmd_e2e_request($baseUrl, '/api/toggle_favorite.php', 'POST', ['episode_id' => 1, 'csrf_token' => 'invalid']);
+    $favAnonPostOk = $favAnonPost['ok'] && (($favAnonPost['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'POST /api/toggle_favorite.php (anonymous)', $favAnonPostOk, $favAnonPostOk ? 'Unauthenticated returns 401' : 'toggle_favorite auth guard failed', ['actual_status' => $favAnonPost['status'] ?? null]);
+
     $aiAnon = ptmd_e2e_request($baseUrl, '/api/ai_generate.php');
     $aiAnonOk = $aiAnon['ok'] && (($aiAnon['status'] ?? 0) === 401);
     ptmd_e2e_record($api, 'GET /api/ai_generate.php (anonymous)', $aiAnonOk, $aiAnonOk ? 'Unauthorized as expected' : 'Anonymous auth check failed', ['actual_status' => $aiAnon['status'] ?? null]);
@@ -333,6 +468,64 @@ function run_ptmd_e2e_tests(): array
         ptmd_e2e_record($api, 'POST /api/apply_overlays.php (invalid csrf)', $overlayPostInvalidCsrfOk, $overlayPostInvalidCsrfOk ? 'CSRF protection enforced' : 'Overlay CSRF check failed', ['actual_status' => $overlayPostInvalidCsrf['status'] ?? null]);
     } else {
         ptmd_e2e_record($api, 'Authenticated apply_overlays checks', true, 'Skipped: active admin session is required');
+    }
+
+    // edit_jobs API
+    $editJobsAnon = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php');
+    $editJobsAnonOk = $editJobsAnon['ok'] && (($editJobsAnon['status'] ?? 0) === 401);
+    ptmd_e2e_record($api, 'GET /api/edit_jobs.php (anonymous)', $editJobsAnonOk, $editJobsAnonOk ? 'Unauthorized as expected' : 'Anonymous edit_jobs auth check failed', ['actual_status' => $editJobsAnon['status'] ?? null]);
+
+    if ($sessionIsValid) {
+        $editJobsAuth = ptmd_e2e_request($baseUrl, '/api/edit_jobs.php', 'GET', [], $authCookie);
+        $editJobsAuthOk = $editJobsAuth['ok']
+            && (($editJobsAuth['status'] ?? 0) === 200)
+            && is_array($editJobsAuth['json'])
+            && (($editJobsAuth['json']['ok'] ?? false) === true)
+            && array_key_exists('jobs', $editJobsAuth['json']);
+        ptmd_e2e_record($api, 'GET /api/edit_jobs.php (admin session)', $editJobsAuthOk, $editJobsAuthOk ? 'Edit jobs API returns jobs list' : 'Edit jobs API GET failed', ['actual_status' => $editJobsAuth['status'] ?? null]);
+
+        $editJobsInvalidCsrf = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => 'invalid', '_action' => 'create'],
+            $authCookie
+        );
+        $editJobsCsrfOk = $editJobsInvalidCsrf['ok'] && (($editJobsInvalidCsrf['status'] ?? 0) === 403);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (invalid csrf)', $editJobsCsrfOk, $editJobsCsrfOk ? 'CSRF protection enforced' : 'Edit jobs CSRF check failed', ['actual_status' => $editJobsInvalidCsrf['status'] ?? null]);
+
+        $editJobsNoPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => ''],
+            $authCookie
+        );
+        $editJobsNoPathOk = $editJobsNoPath['ok']
+            && (($editJobsNoPath['status'] ?? 0) === 200)
+            && is_array($editJobsNoPath['json'])
+            && (($editJobsNoPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (missing source_path)', $editJobsNoPathOk, $editJobsNoPathOk ? 'Validation rejects empty source_path' : 'Edit jobs source_path validation failed', ['actual_status' => $editJobsNoPath['status'] ?? null]);
+
+        $editJobsBadPath = ptmd_e2e_request(
+            $baseUrl,
+            '/api/edit_jobs.php',
+            'POST',
+            ['csrf_token' => csrf_token(), '_action' => 'create', 'source_path' => '../../../../etc/passwd'],
+            $authCookie
+        );
+        $editJobsBadPathOk = $editJobsBadPath['ok']
+            && (($editJobsBadPath['status'] ?? 0) === 200)
+            && is_array($editJobsBadPath['json'])
+            && (($editJobsBadPath['json']['ok'] ?? true) === false);
+        ptmd_e2e_record($api, 'POST /api/edit_jobs.php (path traversal)', $editJobsBadPathOk, $editJobsBadPathOk ? 'Path traversal rejected' : 'Edit jobs path traversal check failed', ['actual_status' => $editJobsBadPath['status'] ?? null]);
+
+        // process_edit_jobs worker auth
+        $workerAnon = ptmd_e2e_request($baseUrl, '/api/process_edit_jobs.php');
+        $workerAnonOk = $workerAnon['ok'] && (($workerAnon['status'] ?? 0) === 401);
+        ptmd_e2e_record($api, 'GET /api/process_edit_jobs.php (anonymous)', $workerAnonOk, $workerAnonOk ? 'Unauthorized as expected' : 'Worker anonymous auth check failed', ['actual_status' => $workerAnon['status'] ?? null]);
+    } else {
+        ptmd_e2e_record($api, 'Authenticated edit_jobs checks', true, 'Skipped: active admin session is required');
     }
 
     $groups[] = ['name' => 'API Endpoints', 'tests' => $api];

@@ -9,10 +9,6 @@ $pageTitle   = 'Episodes | PTMD Admin';
 $activePage  = 'episodes';
 $pageHeading = 'Episodes';
 
-// Load config, session, DB layer, and helpers BEFORE any call to get_db()/is_post()/etc.
-require_once __DIR__ . '/../inc/bootstrap.php';
-require_login();
-
 $pdo    = get_db();
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
@@ -20,7 +16,7 @@ $action = $_GET['action'] ?? ($editId > 0 ? 'edit' : 'list');
 // ── Handle POST ───────────────────────────────────────────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/episodes.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('episodes'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'save';
@@ -29,7 +25,7 @@ if ($pdo && is_post()) {
         $delId = (int) ($_POST['id'] ?? 0);
         if ($delId > 0) {
             $pdo->prepare('DELETE FROM episodes WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/episodes.php', 'Episode deleted.', 'success');
+            redirect(route_admin('episodes'), 'Episode deleted.', 'success');
         }
     }
 
@@ -154,19 +150,19 @@ if ($pdo && is_post()) {
     }
 
     if ($id > 0) {
-        redirect('/admin/episodes.php', 'Episode updated.', 'success');
+        redirect(route_admin('episodes'), 'Episode updated.', 'success');
     }
 
-    redirect('/admin/episodes.php', 'Episode created.', 'success');
+    redirect(route_admin('episodes'), 'Episode created.', 'success');
 }
 
 $pageSubheading = $action === 'edit' ? 'Edit Episode' : ($action === 'new' ? 'New Episode' : 'All Episodes');
 $pageActions    = '';
 $apiKeySet = site_setting('openai_api_key', '') !== '';
 if ($action === 'list') {
-    $pageActions = '<a href="/admin/episodes.php?action=new" class="btn btn-ptmd-primary"><i class="fa-solid fa-plus me-2"></i>New Episode</a>';
+    $pageActions = '<a href="' . e(route_admin('episodes', ['action' => 'new'])) . '" class="btn btn-ptmd-primary"><i class="fa-solid fa-plus me-2"></i>New Episode</a>';
 } elseif ($action === 'edit' || $action === 'new') {
-    $pageActions = '<a href="/admin/episodes.php" class="btn btn-ptmd-outline"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>';
+    $pageActions = '<a href="' . e(route_admin('episodes')) . '" class="btn btn-ptmd-outline"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>';
 }
 
 include __DIR__ . '/_admin_head.php';
@@ -213,7 +209,7 @@ if ($action === 'list'):
                                             loading="lazy"
                                         >
                                     <?php endif; ?>
-                                    <a href="/admin/episodes.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="<?php ee(route_admin('episodes', ['edit' => (string) $ep['id']])); ?>"
                                        class="fw-500 ptmd-text-muted">
                                         <?php ee($ep['title']); ?>
                                     </a>
@@ -230,16 +226,16 @@ if ($action === 'list'):
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <a href="/admin/episodes.php?edit=<?php ee((string) $ep['id']); ?>"
+                                    <a href="<?php ee(route_admin('episodes', ['edit' => (string) $ep['id']])); ?>"
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Edit">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
-                                    <a href="/index.php?page=episode&slug=<?php ee($ep['slug']); ?>"
+                                    <a href="<?php ee(route_case((string) $ep['slug'])); ?>"
                                        target="_blank" rel="noopener"
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View public">
                                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                     </a>
-                                    <form method="post" action="/admin/episodes.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('episodes')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="id" value="<?php ee((string) $ep['id']); ?>">
@@ -261,7 +257,7 @@ if ($action === 'list'):
             </table>
         </div>
         <?php else: ?>
-            <p class="ptmd-muted">No episodes yet. <a href="/admin/episodes.php?action=new">Create your first episode</a>.</p>
+            <p class="ptmd-muted">No episodes yet. <a href="<?php ee(route_admin('episodes', ['action' => 'new'])); ?>">Create your first episode</a>.</p>
         <?php endif; ?>
     </div>
 
@@ -269,7 +265,7 @@ if ($action === 'list'):
 // ── Create / Edit form ────────────────────────────────────────────────────────
 else:
 ?>
-    <form method="post" action="/admin/episodes.php" enctype="multipart/form-data">
+    <form method="post" action="<?php echo e(route_admin('episodes')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" id="ep_id" name="id" value="<?php ee((string) ($ep['id'] ?? 0)); ?>">
         <input type="hidden" name="_action" value="save">
@@ -392,7 +388,7 @@ else:
                     <?php if (!$apiKeySet): ?>
                         <p class="ptmd-muted small mb-0">
                             OpenAI API key is not configured. Set it in
-                            <a href="/admin/settings.php">Settings</a> to enable suggestions.
+                            <a href="<?php ee(route_admin('settings')); ?>">Settings</a> to enable suggestions.
                         </p>
                     <?php else: ?>
                         <div class="mb-3">
@@ -435,7 +431,7 @@ else:
                         <?php echo $editId > 0 ? 'Save Changes' : 'Create Episode'; ?>
                     </button>
                     <?php if ($editId > 0): ?>
-                        <a href="/admin/ai-tools.php" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
+                        <a href="<?php ee(route_admin('ai-tools')); ?>" class="btn btn-ptmd-outline" style="border-color:rgba(106,13,173,0.4);color:#c084fc">
                             <i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Content
                         </a>
                     <?php endif; ?>

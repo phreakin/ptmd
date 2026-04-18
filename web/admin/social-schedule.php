@@ -6,6 +6,8 @@
  * On add or edit, immediately pre-generates queue items for the scheduler horizon.
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Post Schedule | PTMD Admin';
 $activePage   = 'social-schedule';
 $pageHeading  = 'Social Post Schedule';
@@ -20,7 +22,7 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/social-schedule.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('social-schedule'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'toggle';
@@ -37,7 +39,7 @@ if ($pdo && is_post()) {
                    AND scheduled_for > NOW()'
             )->execute(['sid' => $delId]);
             $pdo->prepare('DELETE FROM social_post_schedules WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/social-schedule.php', 'Schedule deleted and future queue items canceled.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule deleted and future queue items canceled.', 'success');
         }
     }
 
@@ -47,7 +49,7 @@ if ($pdo && is_post()) {
         if ($togId > 0) {
             $pdo->prepare('UPDATE social_post_schedules SET is_active = :a, updated_at = NOW() WHERE id = :id')
                 ->execute(['a' => $active ? 0 : 1, 'id' => $togId]);
-            redirect('/admin/social-schedule.php', 'Schedule updated.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule updated.', 'success');
         }
     }
 
@@ -89,13 +91,13 @@ if ($pdo && is_post()) {
                     $contentAuto = _scheduler_setting($pdo, 'scheduler_content_auto', '0') === '1';
                     $genResult   = scheduler_expand_schedule_to_queue($pdo, $newSchedule, $horizonDays, false, null, $contentAuto);
                     $msg = 'Schedule added. Pre-generated ' . $genResult['generated'] . ' queue item(s) for the next ' . $horizonDays . ' days.';
-                    redirect('/admin/social-schedule.php', $msg, 'success');
+                    redirect(route_admin('social-schedule'), $msg, 'success');
                 }
             }
 
-            redirect('/admin/social-schedule.php', 'Schedule added.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule added.', 'success');
         }
-        redirect('/admin/social-schedule.php', 'Platform, day, and time are required.', 'warning');
+        redirect(route_admin('social-schedule'), 'Platform, day, and time are required.', 'warning');
     }
 
     if ($postAction === 'edit') {
@@ -146,12 +148,12 @@ if ($pdo && is_post()) {
                 $contentAuto = _scheduler_setting($pdo, 'scheduler_content_auto', '0') === '1';
                 $genResult   = scheduler_expand_schedule_to_queue($pdo, $updatedSchedule, $horizonDays, false, null, $contentAuto);
                 $msg = 'Schedule updated. Re-generated ' . $genResult['generated'] . ' queue item(s) for the next ' . $horizonDays . ' days.';
-                redirect('/admin/social-schedule.php', $msg, 'success');
+                redirect(route_admin('social-schedule'), $msg, 'success');
             }
 
-            redirect('/admin/social-schedule.php', 'Schedule updated.', 'success');
+            redirect(route_admin('social-schedule'), 'Schedule updated.', 'success');
         }
-        redirect('/admin/social-schedule.php', 'Platform, day, and time are required.', 'warning');
+        redirect(route_admin('social-schedule'), 'Platform, day, and time are required.', 'warning');
     }
 }
 
@@ -160,7 +162,11 @@ $schedules = $pdo
            ->fetchAll()
     : [];
 
-$platforms = array_keys(PTMD_PLATFORMS);
+// Load active platforms from DB; fall back to PTMD_PLATFORMS for graceful degradation
+$activeSites = get_posting_sites(true);
+$platforms   = $activeSites
+    ? array_column($activeSites, 'display_name')
+    : array_keys(PTMD_PLATFORMS);
 $days            = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 $recurrenceTypes = ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'];
 
@@ -180,7 +186,7 @@ if ($editingId > 0 && $pdo) {
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-pencil me-2 ptmd-text-teal"></i>Editing: <?php ee($editingSchedule['platform']); ?> / <?php ee($editingSchedule['day_of_week']); ?>
     </h2>
-    <form method="post" action="/admin/social-schedule.php">
+    <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>">
         <input type="hidden" name="csrf_token"  value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action"     value="edit">
         <input type="hidden" name="id"          value="<?php ee((string) $editingSchedule['id']); ?>">
@@ -233,7 +239,7 @@ if ($editingId > 0 && $pdo) {
                 <button class="btn btn-ptmd-primary" type="submit">
                     <i class="fa-solid fa-floppy-disk me-1"></i>Save
                 </button>
-                <a href="/admin/social-schedule.php" class="btn btn-ptmd-ghost">Cancel</a>
+                <a href="<?php echo e(route_admin('social-schedule')); ?>" class="btn btn-ptmd-ghost">Cancel</a>
             </div>
         </div>
         <p class="ptmd-muted small mt-2 mb-0">
@@ -249,7 +255,7 @@ if ($editingId > 0 && $pdo) {
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-plus me-2 ptmd-text-teal"></i>Add Posting Window
     </h2>
-    <form method="post" action="/admin/social-schedule.php">
+    <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
@@ -356,7 +362,7 @@ if ($editingId > 0 && $pdo) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <form method="post" action="/admin/social-schedule.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="toggle">
                                     <input type="hidden" name="id" value="<?php ee((string) $s['id']); ?>">
@@ -369,13 +375,13 @@ if ($editingId > 0 && $pdo) {
                             <td>
                                 <div class="d-flex gap-2">
                                     <!-- Edit -->
-                                    <a href="/admin/social-schedule.php?edit=<?php ee((string) $s['id']); ?>"
+                                    <a href="<?php echo e(route_admin('social-schedule')); ?>?edit=<?php ee((string) $s['id']); ?>"
                                        class="btn btn-ptmd-ghost btn-sm"
                                        data-tippy-content="Edit rule">
                                         <i class="fa-solid fa-pencil"></i>
                                     </a>
                                     <!-- Delete -->
-                                    <form method="post" action="/admin/social-schedule.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('social-schedule')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="id" value="<?php ee((string) $s['id']); ?>">

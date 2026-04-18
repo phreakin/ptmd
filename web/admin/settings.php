@@ -4,6 +4,8 @@
  * All site config lives in the site_settings table.
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Settings | PTMD Admin';
 $activePage   = 'settings';
 $pageHeading  = 'Site Settings';
@@ -15,7 +17,7 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/settings.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('settings'), 'Invalid CSRF token.', 'danger');
     }
 
     foreach ($_POST['settings'] ?? [] as $key => $value) {
@@ -30,7 +32,7 @@ if ($pdo && is_post()) {
         ]);
     }
 
-    redirect('/admin/settings.php', 'Settings saved.', 'success');
+    redirect(route_admin('settings'), 'Settings saved.', 'success');
 }
 
 // Load all settings grouped
@@ -48,11 +50,12 @@ $groupLabels = [
     'social'   => ['label' => 'Social Links',      'icon' => 'fa-share-nodes'],
     'brand'    => ['label' => 'Brand Assets',      'icon' => 'fa-palette'],
     'ai'       => ['label' => 'AI Configuration',  'icon' => 'fa-wand-magic-sparkles'],
+    'chat'     => ['label' => 'Chat & Donations',  'icon' => 'fa-comments'],
     'system'   => ['label' => 'System',            'icon' => 'fa-gear'],
 ];
 ?>
 
-<form method="post" action="/admin/settings.php">
+<form method="post" action="<?php echo e(route_admin('settings')); ?>">
     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
 
     <?php foreach ($groupLabels as $groupKey => $groupMeta): ?>

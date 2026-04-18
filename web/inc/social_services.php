@@ -14,8 +14,26 @@
  */
 
 // ---------------------------------------------------------------------------
-// Dispatcher — routes a queue item to the correct platform function
+// Dispatcher — routes a queue item to the correct platform handler
 // ---------------------------------------------------------------------------
+
+/**
+ * Site-key → handler function registry.
+ * site_key is the stable lowercase-underscore identifier from posting_sites.site_key
+ * and is produced by ptmd_platform_to_site_key() in inc/functions.php.
+ *
+ * @var array<string, callable>
+ */
+const PTMD_SITE_DISPATCH_REGISTRY = [
+    'youtube'             => 'post_to_youtube',
+    'youtube_shorts'      => 'post_to_youtube_shorts',
+    'tiktok'              => 'post_to_tiktok',
+    'instagram_reels'     => 'post_to_instagram_reels',
+    'facebook_reels'      => 'post_to_facebook_reels',
+    'snapchat_spotlight'  => 'post_to_snapchat_spotlight',
+    'x'                   => 'post_to_x',
+    'pinterest_idea_pins' => 'post_to_pinterest_idea_pins',
+];
 
 function dispatch_social_post(array $queueItem): array
 {
@@ -29,19 +47,17 @@ function dispatch_social_post(array $queueItem): array
         mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
     );
 
-    $platform = strtolower(str_replace([' ', '-'], '_', $queueItem['platform'] ?? ''));
+    $platform = (string) ($queueItem['platform'] ?? '');
+    // Normalise display name or pre-formatted site_key to registry key
+    $siteKey  = strtolower(str_replace([' ', '-'], '_', trim($platform)));
 
-    $result = match ($platform) {
-        'youtube'             => post_to_youtube($queueItem),
-        'youtube_shorts'      => post_to_youtube_shorts($queueItem),
-        'tiktok'              => post_to_tiktok($queueItem),
-        'instagram_reels'     => post_to_instagram_reels($queueItem),
-        'facebook_reels'      => post_to_facebook_reels($queueItem),
-        'snapchat_spotlight'  => post_to_snapchat_spotlight($queueItem),
-        'x'                   => post_to_x($queueItem),
-        'pinterest_idea_pins' => post_to_pinterest_idea_pins($queueItem),
-        default               => ['ok' => false, 'error' => 'Unknown platform: ' . $queueItem['platform']],
-    };
+    $handler = PTMD_SITE_DISPATCH_REGISTRY[$siteKey] ?? null;
+
+    if ($handler === null) {
+        $result = ['ok' => false, 'external_post_id' => null, 'error' => 'Unknown platform: ' . $platform];
+    } else {
+        $result = $handler($queueItem);
+    }
 
     $latencyMs    = (int) round((hrtime(true) - $dispatchStart) / 1_000_000);
     $retryAttempt = max(0, (int) ($queueItem['retry_count'] ?? 0));

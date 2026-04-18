@@ -3,10 +3,12 @@
  * PTMD Admin — Media Library
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Media Library | PTMD Admin';
 $activePage   = 'media';
-$pageHeading  = 'Media Library';
-$pageSubheading = 'Manage all brand assets: overlays, thumbnails, logos, watermarks, and more.';
+$pageHeading  = 'Asset Manager';
+$pageSubheading = 'Visual inventory control for overlays, clips, thumbnails, logos, and publishing assets.';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -14,14 +16,14 @@ $pdo = get_db();
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/media.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('media'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'upload';
 
     if ($postAction === 'upload') {
         if (empty($_FILES['media_file']['name'])) {
-            redirect('/admin/media.php', 'No file selected.', 'warning');
+            redirect(route_admin('media'), 'No file selected.', 'warning');
         }
 
         $category = $_POST['category'] ?? 'other';
@@ -35,7 +37,7 @@ if ($pdo && is_post()) {
         $savedPath = save_upload($_FILES['media_file'], $subdir, $allowed);
 
         if (!$savedPath) {
-            redirect('/admin/media.php', 'Upload failed. Check file type.', 'danger');
+            redirect(route_admin('media'), 'Upload failed. Check file type.', 'danger');
         }
 
         $fileSize = $_FILES['media_file']['size'];
@@ -52,7 +54,7 @@ if ($pdo && is_post()) {
             'cat'  => $category,
         ]);
 
-        redirect('/admin/media.php', 'File uploaded.', 'success');
+        redirect(route_admin('media'), 'File uploaded.', 'success');
     }
 
     if ($postAction === 'delete') {
@@ -68,7 +70,7 @@ if ($pdo && is_post()) {
                 }
             }
             $pdo->prepare('DELETE FROM media_library WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/media.php', 'File deleted.', 'success');
+            redirect(route_admin('media'), 'File deleted.', 'success');
         }
     }
 }
@@ -91,14 +93,39 @@ if ($mediaItems) {
 } else {
     $mediaItems = [];
 }
+
+$categoryCounts = array_fill_keys($categories, 0);
+foreach ($mediaItems as $mediaItem) {
+    $cat = (string) ($mediaItem['category'] ?? 'other');
+    if (isset($categoryCounts[$cat])) {
+        $categoryCounts[$cat]++;
+    }
+}
+$totalAssets = count($mediaItems);
 ?>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-photo-film ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) $totalAssets); ?></div><div class="stat-label">Visible Assets</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-clapperboard ptmd-text-yellow"></i></div><div class="stat-value ptmd-text-yellow"><?php ee((string) ($categoryCounts['clip'] ?? 0)); ?></div><div class="stat-label">Clips</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-image" style="color:#c084fc"></i></div><div class="stat-value" style="color:#c084fc"><?php ee((string) ($categoryCounts['thumbnail'] ?? 0)); ?></div><div class="stat-label">Thumbnails</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-layer-group" style="color:#ff4d5a"></i></div><div class="stat-value" style="color:#ff4d5a"><?php ee((string) ($categoryCounts['overlay'] ?? 0)); ?></div><div class="stat-label">Overlays</div></div></div>
+</div>
+
+<div class="ptmd-panel p-lg mb-4">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="ptmd-chip"><i class="fa-solid fa-water"></i>Watermarks: <?php ee((string) ($categoryCounts['watermark'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-certificate"></i>Logos: <?php ee((string) ($categoryCounts['logo'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-play"></i>Intro: <?php ee((string) ($categoryCounts['intro'] ?? 0)); ?></span>
+        <span class="ptmd-chip"><i class="fa-solid fa-box-open"></i>Other: <?php ee((string) ($categoryCounts['other'] ?? 0)); ?></span>
+    </div>
+</div>
 
 <!-- Upload form -->
 <div class="ptmd-panel p-xl mb-4">
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-cloud-arrow-up me-2 ptmd-text-teal"></i>Upload Asset
     </h2>
-    <form method="post" action="/admin/media.php" enctype="multipart/form-data">
+    <form method="post" action="<?php echo e(route_admin('media')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="upload">
         <div class="row g-3">
@@ -125,12 +152,12 @@ if ($mediaItems) {
 
 <!-- Filter tabs -->
 <div class="d-flex flex-wrap gap-2 mb-4">
-    <a href="/admin/media.php"
+    <a href="<?php ee(route_admin('media')); ?>"
        class="btn btn-sm <?php echo !$filterCategory ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">
         All
     </a>
     <?php foreach ($categories as $cat): ?>
-        <a href="/admin/media.php?category=<?php ee($cat); ?>"
+        <a href="<?php ee(route_admin('media', ['category' => $cat])); ?>"
            class="btn btn-sm <?php echo $filterCategory === $cat ? 'btn-ptmd-teal' : 'btn-ptmd-outline'; ?>">
             <?php ee(ucfirst($cat)); ?>
         </a>
@@ -176,7 +203,7 @@ if ($mediaItems) {
                                 >
                                     <i class="fa-solid fa-copy" style="font-size:11px"></i>
                                 </button>
-                                <form method="post" action="/admin/media.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('media')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="delete">
                                     <input type="hidden" name="id" value="<?php ee((string) $media['id']); ?>">
@@ -201,7 +228,7 @@ if ($mediaItems) {
     <div class="ptmd-panel p-lg">
         <p class="ptmd-muted small">No media found.
             <?php if ($filterCategory): ?>
-                <a href="/admin/media.php">Clear filter</a>
+                <a href="<?php ee(route_admin('media')); ?>">Clear filter</a>
             <?php endif; ?>
         </p>
     </div>

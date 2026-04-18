@@ -6,14 +6,18 @@
  *  1. Upload a source video
  *  2. Define clip segments (start/end time)
  *  3. Extract clips via FFmpeg
- *  4. Track clips and link to episodes
+ *  4. Track clips and link to cases
  *  5. Send clips to the overlay tool or social queue
  */
+
+require_once __DIR__ . '/../inc/bootstrap.php';
 
 $pageTitle    = 'Video Processor | PTMD Admin';
 $activePage   = 'video-processor';
 $pageHeading  = 'Video Processor';
 $pageSubheading = 'Upload videos, extract clips, and prepare them for overlay processing and social publishing.';
+$pageActions  = '<a href="' . e(route_admin('monitor')) . '" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Intelligence</a>';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -24,46 +28,46 @@ $pdo = get_db();
 // ── Handle upload + extract ───────────────────────────────────────────────────
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/video-processor.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('video-processor'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'upload';
 
     if ($postAction === 'upload') {
         if (empty($_FILES['video_file']['name'])) {
-            redirect('/admin/video-processor.php', 'No file selected.', 'warning');
+            redirect(route_admin('video-processor'), 'No file selected.', 'warning');
         }
 
         $savedPath = save_upload(
             $_FILES['video_file'],
-            'episodes',
+            'cases',
             $GLOBALS['config']['allowed_video_ext']
         );
 
         if (!$savedPath) {
-            redirect('/admin/video-processor.php', 'Upload failed. Check file type and size.', 'danger');
+            redirect(route_admin('video-processor'), 'Upload failed. Check file type and size.', 'danger');
         }
 
         // Insert video_clip row for this raw upload
         $label     = trim((string) ($_POST['label'] ?? basename((string) $savedPath)));
-        $episodeId = (int) ($_POST['episode_id'] ?? 0) ?: null;
+        $caseId = (int) ($_POST['case_id'] ?? 0) ?: null;
 
         $absPath = $GLOBALS['config']['upload_dir'] . '/' . $savedPath;
         $meta    = probe_video($absPath);
         $duration = $meta['duration'] ?? null;
 
         $stmt = $pdo->prepare(
-            'INSERT INTO video_clips (episode_id, label, source_path, duration_sec, status, created_at, updated_at)
+            'INSERT INTO video_clips (case_id, label, source_path, duration_sec, status, created_at, updated_at)
              VALUES (:eid, :label, :src, :dur, "raw", NOW(), NOW())'
         );
         $stmt->execute([
-            'eid'   => $episodeId,
+            'eid'   => $caseId,
             'label' => $label,
             'src'   => $savedPath,
             'dur'   => $duration,
         ]);
 
-        redirect('/admin/video-processor.php', 'Video uploaded.', 'success');
+        redirect(route_admin('video-processor'), 'Video uploaded.', 'success');
     }
 
     if ($postAction === 'extract_clip') {
@@ -74,7 +78,7 @@ if ($pdo && is_post()) {
         $platform = trim((string) ($_POST['platform_target'] ?? ''));
 
         if (!$clipId || !$start || !$end) {
-            redirect('/admin/video-processor.php', 'Missing clip ID, start, or end time.', 'warning');
+            redirect(route_admin('video-processor'), 'Missing clip ID, start, or end time.', 'warning');
         }
 
         $parentClip = $pdo->prepare('SELECT * FROM video_clips WHERE id = :id');
@@ -82,7 +86,7 @@ if ($pdo && is_post()) {
         $parentClip = $parentClip->fetch();
 
         if (!$parentClip) {
-            redirect('/admin/video-processor.php', 'Source clip not found.', 'danger');
+            redirect(route_admin('video-processor'), 'Source clip not found.', 'danger');
         }
 
         $inputAbs = $GLOBALS['config']['upload_dir'] . '/' . ltrim((string) $parentClip['source_path'], '/');
@@ -91,18 +95,18 @@ if ($pdo && is_post()) {
         $outAbs = extract_clip($inputAbs, $outDir, $start, $end, $label);
 
         if (!$outAbs) {
-            redirect('/admin/video-processor.php', 'Clip extraction failed. Check FFmpeg is installed.', 'danger');
+            redirect(route_admin('video-processor'), 'Clip extraction failed. Check FFmpeg is installed.', 'danger');
         }
 
         $relPath = 'clips/' . basename($outAbs);
 
         $stmt = $pdo->prepare(
-            'INSERT INTO video_clips (episode_id, label, source_path, output_path, start_time, end_time,
+            'INSERT INTO video_clips (case_id, label, source_path, output_path, start_time, end_time,
              platform_target, status, created_at, updated_at)
              VALUES (:eid, :label, :src, :out, :start, :end, :platform, "ready", NOW(), NOW())'
         );
         $stmt->execute([
-            'eid'      => $parentClip['episode_id'],
+            'eid'      => $parentClip['case_id'],
             'label'    => $label,
             'src'      => $parentClip['source_path'],
             'out'      => $relPath,
@@ -111,18 +115,18 @@ if ($pdo && is_post()) {
             'platform' => $platform,
         ]);
 
-        redirect('/admin/video-processor.php', 'Clip extracted: ' . basename($outAbs), 'success');
+        redirect(route_admin('video-processor'), 'Clip extracted: ' . basename($outAbs), 'success');
     }
 }
 
-// Load episodes for dropdown
-$episodes = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
+// Load cases for dropdown
+$cases = $pdo ? $pdo->query('SELECT id, title FROM cases ORDER BY title')->fetchAll() : [];
 
 // Load all clips
 $clips = $pdo ? $pdo->query(
-    'SELECT vc.*, e.title AS episode_title
+    'SELECT vc.*, e.title AS case_title
      FROM video_clips vc
-     LEFT JOIN episodes e ON e.id = vc.episode_id
+     LEFT JOIN cases e ON e.id = vc.case_id
      ORDER BY vc.created_at DESC'
 )->fetchAll() : [];
 ?>
@@ -132,7 +136,7 @@ $clips = $pdo ? $pdo->query(
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-cloud-arrow-up me-2 ptmd-text-teal"></i>Upload Source Video
     </h2>
-    <form method="post" action="/admin/video-processor.php" enctype="multipart/form-data">
+    <form method="post" action="<?php echo e(route_admin('video-processor')); ?>" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="upload">
         <div class="row g-3">
@@ -147,13 +151,13 @@ $clips = $pdo ? $pdo->query(
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="vp_label">Label</label>
-                <input class="form-control" id="vp_label" name="label" placeholder="e.g. Episode 1 raw footage">
+                <input class="form-control" id="vp_label" name="label" placeholder="e.g. case 1 raw footage">
             </div>
             <div class="col-md-3">
-                <label class="form-label" for="vp_episode">Link to Episode (optional)</label>
-                <select class="form-select" id="vp_episode" name="episode_id">
+                <label class="form-label" for="vp_case">Link to case (optional)</label>
+                <select class="form-select" id="vp_case" name="case_id">
                     <option value="">— None —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -177,7 +181,7 @@ if ($rawClips):
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-scissors me-2 ptmd-text-yellow"></i>Extract Clip from Source
     </h2>
-    <form method="post" action="/admin/video-processor.php">
+    <form method="post" action="<?php echo e(route_admin('video-processor')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="extract_clip">
         <div class="row g-3">
@@ -238,7 +242,7 @@ if ($rawClips):
         <h2 class="h6 mb-0">
             <i class="fa-solid fa-film me-2 ptmd-text-teal"></i>Clip Library
         </h2>
-        <a href="/admin/overlay-tool.php" class="btn btn-ptmd-outline btn-sm">
+        <a href="<?php ee(route_admin('overlay-tool')); ?>" class="btn btn-ptmd-outline btn-sm">
             <i class="fa-solid fa-layer-group me-2"></i>Apply Overlays
         </a>
     </div>
@@ -249,7 +253,7 @@ if ($rawClips):
                 <thead>
                     <tr>
                         <th>Label</th>
-                        <th>Episode</th>
+                        <th>case</th>
                         <th>Duration</th>
                         <th>Platform</th>
                         <th>Status</th>
@@ -261,7 +265,7 @@ if ($rawClips):
                     <?php foreach ($clips as $clip): ?>
                         <tr>
                             <td class="fw-500 ptmd-text-muted"><?php ee($clip['label']); ?></td>
-                            <td class="ptmd-muted small"><?php ee($clip['episode_title'] ?? '—'); ?></td>
+                            <td class="ptmd-muted small"><?php ee($clip['case_title'] ?? '—'); ?></td>
                             <td class="ptmd-muted small">
                                 <?php echo $clip['duration_sec'] ? e(gmdate('H:i:s', (int) $clip['duration_sec'])) : '—'; ?>
                             </td>
@@ -294,14 +298,14 @@ if ($rawClips):
                                         </a>
                                     <?php endif; ?>
                                     <a
-                                        href="/admin/overlay-tool.php"
+                                        href="<?php ee(route_admin('overlay-tool')); ?>"
                                         class="btn btn-ptmd-ghost btn-sm"
                                         data-tippy-content="Send to Overlay Tool"
                                     >
                                         <i class="fa-solid fa-layer-group"></i>
                                     </a>
                                     <a
-                                        href="/admin/posts.php?clip_id=<?php ee((string) $clip['id']); ?>"
+                                        href="<?php ee(route_admin('posts', ['clip_id' => (string) $clip['id']])); ?>"
                                         class="btn btn-ptmd-ghost btn-sm"
                                         data-tippy-content="Add to Social Queue"
                                     >

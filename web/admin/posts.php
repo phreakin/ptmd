@@ -3,10 +3,14 @@
  * PTMD Admin — Social Post Queue
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Social Queue | PTMD Admin';
 $activePage   = 'posts';
-$pageHeading  = 'Social Post Queue';
-$pageSubheading = 'Manage and track all scheduled social media posts.';
+$pageHeading  = 'Dispatch';
+$pageSubheading = 'Visual dispatch control for queued, scheduled, posted, and blocked social assets.';
+$pageActions  = '<a href="' . e(route_admin('monitor')) . '" class="btn btn-ptmd-outline btn-sm">'
+              . '<i class="fa-solid fa-chart-line me-2"></i>Intelligence</a>';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -51,19 +55,29 @@ function clip_asset_path(array $clip): string
 
 if ($pdo && is_post()) {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        redirect('/admin/posts.php', 'Invalid CSRF token.', 'danger');
+        redirect(route_admin('posts'), 'Invalid CSRF token.', 'danger');
     }
 
     $postAction = $_POST['_action'] ?? 'update_status';
 
     if ($postAction === 'add') {
-        $episodeId = (int) ($_POST['episode_id'] ?? 0) ?: null;
+        $caseId = (int) ($_POST['case_id'] ?? 0) ?: null;
         $clipId    = (int) ($_POST['clip_id'] ?? 0) ?: null;
         $platform  = trim((string) ($_POST['platform'] ?? ''));
         $contentType = trim((string) ($_POST['content_type'] ?? ''));
         $caption     = trim((string) ($_POST['caption'] ?? ''));
         $assetPath   = trim((string) ($_POST['asset_path'] ?? ''));
         $scheduledFor = trim((string) ($_POST['scheduled_for'] ?? ''));
+
+        // Check posting_sites.is_active for the selected platform
+        $siteCheck = $pdo->prepare(
+            'SELECT is_active FROM posting_sites WHERE site_key = :key LIMIT 1'
+        );
+        $siteCheck->execute(['key' => ptmd_platform_to_site_key($platform)]);
+        $siteRow = $siteCheck->fetch();
+        if ($siteRow !== false && (int) $siteRow['is_active'] !== 1) {
+            redirect(route_admin('posts'), 'This platform is currently inactive.', 'warning');
+        }
 
         $prefStmt = $pdo->prepare(
             'SELECT is_enabled, default_content_type, default_caption_prefix, default_hashtags, default_status
@@ -75,7 +89,7 @@ if ($pdo && is_post()) {
         $pref = $prefStmt->fetch();
 
         if ($pref && (int) $pref['is_enabled'] !== 1) {
-            redirect('/admin/posts.php', 'This platform is disabled in posting preferences.', 'warning');
+            redirect(route_admin('posts'), 'This platform is disabled in posting preferences.', 'warning');
         }
 
         if ($contentType === '' && !empty($pref['default_content_type'])) {
@@ -92,10 +106,10 @@ if ($pdo && is_post()) {
             : 'queued';
 
         $pdo->prepare(
-            'INSERT INTO social_post_queue (episode_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
+            'INSERT INTO social_post_queue (case_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
              VALUES (:eid, :clip_id, :platform, :ct, :caption, :asset, :sched, :status, NOW(), NOW())'
         )->execute([
-            'eid'      => $episodeId,
+            'eid'      => $caseId,
             'clip_id'  => $clipId,
             'platform' => $platform,
             'ct'       => $contentType,
@@ -104,7 +118,7 @@ if ($pdo && is_post()) {
             'sched'    => $scheduledFor,
             'status'   => $status,
         ]);
-        redirect('/admin/posts.php', 'Post queued.', 'success');
+        redirect(route_admin('posts'), 'Post queued.', 'success');
     }
 
     if ($postAction === 'update_status') {
@@ -116,7 +130,7 @@ if ($pdo && is_post()) {
             $pdo->prepare(
                 'UPDATE social_post_queue SET status = :status, updated_at = NOW() WHERE id = :id'
             )->execute(['status' => $newStatus, 'id' => $queueId]);
-            redirect('/admin/posts.php', 'Status updated.', 'success');
+            redirect(route_admin('posts'), 'Status updated.', 'success');
         }
     }
 
@@ -124,7 +138,7 @@ if ($pdo && is_post()) {
         $delId = (int) ($_POST['id'] ?? 0);
         if ($delId > 0) {
             $pdo->prepare('DELETE FROM social_post_queue WHERE id = :id')->execute(['id' => $delId]);
-            redirect('/admin/posts.php', 'Queue item deleted.', 'success');
+            redirect(route_admin('posts'), 'Queue item deleted.', 'success');
         }
     }
 
@@ -159,7 +173,7 @@ if ($pdo && is_post()) {
                 'enabled'  => !empty($pref['is_enabled']) ? 1 : 0,
             ]);
         }
-        redirect('/admin/posts.php', 'Platform preferences saved.', 'success');
+        redirect(route_admin('posts'), 'Platform preferences saved.', 'success');
     }
 
     if ($postAction === 'publish_now') {
@@ -172,7 +186,7 @@ if ($pdo && is_post()) {
                 $result = dispatch_social_post($item);
                 $msg = $result['ok'] ? 'Post dispatched successfully.' : 'Dispatch failed: ' . ($result['error'] ?? 'unknown error');
                 $type = $result['ok'] ? 'success' : 'warning';
-                redirect('/admin/posts.php', $msg, $type);
+                redirect(route_admin('posts'), $msg, $type);
             }
         }
     }
@@ -206,7 +220,7 @@ if ($pdo && is_post()) {
                     'res'      => json_encode(['ok' => true, 'message' => 'Marked removed by admin'], JSON_UNESCAPED_UNICODE),
                 ]);
 
-                redirect('/admin/posts.php', 'Post removed for this platform.', 'success');
+                redirect(route_admin('posts'), 'Post removed for this platform.', 'success');
             }
         }
     }
@@ -221,10 +235,10 @@ if ($pdo && is_post()) {
             if ($item) {
                 $pdo->prepare(
                     'INSERT INTO social_post_queue
-                     (episode_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
+                     (case_id, clip_id, platform, content_type, caption, asset_path, scheduled_for, status, created_at, updated_at)
                      VALUES (:eid, :clip_id, :platform, :ct, :caption, :asset, NOW(), "queued", NOW(), NOW())'
                 )->execute([
-                    'eid'      => $item['episode_id'] ? (int) $item['episode_id'] : null,
+                    'eid'      => $item['case_id'] ? (int) $item['case_id'] : null,
                     'clip_id'  => $item['clip_id'] ? (int) $item['clip_id'] : null,
                     'platform' => $item['platform'],
                     'ct'       => $item['content_type'],
@@ -241,7 +255,7 @@ if ($pdo && is_post()) {
                     $result = dispatch_social_post($newItem);
                     $msg = $result['ok'] ? 'Reupload dispatched successfully.' : 'Reupload failed: ' . ($result['error'] ?? 'unknown error');
                     $type = $result['ok'] ? 'success' : 'warning';
-                    redirect('/admin/posts.php', $msg, $type);
+                    redirect(route_admin('posts'), $msg, $type);
                 }
             }
         }
@@ -250,19 +264,23 @@ if ($pdo && is_post()) {
 
 $queue = $pdo ? $pdo->query(
     'SELECT
-         q.id, q.episode_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
+         q.id, q.case_id, q.clip_id, q.platform, q.content_type, q.caption, q.asset_path,
          q.scheduled_for, q.status, q.external_post_id, q.last_error, q.created_at, q.updated_at,
-         e.title AS episode_title,
+         e.title AS case_title,
          vc.label AS clip_label, vc.output_path AS clip_output_path, vc.source_path AS clip_source_path
      FROM social_post_queue q
-     LEFT JOIN episodes e ON e.id = q.episode_id
+     LEFT JOIN cases e ON e.id = q.case_id
      LEFT JOIN video_clips vc ON vc.id = q.clip_id
      ORDER BY q.scheduled_for ASC'
 )->fetchAll() : [];
 
-$episodes  = $pdo ? $pdo->query('SELECT id, title FROM episodes ORDER BY title')->fetchAll() : [];
+$cases  = $pdo ? $pdo->query('SELECT id, title FROM cases ORDER BY title')->fetchAll() : [];
 $clips     = $pdo ? $pdo->query('SELECT id, label, output_path, source_path FROM video_clips ORDER BY created_at DESC')->fetchAll() : [];
-$platforms = array_keys(PTMD_PLATFORMS);
+// Load active platforms from DB; fall back to PTMD_PLATFORMS for graceful degradation
+$activeSites = get_posting_sites(true);
+$platforms   = $activeSites
+    ? array_column($activeSites, 'display_name')
+    : array_keys(PTMD_PLATFORMS);
 $statuses  = ['draft','queued','scheduled','posted','failed','canceled'];
 $prefRows  = $pdo ? $pdo->query('SELECT * FROM social_platform_preferences ORDER BY platform')->fetchAll() : [];
 $prefMap   = [];
@@ -278,17 +296,71 @@ $selectedClipId = (int) ($_GET['clip_id'] ?? 0);
 $selectedClip = $selectedClipId > 0 ? ($clipsById[$selectedClipId] ?? null) : null;
 $selectedClipAsset = safe_upload_rel_path($selectedClip ? clip_asset_path($selectedClip) : '');
 
-$pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline">
+$queueCounts = ['draft' => 0, 'queued' => 0, 'scheduled' => 0, 'posted' => 0, 'failed' => 0, 'canceled' => 0];
+foreach ($queue as $qItem) {
+    $statusKey = (string) ($qItem['status'] ?? 'draft');
+    if (isset($queueCounts[$statusKey])) {
+        $queueCounts[$statusKey]++;
+    }
+}
+
+$pageActions = '<a href="' . e(route_admin('social-schedule')) . '" class="btn btn-ptmd-outline">
     <i class="fa-solid fa-clock me-2"></i>Manage Schedule
 </a>';
 ?>
+
+<div class="ptmd-screen-queue">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value"><?php ee((string) count($queue)); ?></div><div class="stat-label">Total</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-yellow"><?php ee((string) $queueCounts['queued']); ?></div><div class="stat-label">Queued</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-teal"><?php ee((string) $queueCounts['scheduled']); ?></div><div class="stat-label">Scheduled</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value ptmd-text-teal"><?php ee((string) $queueCounts['posted']); ?></div><div class="stat-label">Posted</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value" style="color:#ff4d5a"><?php ee((string) $queueCounts['failed']); ?></div><div class="stat-label">Blocked</div></div></div>
+    <div class="col-6 col-lg-2"><div class="ptmd-card-stat"><div class="stat-value"><?php ee((string) $queueCounts['draft']); ?></div><div class="stat-label">Draft</div></div></div>
+</div>
+
+<div class="ptmd-panel p-lg mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 mb-0"><i class="fa-solid fa-bars-progress me-2 ptmd-text-teal"></i>Status Board</h2>
+        <span class="ptmd-chip">What needs attention now</span>
+    </div>
+    <div class="ptmd-queue-board">
+        <?php foreach (['queued' => 'Queued', 'scheduled' => 'Scheduled', 'posted' => 'Posted', 'failed' => 'Blocked'] as $key => $label): ?>
+            <div class="ptmd-queue-column">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-600"><?php ee($label); ?></span>
+                    <span class="ptmd-chip"><?php ee((string) $queueCounts[$key]); ?></span>
+                </div>
+                <?php
+                $shown = 0;
+                foreach ($queue as $item):
+                    if (($item['status'] ?? '') !== $key || $shown >= 3) {
+                        continue;
+                    }
+                    $shown++;
+                ?>
+                    <article class="ptmd-queue-mini-card">
+                        <div class="fw-600 small"><?php ee($item['platform']); ?></div>
+                        <div class="ptmd-muted" style="font-size:var(--text-xs)"><?php ee($item['case_title'] ?? ($item['clip_label'] ?? 'Manual')); ?></div>
+                        <div class="ptmd-muted" style="font-size:var(--text-xs)">
+                            <?php echo $item['scheduled_for'] ? e(date('M j, g:ia', strtotime($item['scheduled_for']))) : 'No schedule'; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+                <?php if ($shown === 0): ?>
+                    <div class="ptmd-muted small">No items</div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
 
 <!-- Platform preferences -->
 <div class="ptmd-panel p-xl mb-4">
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-sliders me-2 ptmd-text-teal"></i>Platform Posting Preferences
     </h2>
-    <form method="post" action="/admin/posts.php">
+    <form method="post" action="<?php echo e(route_admin('posts')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="save_preferences">
         <div class="table-responsive">
@@ -368,15 +440,15 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     <h2 class="h6 mb-4">
         <i class="fa-solid fa-calendar-plus me-2 ptmd-text-teal"></i>Add to Queue
     </h2>
-    <form method="post" action="/admin/posts.php">
+    <form method="post" action="<?php echo e(route_admin('posts')); ?>">
         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
         <input type="hidden" name="_action" value="add">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="form-label">Episode (optional)</label>
-                <select class="form-select" name="episode_id">
+                <label class="form-label">case (optional)</label>
+                <select class="form-select" name="case_id">
                     <option value="">— None (manual post) —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -414,7 +486,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                     class="form-control"
                     name="asset_path"
                     value="<?php ee($selectedClipAsset); ?>"
-                    placeholder="clips/..., episodes/..., or /uploads/..."
+                    placeholder="clips/..., cases/..., or /uploads/..."
                 >
             </div>
             <div class="col-12">
@@ -438,7 +510,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
-                    <tr><th>Platform</th><th>Video</th><th>Episode</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Platform</th><th>Video</th><th>case</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($queue as $item): ?>
@@ -457,12 +529,12 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                     —
                                 <?php endif; ?>
                             </td>
-                            <td class="ptmd-muted small"><?php ee($item['episode_title'] ?? '—'); ?></td>
+                            <td class="ptmd-muted small"><?php ee($item['case_title'] ?? '—'); ?></td>
                             <td class="ptmd-muted" style="font-size:var(--text-xs)">
                                 <?php echo $item['scheduled_for'] ? e(date('M j, Y g:ia', strtotime($item['scheduled_for']))) : '—'; ?>
                             </td>
                             <td>
-                                <form method="post" action="/admin/posts.php" class="d-inline">
+                                <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                     <input type="hidden" name="_action" value="update_status">
                                     <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -481,7 +553,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="publish_now">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -489,7 +561,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-rocket"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="reupload">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -497,7 +569,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-upload"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="remove_site_post">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -508,7 +580,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
                                             <i class="fa-solid fa-link-slash"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="/admin/posts.php" class="d-inline">
+                                    <form method="post" action="<?php echo e(route_admin('posts')); ?>" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="id" value="<?php ee((string) $item['id']); ?>">
@@ -529,6 +601,7 @@ $pageActions = '<a href="/admin/social-schedule.php" class="btn btn-ptmd-outline
     <?php else: ?>
         <p class="ptmd-muted small">Queue is empty.</p>
     <?php endif; ?>
+</div>
 </div>
 
 <?php include __DIR__ . '/_admin_footer.php'; ?>

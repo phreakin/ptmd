@@ -15,10 +15,10 @@
  * The OpenAI API key is stored in site_settings as 'openai_api_key'.
  */
 
-$pageTitle    = 'AI Content Studio | PTMD Admin';
+$pageTitle    = 'Hook Lab | PTMD Admin';
 $activePage   = 'ai-tools';
-$pageHeading  = 'AI Content Studio';
-$pageSubheading = 'Generate ideas, titles, keywords, and captions powered by OpenAI.';
+$pageHeading  = 'Hook Lab';
+$pageSubheading = 'Cinematic AI content lab for hooks, titles, descriptions, and social launch copy.';
 
 include __DIR__ . '/_admin_head.php';
 
@@ -29,9 +29,9 @@ $apiKeySet = site_setting('openai_api_key', '') !== '';
 $history = [];
 if ($pdo) {
     $history = $pdo->query(
-        'SELECT g.*, e.title AS episode_title
+        'SELECT g.*, e.title AS case_title
          FROM ai_generations g
-         LEFT JOIN episodes e ON e.id = g.episode_id
+         LEFT JOIN cases e ON e.id = g.case_id
          ORDER BY g.created_at DESC LIMIT 30'
     )->fetchAll();
 }
@@ -54,11 +54,11 @@ if ($pdo) {
 $topIdeas = array_slice($storedIdeas, 0, 5);
 $moreIdeas = array_slice($storedIdeas, 5);
 
-// Episode list for the "context" dropdown
-$episodes = [];
+// case list for the "context" dropdown
+$cases = [];
 if ($pdo) {
-    $episodes = $pdo->query(
-        'SELECT id, title FROM episodes ORDER BY published_at DESC, id DESC'
+    $cases = $pdo->query(
+        'SELECT id, title FROM cases ORDER BY published_at DESC, id DESC'
     )->fetchAll();
 }
 ?>
@@ -67,10 +67,18 @@ if ($pdo) {
     <div class="alert ptmd-alert alert-warning mb-5" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
         <strong>OpenAI API key not configured.</strong>
-        Go to <a href="/admin/settings.php">Settings</a> and set the
+        Go to <a href="<?php ee(route_admin('settings')); ?>">Settings</a> and set the
         <strong>OpenAI API Key</strong> to enable AI features.
     </div>
 <?php endif; ?>
+
+<div class="ptmd-screen-hook-lab">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-lightbulb ptmd-text-yellow"></i></div><div class="stat-value ptmd-text-yellow"><?php ee((string) count($storedIdeas)); ?></div><div class="stat-label">Stored Ideas</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-clock-rotate-left ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) count($history)); ?></div><div class="stat-label">Generations Logged</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-film" style="color:#c084fc"></i></div><div class="stat-value" style="color:#c084fc"><?php ee((string) count($cases)); ?></div><div class="stat-label">Case Contexts</div></div></div>
+    <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-bolt ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php echo $apiKeySet ? 'Live' : 'Off'; ?></div><div class="stat-label">AI Engine</div></div></div>
+</div>
 
 <!-- Tool cards grid -->
 <div class="row g-4 mb-5">
@@ -80,7 +88,7 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-lightbulb"></i></div>
             <h2 class="h5 mb-2">Video Idea Generator</h2>
-            <p class="ptmd-muted small mb-4">Generate future documentary topic ideas based on the PTMD brand voice.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Brand Voice</span><span class="ptmd-chip">Topic Discovery</span></div>
             <div class="mb-3">
                 <label class="form-label" for="ideas_theme">Optional theme or keyword</label>
                 <input class="form-control" id="ideas_theme" placeholder="e.g. housing policy, social media manipulation…">
@@ -123,17 +131,17 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-heading"></i></div>
             <h2 class="h5 mb-2">Title Generator</h2>
-            <p class="ptmd-muted small mb-4">Get compelling, click-worthy episode titles matched to the PTMD style.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Headline Focus</span><span class="ptmd-chip">CTR Tilt</span></div>
             <div class="mb-3">
-                <label class="form-label" for="title_topic">What's the episode about?</label>
+                <label class="form-label" for="title_topic">What's the case about?</label>
                 <textarea class="form-control" id="title_topic" rows="3"
-                    placeholder="Describe the episode premise briefly…"></textarea>
+                    placeholder="Describe the case premise briefly…"></textarea>
             </div>
             <div class="mb-3">
-                <label class="form-label" for="title_episode">Or link to an episode</label>
-                <select class="form-select" id="title_episode">
+                <label class="form-label" for="title_case">Or link to an case</label>
+                <select class="form-select" id="title_case">
                     <option value="">— None —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -141,7 +149,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="title"
-                data-inputs='["title_topic","title_episode"]'
+                data-inputs='["title_topic","title_case"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Titles
@@ -155,9 +163,9 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-tags"></i></div>
             <h2 class="h5 mb-2">Keyword &amp; Tag Generator</h2>
-            <p class="ptmd-muted small mb-4">SEO keywords, hashtags, and YouTube tags to maximise discoverability.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Discoverability</span><span class="ptmd-chip">Platform Tags</span></div>
             <div class="mb-3">
-                <label class="form-label" for="kw_topic">Episode topic or title</label>
+                <label class="form-label" for="kw_topic">case topic or title</label>
                 <input class="form-control" id="kw_topic" placeholder="Topic, title, or short description…">
             </div>
             <div class="mb-3">
@@ -186,12 +194,12 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-align-left"></i></div>
             <h2 class="h5 mb-2">Description Generator</h2>
-            <p class="ptmd-muted small mb-4">Full YouTube / video platform description with hooks, links, and hashtags.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Long-form Copy</span><span class="ptmd-chip">SEO Context</span></div>
             <div class="mb-3">
-                <label class="form-label" for="desc_episode">Episode</label>
-                <select class="form-select" id="desc_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="desc_case">case</label>
+                <select class="form-select" id="desc_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -204,7 +212,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="description"
-                data-inputs='["desc_episode","desc_notes"]'
+                data-inputs='["desc_case","desc_notes"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Description
@@ -218,12 +226,12 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-brands fa-instagram"></i></div>
             <h2 class="h5 mb-2">Social Caption Generator</h2>
-            <p class="ptmd-muted small mb-4">Platform-specific captions for YouTube Shorts, TikTok, Instagram, X, and Facebook.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Multi-platform</span><span class="ptmd-chip">Short-form</span></div>
             <div class="mb-3">
-                <label class="form-label" for="cap_episode">Episode</label>
-                <select class="form-select" id="cap_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="cap_case">case</label>
+                <select class="form-select" id="cap_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -242,7 +250,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="caption"
-                data-inputs='["cap_episode","cap_platform"]'
+                data-inputs='["cap_case","cap_platform"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Captions
@@ -256,12 +264,12 @@ if ($pdo) {
         <div class="ptmd-ai-card h-100">
             <div class="ai-card-icon"><i class="fa-solid fa-image"></i></div>
             <h2 class="h5 mb-2">Thumbnail Concept</h2>
-            <p class="ptmd-muted small mb-4">Detailed visual direction and text overlay suggestions for episode thumbnails.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3"><span class="ptmd-chip">Visual Direction</span><span class="ptmd-chip">Overlay Copy</span></div>
             <div class="mb-3">
-                <label class="form-label" for="thumb_episode">Episode</label>
-                <select class="form-select" id="thumb_episode">
-                    <option value="">— Select episode —</option>
-                    <?php foreach ($episodes as $ep): ?>
+                <label class="form-label" for="thumb_case">case</label>
+                <select class="form-select" id="thumb_case">
+                    <option value="">— Select case —</option>
+                    <?php foreach ($cases as $ep): ?>
                         <option value="<?php ee((string) $ep['id']); ?>"><?php ee($ep['title']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -278,7 +286,7 @@ if ($pdo) {
             <button
                 class="btn btn-ptmd-outline w-100 mb-3"
                 data-ai-feature="thumbnail_concept"
-                data-inputs='["thumb_episode","thumb_style"]'
+                data-inputs='["thumb_case","thumb_style"]'
                 <?php if (!$apiKeySet) echo 'disabled'; ?>
             >
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Concept
@@ -365,7 +373,7 @@ if ($pdo) {
                 <thead>
                     <tr>
                         <th>Feature</th>
-                        <th>Episode</th>
+                        <th>case</th>
                         <th>Model</th>
                         <th>Tokens</th>
                         <th>Date</th>
@@ -381,7 +389,7 @@ if ($pdo) {
                                 </span>
                             </td>
                             <td class="ptmd-muted small">
-                                <?php ee($gen['episode_title'] ?? '—'); ?>
+                                <?php ee($gen['case_title'] ?? '—'); ?>
                             </td>
                             <td class="ptmd-muted" style="font-size:var(--text-xs)">
                                 <?php ee($gen['model']); ?>
@@ -408,101 +416,12 @@ if ($pdo) {
         <p class="ptmd-muted small">No AI generations yet. Use the tools above to get started.</p>
     <?php endif; ?>
 </div>
-
-<script>
-'use strict';
-
-function escapeHtml(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-// ── AI tool buttons ────────────────────────────────────────────────────────────
-document.querySelectorAll('[data-ai-feature]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-        const feature    = btn.dataset.aiFeature;
-        const inputIds   = JSON.parse(btn.dataset.inputs ?? '[]');
-        const resultBox  = document.getElementById('result_' + feature);
-
-        if (!resultBox) return;
-
-        // Collect input values
-        const inputs = {};
-        inputIds.forEach(id => {
-            const el = document.getElementById(id);
-            inputs[id] = el?.value ?? '';
-        });
-
-        // Show loading
-        resultBox.style.display = 'block';
-        resultBox.classList.add('loading');
-        resultBox.textContent = 'Generating…';
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Generating…';
-
-        try {
-            const fd = new FormData();
-            fd.append('csrf_token', document.cookie);   // We'll pass it in the body
-            fd.append('feature', feature);
-            Object.entries(inputs).forEach(([k, v]) => fd.append(k, v));
-
-            // Get CSRF from a meta tag we'll inject
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            fd.set('csrf_token', csrfMeta?.content ?? '');
-
-            const res  = await fetch('/api/ai_generate.php', {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: fd,
-            });
-            const data = await res.json();
-
-            resultBox.classList.remove('loading');
-
-            if (data.ok) {
-                if (feature === 'video_ideas' && Array.isArray(data.ideas) && data.ideas.length) {
-                    resultBox.innerHTML = '<ol class="mb-0">' + data.ideas.map(item => {
-                        return '<li class="mb-2"><strong>' + escapeHtml(item.title) + '</strong><br>'
-                            + '<span class="ptmd-muted">' + escapeHtml(item.premise) + '</span><br>'
-                            + '<em>Angle:</em> ' + escapeHtml(item.angle) + '</li>';
-                    }).join('') + '</ol>'
-                        + '<div class="ptmd-muted mt-2" style="font-size:var(--text-xs)">Saved to database. Refresh to update the stored list.</div>';
-                } else {
-                    resultBox.textContent = data.text ?? '';
-                }
-                window.PTMDToast?.success('Generated successfully.');
-            } else {
-                resultBox.textContent = '⚠ ' + (data.error ?? 'Generation failed.');
-                window.PTMDToast?.error(data.error ?? 'Generation failed.');
-            }
-        } catch (err) {
-            resultBox.classList.remove('loading');
-            resultBox.textContent = '⚠ Network error. Please try again.';
-            window.PTMDToast?.error('Network error.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-2"></i>' +
-                btn.innerHTML.replace(/<[^>]+>/g, '').trim().replace('Generating…', '');
-            // Re-set proper button text
-            const origMap = {
-                video_ideas:       'Generate Ideas',
-                title:             'Generate Titles',
-                keywords:          'Generate Keywords',
-                description:       'Generate Description',
-                caption:           'Generate Captions',
-                thumbnail_concept: 'Generate Concept',
-            };
-            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-2"></i>' + (origMap[feature] ?? 'Generate');
-        }
-    });
-});
-</script>
+</div>
 
 <!-- Inject CSRF for JS -->
 <meta name="csrf-token" content="<?php ee(csrf_token()); ?>">
 
-<?php include __DIR__ . '/_admin_footer.php'; ?>
+<?php
+$extraScripts = '<script src="/assets/js/admin/ai-tools.js"></script>';
+include __DIR__ . '/_admin_footer.php';
+?>

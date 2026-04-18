@@ -9,6 +9,8 @@
  * Batch submission → /api/apply_overlays.php
  */
 
+require_once __DIR__ . '/../inc/bootstrap.php';
+
 $pageTitle    = 'Overlay Tool | PTMD Admin';
 $activePage   = 'overlay-tool';
 $pageHeading  = 'Overlay Tool';
@@ -61,9 +63,9 @@ if (is_dir($clipDir)) {
 $dbClips = [];
 if ($pdo) {
     $dbClips = $pdo->query(
-        'SELECT vc.id, vc.label, vc.source_path, vc.output_path, vc.status, e.title AS episode_title
+        'SELECT vc.id, vc.label, vc.source_path, vc.output_path, vc.status, e.title AS case_title
          FROM video_clips vc
-         LEFT JOIN episodes e ON e.id = vc.episode_id
+         LEFT JOIN cases e ON e.id = vc.case_id
          WHERE vc.status IN ("raw","ready")
          ORDER BY vc.created_at DESC LIMIT 50'
     )->fetchAll();
@@ -94,7 +96,7 @@ if ($pdo) {
             <?php if (!$brandOverlays && !$dbOverlays): ?>
                 <div class="ptmd-muted small">
                     No overlay assets found in <code>/assets/brand/overlays/</code> or media library.
-                    <a href="/admin/media.php">Upload one via Media Library</a>.
+                    <a href="<?php ee(route_admin('media')); ?>">Upload one via Media Library</a>.
                 </div>
             <?php endif; ?>
 
@@ -242,8 +244,8 @@ if ($pdo) {
             <?php if (!$dbClips && !$localClips): ?>
                 <div class="ptmd-muted small">
                     No clips found. Upload clips via
-                    <a href="/admin/video-processor.php">Video Processor</a>
-                    or the <a href="/admin/media.php">Media Library</a>.
+                    <a href="<?php ee(route_admin('video-processor')); ?>">Video Processor</a>
+                    or the <a href="<?php ee(route_admin('media')); ?>">Media Library</a>.
                 </div>
             <?php endif; ?>
 
@@ -302,7 +304,7 @@ if ($pdo) {
                     class="form-control"
                     id="batchLabel"
                     name="label"
-                    placeholder="e.g. Episode 1 — Teaser Clips"
+                    placeholder="e.g. case 1 — Teaser Clips"
                 >
             </div>
         </div>
@@ -379,7 +381,7 @@ if ($pdo) {
                             </td>
                             <td>
                                 <a
-                                    href="/admin/overlay-tool.php?view_job=<?php ee((string) $job['id']); ?>"
+                                    href="<?php ee(route_admin('overlay-tool', ['view_job' => (string) $job['id']])); ?>"
                                     class="btn btn-ptmd-ghost btn-sm"
                                     data-tippy-content="View items"
                                 >

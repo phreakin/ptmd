@@ -1,0 +1,279 @@
+/*noinspection CssUnresolvedCustomProperty */
+:root {
+    --ptmd-bg-1: #0b0d14;
+    --ptmd-bg-2: #101522;
+
+    --ptmd-surface-glass: rgba(255, 255, 255, 0.055);
+    --ptmd-surface-glass-subtle: rgba(255, 255, 255, 0.03);
+
+    --ptmd-accent-forensic: #2ec4b6;
+    --ptmd-accent-forensic-soft: color-mix(in srgb, var(--ptmd-accent-forensic) 25%, transparent);
+    --ptmd-accent-gold: #bfa181;
+
+    --ptmd-text-primary: #f5f7fb;
+    --ptmd-text-muted: #98a5bb;
+
+    --ptmd-border-soft: rgba(255, 255, 255, 0.08);
+    --ptmd-border-hairline: rgba(255, 255, 255, 0.06);
+    --ptmd-border-subtle: rgba(255, 255, 255, 0.09);
+    --ptmd-border-warning: color-mix(in srgb, #ffd60a 45%, #ffffff 55%);
+    --ptmd-border-danger: color-mix(in srgb, #c1121f 52%, #ffffff 48%);
+
+    --ptmd-shadow-inset-soft: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+    --ptmd-shadow-elev-1: 0 10px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.22);
+    --ptmd-shadow-elev-2: 0 16px 38px rgba(0, 0, 0, 0.42), 0 4px 14px rgba(0, 0, 0, 0.32);
+    --ptmd-shadow-layered: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 10px rgba(0, 0, 0, 0.28);
+
+    --ptmd-glow-forensic: 0 0 32px color-mix(in srgb, var(--ptmd-accent-forensic) 30%, transparent);
+    --ptmd-glow-evidence-soft: 0 0 16px color-mix(in srgb, #c1121f 18%, transparent);
+    --ptmd-glow-warning-soft: 0 0 18px color-mix(in srgb, #ffd60a 22%, transparent);
+
+    --ptmd-radius-sm: 12px;
+    --ptmd-radius-md: 16px;
+    --ptmd-radius-lg: 22px;
+
+    --ptmd-space-3: .75rem;
+    --ptmd-space-4: 1rem;
+
+    --ptmd-warning: #FACC15;
+    --ptmd-teal: #2EC4B6;
+    --text-sm: clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);
+}
+
+.ptmd-screen-dashboard .ptmd-card-stat,
+.ptmd-screen-analytics .ptmd-card-stat,
+.ptmd-screen-queue .ptmd-card-stat {
+    min-height: 156px;
+    justify-content: space-between;
+}
+
+.ptmd-screen-dashboard .ptmd-card-stat {
+    position: relative;
+}
+
+.ptmd-screen-dashboard .ptmd-card-stat::after {
+    opacity: .75;
+}
+
+.ptmd-analytics-panel {
+    border: 1px solid var(--ptmd-border-subtle);
+    border-radius: var(--ptmd-radius-lg);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--ptmd-accent-forensic-soft) 20%, var(--ptmd-surface-glass)) 0%, rgba(10,12,21,.72) 100%);
+    box-shadow: var(--ptmd-shadow-elev-2), var(--ptmd-shadow-inset-soft);
+}
+
+.ptmd-chart-shell {
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-forensic) 22%, var(--ptmd-border-soft));
+    background: linear-gradient(180deg, rgba(8, 12, 20, .6) 0%, rgba(8, 12, 20, .22) 100%);
+    border-radius: var(--ptmd-radius-md);
+    min-height: 220px;
+    padding: var(--ptmd-space-4);
+    display: grid;
+    align-content: space-between;
+    gap: var(--ptmd-space-3);
+}
+
+.ptmd-hook-lab-card {
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-gold) 35%, var(--ptmd-border-soft));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--ptmd-accent-gold) 10%, transparent), rgba(9,12,20,.72));
+}
+
+.ptmd-hook-rationale {
+    border-top: 1px dashed var(--ptmd-border-soft);
+    margin-top: .8rem;
+    padding-top: .8rem;
+    display: grid;
+    gap: .35rem;
+}
+
+.ptmd-case-detail-rail {
+    border-left: 1px solid var(--ptmd-border-soft);
+    padding-left: var(--ptmd-space-4);
+}
+
+.ptmd-queue-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--ptmd-space-4);
+}
+
+.ptmd-queue-column {
+    border: 1px solid var(--ptmd-border-soft);
+    border-radius: var(--ptmd-radius-lg);
+    background: color-mix(in srgb, var(--ptmd-bg-1) 66%, transparent);
+    padding: var(--ptmd-space-3);
+    display: grid;
+    gap: var(--ptmd-space-3);
+    min-height: 300px;
+}
+
+.ptmd-alert-banner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--ptmd-space-3);
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-forensic) 38%, var(--ptmd-border-soft));
+    border-radius: var(--ptmd-radius-lg);
+    padding: var(--ptmd-space-3) var(--ptmd-space-4);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--ptmd-accent-forensic-soft) 36%, rgba(255,255,255,.02)), rgba(8,12,20,.82));
+    box-shadow: var(--ptmd-shadow-layered), var(--ptmd-glow-forensic);
+}
+
+.ptmd-alert-banner__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--ptmd-border-soft);
+    display: grid;
+    place-items: center;
+    color: var(--ptmd-accent-forensic);
+    background: rgba(255,255,255,.04);
+}
+
+.ptmd-alert-banner__title {
+    font-size: var(--text-sm);
+    color: var(--ptmd-text-primary);
+}
+
+.ptmd-alert-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.ptmd-insight-card {
+    border: 1px solid color-mix(in srgb, var(--ptmd-accent-gold) 26%, var(--ptmd-border-soft));
+    border-radius: var(--ptmd-radius-md);
+    padding: var(--ptmd-space-3);
+    background: linear-gradient(150deg, color-mix(in srgb, var(--ptmd-accent-gold) 12%, transparent), rgba(8,11,18,.55));
+}
+
+.ptmd-queue-ticket {
+    border: 1px solid var(--ptmd-border-subtle);
+    border-radius: var(--ptmd-radius-md);
+    background: linear-gradient(155deg, color-mix(in srgb, var(--ptmd-surface-glass-subtle) 95%, transparent), rgba(8, 11, 18, .66));
+    padding: .7rem .8rem;
+    display: grid;
+    gap: .35rem;
+}
+
+.ptmd-queue-ticket--blocked {
+    border-color: var(--ptmd-border-danger);
+    box-shadow: var(--ptmd-glow-evidence-soft);
+}
+
+.ptmd-queue-ticket--warning {
+    border-color: var(--ptmd-border-warning);
+    box-shadow: var(--ptmd-glow-warning-soft);
+}
+
+.ptmd-signal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--ptmd-space-3);
+}
+
+.ptmd-signal-card {
+    border: 1px solid var(--ptmd-border-subtle);
+    border-radius: var(--ptmd-radius-md);
+    background: color-mix(in srgb, var(--ptmd-bg-2) 70%, transparent);
+    padding: .85rem .95rem;
+    box-shadow: var(--ptmd-shadow-elev-1);
+}
+
+.ptmd-signal-card__label {
+    color: var(--ptmd-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: .68rem;
+    margin-bottom: .25rem;
+}
+
+.ptmd-signal-card__value {
+    font-size: 1.3rem;
+    line-height: 1.1;
+    font-weight: 700;
+}
+
+.ptmd-evidence-list {
+    display: grid;
+    gap: .55rem;
+}
+
+.ptmd-evidence-item {
+    border: 1px solid var(--ptmd-border-hairline);
+    border-radius: var(--ptmd-radius-sm);
+    padding: .55rem .65rem;
+    background: color-mix(in srgb, var(--ptmd-bg-1) 78%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+}
+
+.ptmd-screen-case-detail .ptmd-case-detail-rail {
+    display: grid;
+    gap: var(--ptmd-space-3);
+}
+
+.ptmd-timeline {
+    display: grid;
+    gap: var(--ptmd-space-3);
+}
+
+.ptmd-timeline-item {
+    border: 1px solid var(--ptmd-border-soft);
+    border-radius: var(--ptmd-radius-md);
+    background: color-mix(in srgb, var(--ptmd-bg-1) 72%, transparent);
+    padding: .75rem .9rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: .75rem;
+}
+
+.ptmd-timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.ptmd-timeline-dot--warn { background: var(--ptmd-warning); box-shadow: 0 0 0 6px rgba(255,214,10,.1); }
+.ptmd-timeline-dot--ok { background: var(--ptmd-teal); box-shadow: 0 0 0 6px rgba(46,196,182,.12); }
+.ptmd-timeline-dot--info { background: #c084fc; box-shadow: 0 0 0 6px rgba(192,132,252,.14); }
+
+.ptmd-queue-mini-card {
+    border: 1px solid var(--ptmd-border-soft);
+    border-radius: var(--ptmd-radius-md);
+    background: color-mix(in srgb, var(--ptmd-bg-2) 74%, transparent);
+    padding: .6rem .7rem;
+    display: grid;
+    gap: .2rem;
+}
+
+.ptmd-screen-assets .ptmd-asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--ptmd-space-3);
+}
+
+.ptmd-screen-assets .ptmd-asset-card {
+    border: 1px solid var(--ptmd-border-subtle);
+    border-radius: var(--ptmd-radius-md);
+    background: linear-gradient(152deg, color-mix(in srgb, var(--ptmd-bg-2) 72%, transparent), color-mix(in srgb, var(--ptmd-surface-glass-subtle) 88%, transparent));
+    padding: .85rem;
+    display: grid;
+    gap: .45rem;
+}
+
+@media (max-width: 960px) {
+    .ptmd-alert-banner {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .ptmd-timeline-item {
+        grid-template-columns: 1fr;
+    }
+}

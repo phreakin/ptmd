@@ -1,8 +1,29 @@
 Options -Indexes
 
-# Route all requests through front controller unless file/dir exists
+# ---------------------------------------------------------------------------
+# PTMD rewrite rules
+# ---------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Retired public paths -> canonical destinations.
+    RewriteRule ^series/?$ /cases [R=301,L]
+    RewriteRule ^case-chat/?$ /chat [R=301,L]
+
+    # Canonical admin entry points.
+    RewriteRule ^admin/?$ /admin/dashboard.php [L]
+    RewriteRule ^admin/control-room/?$ /admin/dashboard.php [L]
+    RewriteRule ^admin/the-analyst/?$ /admin/ai-assistant.php [L]
+    RewriteRule ^admin/dispatch/?$ /admin/posts.php [L]
+    RewriteRule ^admin/intelligence/?$ /admin/monitor.php [L]
+
+    # Admin clean paths -> existing PHP handlers.
+    RewriteCond %{REQUEST_URI} ^/admin/([a-z0-9_-]+)/?$ [NC]
+    RewriteCond %{DOCUMENT_ROOT}/admin/%1.php -f
+    RewriteRule ^admin/([a-z0-9_-]+)/?$ /admin/$1.php [L]
+
+    # Public front controller: everything that isn't a real file/dir goes
+    # through index.php so clean paths resolve centrally.
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]
