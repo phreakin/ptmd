@@ -230,7 +230,7 @@ if ($action === 'list'):
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Edit">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
-                                    <a href="/index.php?page=episode&slug=<?php ee($ep['slug']); ?>"
+                                    <a href="/index.php?page=case&slug=<?php ee($ep['slug']); ?>"
                                        target="_blank" rel="noopener"
                                        class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View public">
                                         <i class="fa-solid fa-arrow-up-right-from-square"></i>

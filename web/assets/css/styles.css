@@ -391,11 +391,7 @@
 
         & .nav-link {
             color: var(--ptmd-muted-strong);
-<<<<<<< HEAD
-            font-size: 12px !important;
-=======
             font-size: var(--text-xs);
->>>>>>> 7612f8e264ddff6956e17730e72947f555a8d95f
             font-weight: 500;
             padding: 0.4rem 0.75rem;
             border-radius: var(--radius-md);

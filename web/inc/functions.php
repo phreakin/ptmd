@@ -39,6 +39,68 @@ function upload_url(string $path): string
 }
 
 // ---------------------------------------------------------------------------
+// ROUTE HELPERS  (centralized clean-path URL generation)
+// ---------------------------------------------------------------------------
+//
+// Goal: every internal link in templates should go through one of these
+// helpers so that if the routing scheme changes we only update it here.
+//
+// All helpers return root-relative paths (e.g. "/cases", "/case/foo").
+// The .htaccess front controller rewrites these to index.php which then
+// resolves them back to the internal page name.
+//
+// Back-compat: legacy "/index.php?page=X" URLs still work; they are handled
+// by the front controller's query-string fallback.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a clean root-relative URL, optionally with a query string.
+ *
+ *   url('/cases')                         => "/cases"
+ *   url('/case/foo')                      => "/case/foo"
+ *   url('/login', ['return' => 'cases'])  => "/login?return=cases"
+ */
+function url(string $path = '/', array $query = []): string
+{
+    $p = '/' . ltrim($path, '/');
+    if (!empty($query)) {
+        $p .= (str_contains($p, '?') ? '&' : '?') . http_build_query($query);
+    }
+    return $p;
+}
+
+/** Public routes — use these everywhere instead of hardcoded URLs. */
+function route_home(): string       { return '/'; }
+function route_cases(): string      { return '/cases'; }
+function route_case(string $slug): string
+{
+    return '/case/' . rawurlencode($slug);
+}
+function route_series(): string     { return '/series'; }
+function route_chat(): string       { return '/chat'; }
+function route_about(): string      { return '/about'; }
+function route_contact(): string    { return '/contact'; }
+function route_login(string $return = ''): string
+{
+    return $return !== '' ? url('/login', ['return' => $return]) : '/login';
+}
+function route_chat_login(): string { return '/chat-login'; }
+function route_register(): string   { return '/register'; }
+function route_account(): string    { return '/account'; }
+function route_logout(): string     { return '/logout'; }
+
+/**
+ * Admin route helper — builds /admin or /admin/<path>.
+ * Note: individual admin pages still resolve via their own .php files;
+ * .htaccess lets clean /admin/<name> resolve to /admin/<name>.php.
+ */
+function route_admin(string $path = ''): string
+{
+    $path = trim($path, '/');
+    return $path === '' ? '/admin' : '/admin/' . $path;
+}
+
+// ---------------------------------------------------------------------------
 // SITE SETTINGS  (cached from DB on first call)
 // ---------------------------------------------------------------------------
 
@@ -151,6 +213,14 @@ function verify_csrf(?string $token): bool
     return is_string($token)
         && !empty($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/** Back-compat alias — some callers historically used verify_csrf_token(). */
+if (!function_exists('verify_csrf_token')) {
+    function verify_csrf_token(?string $token): bool
+    {
+        return verify_csrf($token);
+    }
 }
 
 // ---------------------------------------------------------------------------
