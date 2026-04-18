@@ -44,7 +44,11 @@ $flash = pull_flash();
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="<?php ee(route_cases()); ?>">
+<<<<<<< HEAD
                             <i class="fa-solid fa-folder-open fa-sm me-1"></i>Cases
+=======
+                            <i class="fa-solid fa-folder-open fa-sm me-1"></i>Open Cases
+>>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
                         </a>
                     </li>
                     <li class="nav-item">

@@ -1,8 +1,8 @@
-<aside class="ptmd-drawer" id="ptmdAiBotDrawer" aria-label="AI Copilot Drawer" aria-hidden="true">
+<aside class="ptmd-drawer" id="ptmdAiBotDrawer" aria-label="The Analyst Drawer" aria-hidden="true">
     <div class="ptmd-drawer__panel glass-modal ptmd-ai-bot">
         <div class="d-flex justify-content-between align-items-start">
             <div>
-                <div class="ptmd-kicker">AI Copilot</div>
+                <div class="ptmd-kicker">The Analyst</div>
                 <h2 class="h6 mb-0">Case Context: Housing Evidence Thread</h2>
                 <p class="small ptmd-muted mb-0">Explainable recommendations with source traces and workflow impacts.</p>
             </div>
@@ -11,7 +11,7 @@
         <div class="ptmd-stack-sm" style="overflow:auto;max-height:45vh">
             <article class="glass-card p-3"><div class="small ptmd-muted mb-1">You</div><p class="mb-0">Summarize contradictions in witness timeline.</p></article>
             <article class="glass-card p-3 ptmd-stack-sm">
-                <div class="small ptmd-muted mb-1">Copilot</div>
+                <div class="small ptmd-muted mb-1">The Analyst</div>
                 <p class="mb-1">Three timeline conflicts were detected from source filings.</p>
                 <article class="ptmd-state-card">
                     <h4>Recommended action</h4>
@@ -32,7 +32,7 @@
                 <p>Recommendation confidence degraded due to delayed queue conversion metrics.</p>
             </article>
         </div>
-        <div class="d-flex flex-wrap gap-2"><button class="btn btn-ptmd-outline btn-sm">Generate hooks</button><button class="btn btn-ptmd-outline btn-sm">Queue summary</button></div>
-        <div class="d-flex gap-2"><textarea class="form-control" rows="2" placeholder="Ask Copilot..."></textarea><button class="btn btn-ptmd-teal" type="button"><i class="fa-solid fa-paper-plane"></i></button></div>
+        <div class="d-flex flex-wrap gap-2"><button class="btn btn-ptmd-outline btn-sm">Generate hooks</button><button class="btn btn-ptmd-outline btn-sm">Queue summary</button><button class="btn btn-ptmd-outline btn-sm">Risk brief</button></div>
+        <div class="d-flex gap-2"><textarea class="form-control" rows="2" placeholder="Ask The Analyst..."></textarea><button class="btn btn-ptmd-teal" type="button"><i class="fa-solid fa-paper-plane"></i></button></div>
     </div>
 </aside>

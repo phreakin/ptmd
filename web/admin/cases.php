@@ -5,9 +5,9 @@
 
 require_once __DIR__ . '/../inc/bootstrap.php';
 
-$pageTitle   = 'cases | PTMD Admin';
+$pageTitle   = 'Cases | PTMD Admin';
 $activePage  = 'cases';
-$pageHeading = 'cases';
+$pageHeading = 'Cases';
 
 // Load config, session, DB layer, and helpers BEFORE any call to get_db()/is_post()/etc.
 require_once __DIR__ . '/../inc/bootstrap.php';
@@ -160,7 +160,7 @@ if ($pdo && is_post()) {
     redirect(route_admin('cases'), 'case created.', 'success');
 }
 
-$pageSubheading = $action === 'edit' ? 'Edit case' : ($action === 'new' ? 'New case' : 'All cases');
+$pageSubheading = $action === 'edit' ? 'Case editor' : ($action === 'new' ? 'Create case' : 'Case board');
 $pageActions    = '';
 $apiKeySet = site_setting('openai_api_key', '') !== '';
 if ($action === 'list') {
@@ -189,9 +189,32 @@ if ($editId > 0 && $pdo) {
 // ── List view ─────────────────────────────────────────────────────────────────
 if ($action === 'list'):
     $cases = $pdo ? $pdo->query('SELECT * FROM cases ORDER BY updated_at DESC')->fetchAll() : [];
+    $totalCases = count($cases);
+    $publishedCases = 0;
+    $draftCases = 0;
+    $missingThumbs = 0;
+    foreach ($cases as $caseItem) {
+        if (($caseItem['status'] ?? '') === 'published') {
+            $publishedCases++;
+        }
+        if (($caseItem['status'] ?? '') === 'draft') {
+            $draftCases++;
+        }
+        if (empty($caseItem['thumbnail_image'])) {
+            $missingThumbs++;
+        }
+    }
 ?>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-film ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) $totalCases); ?></div><div class="stat-label">Total Cases</div></div></div>
+        <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-circle-check ptmd-text-teal"></i></div><div class="stat-value ptmd-text-teal"><?php ee((string) $publishedCases); ?></div><div class="stat-label">Published</div></div></div>
+        <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-pen-to-square ptmd-text-yellow"></i></div><div class="stat-value ptmd-text-yellow"><?php ee((string) $draftCases); ?></div><div class="stat-label">Draft</div></div></div>
+        <div class="col-6 col-lg-3"><div class="ptmd-card-stat"><div class="stat-icon"><i class="fa-solid fa-image" style="color:#ff4d5a"></i></div><div class="stat-value" style="color:#ff4d5a"><?php ee((string) $missingThumbs); ?></div><div class="stat-label">Needs Thumbnail</div></div></div>
+    </div>
+
     <div class="ptmd-panel p-lg">
         <?php if ($cases): ?>
+<<<<<<< HEAD
         <div class="table-responsive">
             <table class="ptmd-table">
                 <thead>
@@ -263,6 +286,43 @@ if ($action === 'list'):
                 </tbody>
             </table>
         </div>
+=======
+            <div class="ptmd-list-hybrid">
+                <?php foreach ($cases as $ep): ?>
+                    <article class="ptmd-list-hybrid-item">
+                        <div class="d-flex align-items-center gap-3">
+                            <?php if ($ep['thumbnail_image']): ?>
+                                <img
+                                    src="<?php ee($ep['thumbnail_image']); ?>"
+                                    alt=""
+                                    style="width:56px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--ptmd-border)"
+                                    loading="lazy"
+                                >
+                            <?php else: ?>
+                                <span class="ptmd-chip"><i class="fa-solid fa-image"></i>No thumb</span>
+                            <?php endif; ?>
+                            <div>
+                                <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="fw-600 ptmd-text-muted"><?php ee($ep['title']); ?></a>
+                                <div class="small ptmd-muted"><?php ee($ep['duration'] ?: 'No duration'); ?></div>
+                            </div>
+                        </div>
+                        <span class="ptmd-status ptmd-status-<?php ee($ep['status']); ?>"><?php ee($ep['status']); ?></span>
+                        <span class="ptmd-chip"><i class="fa-solid fa-timer"></i><?php ee($ep['duration'] ?: '—'); ?></span>
+                        <span class="ptmd-chip"><i class="fa-solid fa-calendar-days"></i><?php echo $ep['published_at'] ? e(date('M j, Y', strtotime($ep['published_at']))) : 'Unpublished'; ?></span>
+                        <div class="d-flex gap-2">
+                            <a href="/admin/cases.php?edit=<?php ee((string) $ep['id']); ?>" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="Edit"><i class="fa-solid fa-pen"></i></a>
+                            <a href="/index.php?page=case&slug=<?php ee($ep['slug']); ?>" target="_blank" rel="noopener" class="btn btn-ptmd-ghost btn-sm" data-tippy-content="View public"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                            <form method="post" action="/admin/cases.php" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="<?php ee(csrf_token()); ?>">
+                                <input type="hidden" name="_action" value="delete">
+                                <input type="hidden" name="id" value="<?php ee((string) $ep['id']); ?>">
+                                <button class="btn btn-ptmd-ghost btn-sm" type="submit" style="color:var(--ptmd-error)" data-confirm="Delete &quot;<?php ee($ep['title']); ?>&quot;? This cannot be undone." data-tippy-content="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+>>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
         <?php else: ?>
             <p class="ptmd-muted">No cases yet. <a href="<?php ee(route_admin('cases', ['action' => 'new'])); ?>">Create your first case</a>.</p>
         <?php endif; ?>
@@ -345,6 +405,20 @@ else:
 
             <!-- Right: meta -->
             <div class="col-lg-4">
+
+                <div class="ptmd-panel p-xl mb-4">
+                    <h2 class="h6 mb-3">Case Summary</h2>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="ptmd-chip"><i class="fa-solid fa-diagram-project"></i><?php ee(($ep['status'] ?? 'draft')); ?></span>
+                        <span class="ptmd-chip"><i class="fa-solid fa-timer"></i><?php ee(($ep['duration'] ?? 'No duration')); ?></span>
+                        <span class="ptmd-chip"><i class="fa-solid fa-tags"></i><?php echo $epKeywords !== '' ? e((string) count(array_filter(array_map('trim', explode(',', $epKeywords))))) . ' tags' : 'No tags'; ?></span>
+                    </div>
+                    <?php if (!empty($ep['published_at'])): ?>
+                        <div class="ptmd-muted small mt-3">Published <?php echo e(date('M j, Y g:ia', strtotime($ep['published_at']))); ?></div>
+                    <?php else: ?>
+                        <div class="ptmd-muted small mt-3">Not yet published</div>
+                    <?php endif; ?>
+                </div>
 
                 <div class="ptmd-panel p-xl mb-4">
                     <h2 class="h6 mb-4">Publish</h2>

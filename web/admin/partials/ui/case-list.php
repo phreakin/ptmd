@@ -29,8 +29,15 @@
         <article class="ptmd-list-hybrid-item glass-table-row">
             <div><strong>How Policy Buried the Evidence</strong><div class="small ptmd-muted">Updated 2h ago</div></div>
             <span class="ptmd-status ptmd-status-good">Published</span>
-            <span class="small ptmd-muted">Queue: 5</span>
-            <span class="small ptmd-muted">Risk: Low</span>
+            <span class="ptmd-chip"><i class="fa-solid fa-calendar-check"></i>Queue: 5</span>
+            <span class="ptmd-chip"><i class="fa-solid fa-shield"></i>Risk: Low</span>
+            <button class="btn btn-ptmd-ghost btn-sm" type="button" data-drawer-target="#ptmdRightDrawer">Inspect</button>
+        </article>
+        <article class="ptmd-list-hybrid-item glass-table-row">
+            <div><strong>Witness Timeline Collapse</strong><div class="small ptmd-muted">Updated 18m ago</div></div>
+            <span class="ptmd-status ptmd-status-warning">Draft</span>
+            <span class="ptmd-chip"><i class="fa-solid fa-hourglass-half"></i>Queue: 2</span>
+            <span class="ptmd-chip"><i class="fa-solid fa-triangle-exclamation"></i>Risk: Medium</span>
             <button class="btn btn-ptmd-ghost btn-sm" type="button" data-drawer-target="#ptmdRightDrawer">Inspect</button>
         </article>
         <article class="ptmd-list-hybrid-item glass-table-row">

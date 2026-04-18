@@ -15,10 +15,17 @@ require_once __DIR__ . '/../inc/bootstrap.php';
 
 $pageTitle      = 'Monitor | PTMD Admin';
 $activePage     = 'monitor';
+<<<<<<< HEAD
 $pageHeading    = 'Monitor';
 $pageSubheading = 'Pipeline health, social post performance, and site engagement analytics.';
 $pageActions    = '<a href="' . e(route_admin('posts')) . '" class="btn btn-ptmd-outline btn-sm">'
                 . '<i class="fa-solid fa-calendar-check me-2"></i>Dispatch</a>';
+=======
+$pageHeading    = 'Analytics View';
+$pageSubheading = 'Operational intelligence for pipeline health, social performance, and site behavior.';
+$pageActions    = '<a href="/admin/posts.php" class="btn btn-ptmd-outline btn-sm">'
+                . '<i class="fa-solid fa-calendar-check me-2"></i>Social Queue</a>';
+>>>>>>> ed91b0b00085c31bb54401dc4f172e51e1c727e9
 
 include __DIR__ . '/_admin_head.php';
 
@@ -109,6 +116,12 @@ foreach ($queueMetrics as $row) {
         break;
     }
 }
+$blockedQueue = 0;
+foreach ($queueMetrics as $row) {
+    if (in_array((string) ($row['status'] ?? ''), ['failed', 'canceled'], true)) {
+        $blockedQueue++;
+    }
+}
 
 /** Small helper for status badge colour class */
 function monitor_status_class(string $status): string
@@ -123,6 +136,18 @@ function monitor_status_class(string $status): string
 ?>
 
 <div class="ptmd-screen-analytics">
+<div class="ptmd-alert-banner mb-4">
+    <div class="ptmd-alert-banner__icon"><i class="fa-solid fa-satellite-dish"></i></div>
+    <div class="ptmd-alert-banner__content">
+        <div class="ptmd-kicker">Analytics Pulse</div>
+        <div class="ptmd-alert-banner__title"><?php ee((string) $blockedQueue); ?> blocked queue items · <?php ee((string) ($health['failed_posts_24h'] ?? 0)); ?> failed in 24h · Sync status: <?php echo e(ucfirst((string) ($health['last_sync_status'] ?? 'unknown'))); ?></div>
+    </div>
+    <div class="ptmd-alert-banner__actions">
+        <a href="/admin/posts.php" class="btn btn-ptmd-outline btn-sm"><i class="fa-solid fa-calendar-check me-2"></i>Open Queue</a>
+        <button id="runSyncBtn" class="btn btn-ptmd-teal btn-sm"><i class="fa-solid fa-arrows-rotate me-2"></i>Run Sync</button>
+    </div>
+</div>
+
 <!-- ── Health cards ──────────────────────────────────────────────────────────── -->
 <div class="row g-4 mb-5">
 
@@ -206,7 +231,7 @@ function monitor_status_class(string $status): string
                 <a href="<?php ee(route_admin('settings')); ?>">Settings</a>.
             </p>
         </div>
-        <button id="runSyncBtn" class="btn btn-ptmd-teal">
+        <button id="runSyncBtnSecondary" class="btn btn-ptmd-outline">
             <i class="fa-solid fa-arrows-rotate me-2"></i>Run Sync Now
         </button>
     </div>
@@ -611,8 +636,7 @@ function monitor_status_class(string $status): string
 $extraScripts = '<script>
 \'use strict\';
 
-document.getElementById(\'runSyncBtn\')?.addEventListener(\'click\', async function () {
-    const btn = this;
+async function runSync(btn) {
     const fd  = new FormData();
     fd.set(\'csrf_token\', ' . json_encode(csrf_token()) . ');
 
@@ -638,8 +662,14 @@ document.getElementById(\'runSyncBtn\')?.addEventListener(\'click\', async funct
         window.PTMDToast?.error(\'Network error during sync.\');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = \'<i class="fa-solid fa-arrows-rotate me-2"></i>Run Sync Now\';
+        btn.innerHTML = \'<i class="fa-solid fa-arrows-rotate me-2"></i>\' + (btn.id === \'runSyncBtn\' ? \'Run Sync\' : \'Run Sync Now\');
     }
+}
+
+document.querySelectorAll(\'#runSyncBtn, #runSyncBtnSecondary\').forEach((btn) => {
+    btn.addEventListener(\'click\', function () {
+        runSync(this);
+    });
 });
 </script>';
 ?>
