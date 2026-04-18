@@ -15,19 +15,20 @@ $pageTitle  = $pageTitle  ?? 'Admin | Paper Trail MD';
 $activePage = $activePage ?? '';
 
 $navItems = [
-    ['href' => '/admin/dashboard.php',       'label' => 'Dashboard',       'icon' => 'fa-gauge',          'id' => 'dashboard'],
-    ['href' => '/admin/site-editor.php',     'label' => 'Site Editor',     'icon' => 'fa-sliders',       'id' => 'site-editor'],
-    ['href' => '/admin/episodes.php',        'label' => 'Episodes',        'icon' => 'fa-film',           'id' => 'episodes'],
-    ['href' => '/admin/video-processor.php', 'label' => 'Video Processor', 'icon' => 'fa-scissors',       'id' => 'video-processor'],
-    ['href' => '/admin/overlay-tool.php',    'label' => 'Overlay Tool',    'icon' => 'fa-layer-group',    'id' => 'overlay-tool'],
-    ['href' => '/admin/media.php',           'label' => 'Media Library',   'icon' => 'fa-photo-film',     'id' => 'media'],
-    ['href' => '/admin/ai-tools.php',        'label' => 'AI Content',      'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
-    ['href' => '/admin/ai-assistant.php',    'label' => 'AI Copilot',      'icon' => 'fa-robot',          'id' => 'ai-assistant'],
-    ['href' => '/admin/posts.php',           'label' => 'Social Queue',    'icon' => 'fa-calendar-check', 'id' => 'posts'],
-    ['href' => '/admin/social-schedule.php', 'label' => 'Post Schedule',   'icon' => 'fa-clock',          'id' => 'social-schedule'],
-    ['href' => '/admin/chat.php',            'label' => 'Case Chat',       'icon' => 'fa-comments',       'id' => 'chat'],
-    ['href' => '/admin/settings.php',        'label' => 'Settings',        'icon' => 'fa-gear',           'id' => 'settings'],
-    ['href' => '/admin/site-tests.php',      'label' => 'Site Tests',      'icon' => 'fa-flask-vial',     'id' => 'site-tests'],
+    ['href' => '/admin/dashboard.php',         'label' => 'Dashboard',        'icon' => 'fa-gauge',               'id' => 'dashboard'],
+    ['href' => '/admin/site-editor.php',       'label' => 'Site Editor',      'icon' => 'fa-sliders',            'id' => 'site-editor'],
+    ['href' => '/admin/episodes.php',          'label' => 'Episodes',         'icon' => 'fa-film',                'id' => 'episodes'],
+    ['href' => '/admin/video-processor.php',   'label' => 'Video Processor',  'icon' => 'fa-scissors',            'id' => 'video-processor'],
+    ['href' => '/admin/overlay-tool.php',      'label' => 'Overlay Tool',     'icon' => 'fa-layer-group',         'id' => 'overlay-tool'],
+    ['href' => '/admin/media.php',             'label' => 'Media Library',    'icon' => 'fa-photo-film',          'id' => 'media'],
+    ['href' => '/admin/ai-tools.php',          'label' => 'AI Content',       'icon' => 'fa-wand-magic-sparkles', 'id' => 'ai-tools'],
+    ['href' => '/admin/ai-assistant.php',      'label' => 'AI Copilot',       'icon' => 'fa-robot',               'id' => 'ai-assistant'],
+    ['href' => '/admin/posts.php',             'label' => 'Social Queue',     'icon' => 'fa-calendar-check',      'id' => 'posts'],
+    ['href' => '/admin/social-schedule.php',   'label' => 'Post Schedule',    'icon' => 'fa-clock',               'id' => 'social-schedule'],
+    ['href' => '/admin/social-accounts.php',   'label' => 'Social Accounts',  'icon' => 'fa-plug',                'id' => 'social-accounts'],
+    ['href' => '/admin/chat.php',              'label' => 'Case Chat',        'icon' => 'fa-comments',            'id' => 'chat'],
+    ['href' => '/admin/settings.php',          'label' => 'Settings',         'icon' => 'fa-gear',                'id' => 'settings'],
+    ['href' => '/admin/site-tests.php',        'label' => 'Site Tests',       'icon' => 'fa-flask-vial',          'id' => 'site-tests'],
 ];
 ?>
 <!DOCTYPE html>
@@ -150,7 +151,7 @@ $navItems = [
         <!-- Publishing -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">Publishing</div>
-            <?php foreach (array_slice($navItems, 6, 4) as $item): ?>
+            <?php foreach (array_slice($navItems, 6, 5) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"
@@ -166,7 +167,7 @@ $navItems = [
         <!-- System -->
         <div class="ptmd-nav-group">
             <div class="nav-group-label">System</div>
-            <?php foreach (array_slice($navItems, 9) as $item): ?>
+            <?php foreach (array_slice($navItems, 11) as $item): ?>
                 <a
                     href="<?php ee($item['href']); ?>"
                     class="ptmd-nav-item <?php echo $activePage === $item['id'] ? 'active' : ''; ?>"

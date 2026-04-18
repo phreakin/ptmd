@@ -102,13 +102,30 @@ CREATE TABLE IF NOT EXISTS media_library (
 -- Social Accounts
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_accounts (
-    id                INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-    platform          VARCHAR(80)   NOT NULL,
-    handle            VARCHAR(120)  NOT NULL,
-    auth_config_json  JSON          NULL,    -- store tokens encrypted or via vault in production
-    is_active         TINYINT(1)    NOT NULL DEFAULT 1,
-    created_at        DATETIME      NOT NULL,
-    updated_at        DATETIME      NOT NULL
+    id                   INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+    platform             VARCHAR(80)   NOT NULL,
+    handle               VARCHAR(120)  NOT NULL,
+    auth_config_json     JSON          NULL,    -- store tokens encrypted or via vault in production
+    -- Onboarding lifecycle
+    onboard_status       ENUM('pending','connected','active','error','deactivated') NOT NULL DEFAULT 'pending',
+    token_expires_at     DATETIME      NULL,    -- when the access token expires (NULL = non-expiring)
+    permissions_json     JSON          NULL,    -- list of granted scopes from last OAuth callback
+    required_scopes_json JSON          NULL,    -- scopes required for posting on this platform
+    -- Health check
+    last_health_check_at DATETIME      NULL,    -- timestamp of last health check run
+    health_status        ENUM('ok','warning','error','unknown') NOT NULL DEFAULT 'unknown',
+    health_notes_json    JSON          NULL,    -- array of health check notes
+    -- Account-level controls
+    geo_restrict         VARCHAR(255)  NULL,    -- comma-separated ISO 3166-1 alpha-2 country codes, NULL = no restriction
+    age_restrict         ENUM('none','18+') NOT NULL DEFAULT 'none',
+    visibility_default   ENUM('public','private','unlisted','friends') NOT NULL DEFAULT 'public',
+    -- Policy compliance
+    policy_checklist_json JSON         NULL,    -- per-platform compliance flags
+    -- Lifecycle
+    is_active            TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at           DATETIME      NOT NULL,
+    updated_at           DATETIME      NOT NULL,
+    INDEX idx_sa_platform_active (platform, is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -137,6 +154,7 @@ CREATE TABLE IF NOT EXISTS social_platform_preferences (
     default_hashtags       VARCHAR(255)  NULL,
     default_status         ENUM('draft','queued','scheduled') NOT NULL DEFAULT 'queued',
     is_enabled             TINYINT(1)    NOT NULL DEFAULT 1,
+    policy_checklist_json  JSON          NULL,   -- compliance checklist flags per platform
     created_at             DATETIME      NOT NULL,
     updated_at             DATETIME      NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -151,6 +169,10 @@ CREATE TABLE IF NOT EXISTS social_post_queue (
     platform         VARCHAR(80)    NOT NULL,
     content_type     VARCHAR(80)    NOT NULL,
     caption          TEXT           NULL,
+    hashtags         VARCHAR(500)   NULL,    -- primary variant hashtags
+    caption_b        TEXT           NULL,    -- A/B: alternate caption body
+    hashtags_b       VARCHAR(500)   NULL,    -- A/B: alternate hashtags
+    active_variant   ENUM('a','b')  NOT NULL DEFAULT 'a',  -- which variant was dispatched
     asset_path       VARCHAR(255)   NULL,
     scheduled_for    DATETIME       NOT NULL,
     status           ENUM('draft','queued','scheduled','posted','failed','canceled') NOT NULL DEFAULT 'draft',

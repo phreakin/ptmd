@@ -11,6 +11,9 @@
  * format_caption_for_platform(string $caption, string $platform,
  *                             string $hashtags = '', ?string $title = null): string
  *
+ * format_caption_from_queue_item(array $queueItem, string $platform,
+ *                                string $variant = 'a'): string
+ *
  * normalize_hashtags(string $text): string
  *
  * add_required_platform_tags(string $caption, string $platform): string
@@ -163,4 +166,42 @@ function _ptmd_truncate_to_limit(string $text, int $limit): string
     }
 
     return rtrim($truncated) . '…';
+}
+
+/**
+ * Format a caption from a social_post_queue item, selecting the correct
+ * A/B variant automatically.
+ *
+ * The variant to use is resolved in this order:
+ *  1. $variant parameter (if 'a' or 'b')
+ *  2. $queueItem['active_variant'] field
+ *  3. Falls back to 'a'
+ *
+ * @param  array<string,mixed> $queueItem  Row from social_post_queue.
+ * @param  string              $platform   Target platform.
+ * @param  string              $variant    Force 'a' or 'b'; empty = auto.
+ * @return string  Platform-ready formatted caption.
+ */
+function format_caption_from_queue_item(
+    array $queueItem,
+    string $platform,
+    string $variant = ''
+): string {
+    // Determine which variant to use
+    if ($variant !== 'a' && $variant !== 'b') {
+        $variant = (string) ($queueItem['active_variant'] ?? 'a');
+        if ($variant !== 'a' && $variant !== 'b') {
+            $variant = 'a';
+        }
+    }
+
+    if ($variant === 'b' && !empty($queueItem['caption_b'])) {
+        $caption  = (string) $queueItem['caption_b'];
+        $hashtags = (string) ($queueItem['hashtags_b'] ?? $queueItem['hashtags'] ?? '');
+    } else {
+        $caption  = (string) ($queueItem['caption'] ?? '');
+        $hashtags = (string) ($queueItem['hashtags'] ?? '');
+    }
+
+    return format_caption_for_platform($caption, $platform, $hashtags);
 }
