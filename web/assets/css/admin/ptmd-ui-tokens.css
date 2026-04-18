@@ -28,15 +28,29 @@
     --ptmd-border-soft: rgba(255, 255, 255, 0.08);
     --ptmd-border-default: rgba(255, 255, 255, 0.12);
     --ptmd-border-strong: rgba(255, 255, 255, 0.2);
+    --ptmd-border-hairline: rgba(255, 255, 255, 0.06);
+    --ptmd-border-subtle: rgba(255, 255, 255, 0.09);
     --ptmd-border-focus: color-mix(in srgb, var(--ptmd-accent-forensic) 72%, #ffffff 28%);
+    --ptmd-border-warning: color-mix(in srgb, var(--ptmd-accent-highlighter) 45%, #ffffff 55%);
+    --ptmd-border-danger: color-mix(in srgb, var(--ptmd-accent-evidence) 52%, #ffffff 48%);
 
     --ptmd-shadow-soft: 0 6px 24px rgba(0, 0, 0, 0.38);
     --ptmd-shadow-layered: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 10px rgba(0, 0, 0, 0.28);
     --ptmd-shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.62), 0 8px 20px rgba(0, 0, 0, 0.32);
+    --ptmd-shadow-inset-soft: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+    --ptmd-shadow-elev-1: 0 10px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.22);
+    --ptmd-shadow-elev-2: 0 16px 38px rgba(0, 0, 0, 0.42), 0 4px 14px rgba(0, 0, 0, 0.32);
+    --ptmd-shadow-elev-3: 0 24px 54px rgba(0, 0, 0, 0.55), 0 8px 22px rgba(0, 0, 0, 0.36);
 
     --ptmd-glow-forensic: 0 0 32px color-mix(in srgb, var(--ptmd-accent-forensic) 30%, transparent);
     --ptmd-glow-evidence: 0 0 28px color-mix(in srgb, var(--ptmd-accent-evidence) 26%, transparent);
     --ptmd-glow-gold: 0 0 32px color-mix(in srgb, var(--ptmd-accent-gold) 20%, transparent);
+    --ptmd-glow-forensic-soft: 0 0 18px color-mix(in srgb, var(--ptmd-accent-forensic) 20%, transparent);
+    --ptmd-glow-evidence-soft: 0 0 16px color-mix(in srgb, var(--ptmd-accent-evidence) 18%, transparent);
+    --ptmd-glow-warning-soft: 0 0 18px color-mix(in srgb, var(--ptmd-accent-highlighter) 22%, transparent);
+
+    --ptmd-reflection-primary: linear-gradient(112deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.055) 24%, rgba(255,255,255,.01) 45%, rgba(255,255,255,0) 70%);
+    --ptmd-reflection-edge: linear-gradient(180deg, rgba(255,255,255,.1) 0%, rgba(255,255,255,0) 22%);
 
     --ptmd-blur-none: 0;
     --ptmd-blur-sm: 8px;
@@ -60,6 +74,7 @@
     --ptmd-space-8: 2rem;
     --ptmd-space-10: 2.5rem;
     --ptmd-space-12: 3rem;
+    --ptmd-space-14: 3.5rem;
 
     --ptmd-z-base: 1;
     --ptmd-z-sticky: 200;
@@ -75,4 +90,7 @@
     --ptmd-ease-standard: cubic-bezier(.2, .75, .2, 1);
     --ptmd-ease-emphasis: cubic-bezier(.18, 1, .3, 1);
     --ptmd-ease-exit: cubic-bezier(.4, 0, 1, 1);
+
+    --ptmd-font-title: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ptmd-font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
