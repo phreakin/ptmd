@@ -1,4 +1,45 @@
 /*noinspection CssUnresolvedCustomProperty */
+:root {
+    --ptmd-bg-1: #0b0d14;
+    --ptmd-bg-2: #101522;
+
+    --ptmd-surface-glass: rgba(255, 255, 255, 0.055);
+    --ptmd-surface-glass-subtle: rgba(255, 255, 255, 0.03);
+
+    --ptmd-accent-forensic: #2ec4b6;
+    --ptmd-accent-forensic-soft: color-mix(in srgb, var(--ptmd-accent-forensic) 25%, transparent);
+    --ptmd-accent-gold: #bfa181;
+
+    --ptmd-text-primary: #f5f7fb;
+    --ptmd-text-muted: #98a5bb;
+
+    --ptmd-border-soft: rgba(255, 255, 255, 0.08);
+    --ptmd-border-hairline: rgba(255, 255, 255, 0.06);
+    --ptmd-border-subtle: rgba(255, 255, 255, 0.09);
+    --ptmd-border-warning: color-mix(in srgb, #ffd60a 45%, #ffffff 55%);
+    --ptmd-border-danger: color-mix(in srgb, #c1121f 52%, #ffffff 48%);
+
+    --ptmd-shadow-inset-soft: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+    --ptmd-shadow-elev-1: 0 10px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.22);
+    --ptmd-shadow-elev-2: 0 16px 38px rgba(0, 0, 0, 0.42), 0 4px 14px rgba(0, 0, 0, 0.32);
+    --ptmd-shadow-layered: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 10px rgba(0, 0, 0, 0.28);
+
+    --ptmd-glow-forensic: 0 0 32px color-mix(in srgb, var(--ptmd-accent-forensic) 30%, transparent);
+    --ptmd-glow-evidence-soft: 0 0 16px color-mix(in srgb, #c1121f 18%, transparent);
+    --ptmd-glow-warning-soft: 0 0 18px color-mix(in srgb, #ffd60a 22%, transparent);
+
+    --ptmd-radius-sm: 12px;
+    --ptmd-radius-md: 16px;
+    --ptmd-radius-lg: 22px;
+
+    --ptmd-space-3: .75rem;
+    --ptmd-space-4: 1rem;
+
+    --ptmd-warning: #FACC15;
+    --ptmd-teal: #2EC4B6;
+    --text-sm: clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);
+}
+
 .ptmd-screen-dashboard .ptmd-card-stat,
 .ptmd-screen-analytics .ptmd-card-stat,
 .ptmd-screen-queue .ptmd-card-stat {
