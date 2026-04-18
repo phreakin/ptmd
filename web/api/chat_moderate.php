@@ -45,7 +45,12 @@ $roomId       = (int) ($_POST['room_id']       ?? 0);
 
 $caller   = current_chat_user();
 $callerId = $caller ? (int) $caller['id'] : 0;
-$hideReason = trim(strip_tags((string)($_POST['hide_reason'] ?? $reason)));
+$hideReason = trim(strip_tags((string) ($_POST['hide_reason'] ?? $reason)));
+$allowed = [
+    'pin', 'unpin', 'delete', 'restore', 'highlight',
+    'mute_user', 'unmute_user', 'ban_user', 'unban_user',
+    'hide', 'unhide', 'add_strike',
+];
 
 if (!in_array($action, $allowed, true)) {
     http_response_code(400);
@@ -97,6 +102,35 @@ switch ($action) {
         echo json_encode(['ok' => true]);
         break;
 
+    case 'highlight':
+        if ($messageId <= 0) { echo json_encode(['ok' => false, 'error' => 'message_id required']); exit; }
+        $highlightColor = trim((string) ($_POST['highlight_color'] ?? ''));
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $highlightColor)) {
+            $highlightColor = '#FFD60A';
+        }
+        $highlightAmount = (float) ($_POST['highlight_amount'] ?? 0);
+        $highlightAmount = $highlightAmount > 0 ? round($highlightAmount, 2) : null;
+        $pdo->prepare(
+            'UPDATE chat_messages
+             SET is_highlighted = 1, highlight_color = :color, highlight_amount = :amount, updated_at = NOW()
+             WHERE id = :id'
+        )->execute([
+            'color'  => $highlightColor,
+            'amount' => $highlightAmount,
+            'id'     => $messageId,
+        ]);
+        _cml_log($pdo, $messageId, $callerId, null, 'highlighted', $reason);
+        echo json_encode([
+            'ok' => true,
+            'message' => [
+                'id' => $messageId,
+                'is_highlighted' => true,
+                'highlight_color' => $highlightColor,
+                'highlight_amount' => $highlightAmount,
+            ],
+        ]);
+        break;
+
     case 'mute_user':
         if ($targetUserId <= 0) { echo json_encode(['ok' => false, 'error' => 'target_user_id required']); exit; }
         $mutedUntil = null;
@@ -107,7 +141,7 @@ switch ($action) {
             'UPDATE chat_users SET status = "muted", muted_until = :until, updated_at = NOW() WHERE id = :id'
         )->execute(['until' => $mutedUntil, 'id' => $targetUserId]);
         _cml_log($pdo, null, $callerId, $targetUserId, 'muted_user', $reason);
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'user' => ['id' => $targetUserId, 'status' => 'muted', 'muted_until' => $mutedUntil]]);
         break;
 
     case 'unmute_user':
@@ -116,7 +150,7 @@ switch ($action) {
             'UPDATE chat_users SET status = "active", muted_until = NULL, updated_at = NOW() WHERE id = :id'
         )->execute(['id' => $targetUserId]);
         _cml_log($pdo, null, $callerId, $targetUserId, 'unmuted_user', $reason);
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'user' => ['id' => $targetUserId, 'status' => 'active', 'muted_until' => null]]);
         break;
 
     case 'ban_user':
@@ -142,7 +176,7 @@ switch ($action) {
             'exp'    => $expiresAtVal,
         ]);
         _cml_log($pdo, null, $callerId, $targetUserId, 'banned_user', $reason);
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'user' => ['id' => $targetUserId, 'status' => $roomIdVal === null ? 'banned' : 'active']]);
         break;
 
     case 'unban_user':
@@ -158,7 +192,7 @@ switch ($action) {
                 ->execute(['id' => $targetUserId]);
         }
         _cml_log($pdo, null, $callerId, $targetUserId, 'unbanned_user', $reason);
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'user' => ['id' => $targetUserId, 'status' => 'active']]);
         break;
 
     case 'hide':

@@ -255,7 +255,16 @@ CREATE TABLE IF NOT EXISTS chat_moderation_logs (
     chat_message_id  INT UNSIGNED  NULL,   -- NULL for user-level actions (mute/ban)
     moderator_id     INT UNSIGNED  NULL,   -- admin users.id (NULL for chat-role moderators)
     target_user_id   INT UNSIGNED  NULL,   -- chat_users.id who was acted on
-    action           VARCHAR(50)   NOT NULL,   -- approved | flagged | blocked | deleted | pinned | muted_user | banned_user | unbanned_user
+    action           ENUM(
+                        'approved','flagged','blocked',
+                        'deleted','restored',
+                        'pinned','unpinned',
+                        'hidden','unhidden',
+                        'highlighted',
+                        'muted_user','unmuted_user',
+                        'banned_user','unbanned_user',
+                        'strike_added'
+                     ) NOT NULL,
     reason           VARCHAR(255)  NULL,
     created_at       DATETIME      NOT NULL,
     CONSTRAINT fk_cml_message     FOREIGN KEY (chat_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,

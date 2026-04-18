@@ -109,19 +109,9 @@ if (is_post()) {
         </form>
 
         <p class="ptmd-muted small text-center mt-4 mb-0">
-            <a href="<?php function route_chat_forgot_password(): string
-            {
-                return '/chat/forgot-password';
-            }
-
-            ee(route_chat_forgot_password()); ?>" class="ptmd-text-teal">Forgot password?</a>
+            <a href="<?php ee(route_contact()); ?>" class="ptmd-text-teal">Forgot password?</a>
             No account yet?
-            <a href="<?php function route_register(): string
-            {
-                return '/register';
-            }
-
-            ee(route_register()); ?>" class="ptmd-text-teal">Register for free</a>
+            <a href="<?php ee(route_register()); ?>" class="ptmd-text-teal">Register for free</a>
         </p>
     </div>
 
